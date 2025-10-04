@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crawling Border</title>
+  <style>
+
+    .card{
+        width: 190px;
+        height: 254px;
+        background-color: blue;
+        position: relative;
+        display: flex;
+        place-content: center;
+        place-items: center;
+        overflow: hidden;
+       
+        border-radius: 20px;
+    }
+
+    .card h2{
+        z-index: 1;
+        color: white;
+        font-size: 2 rem;
+    }
+   
+    .card::before{
+        content: '';
+        position: absolute;
+        width: 100px;
+        background-image: linear-gradient(180deg,red, blue);
+        height: 120%;
+        animation: animate 7s linear infinite;
+        transition: all 3s linear;
+    }
+
+    @keyframes animate {
+        from{
+            transform: rotate(0deg);
+        }
+        to{
+            transform: rotate(360deg);
+        }
+    }
+
+    .card::after{
+        content: "";
+        position: absolute;
+        background: black;
+        inset: 5px;
+        border-radius: 15px;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="card"></div>
+</body>
+</html>
