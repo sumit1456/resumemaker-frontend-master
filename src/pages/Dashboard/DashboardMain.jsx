@@ -13,6 +13,9 @@ export default function DashboardMain({ onUpload }) {
     navigate("resume-editor");
   };
 
+
+
+  
   return (
     <>
       <div style={{backgroundColor : ""}} className="dashboard">

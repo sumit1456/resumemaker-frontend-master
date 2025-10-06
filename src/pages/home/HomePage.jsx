@@ -4,6 +4,8 @@ import Login from "../../features/auth/Login.jsx";
 import Signup from "../../features/auth/Signup.jsx";
 import ResumeDashboard from "../Dashboard/Dashboard.jsx";
 import "./css-files/HomePage.css";
+import About from "../About/About.jsx";
+import TemplatesShowcase from "../Templates showcase/Templatesshowcase.jsx";
 
 export default function HomePage({
   isLogged,
@@ -49,6 +51,16 @@ export default function HomePage({
         <Route
           path="dashboard"
           element={<ResumeDashboard userId={userId} />}
+        />
+
+         <Route
+          path="about"
+          element={<About />}
+        />
+
+          <Route
+          path="templates"
+          element={<TemplatesShowcase />}
         />
       </Routes>
     </div>
