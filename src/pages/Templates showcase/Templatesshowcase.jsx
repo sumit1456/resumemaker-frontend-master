@@ -1,6 +1,13 @@
 import React, { useState } from 'react';
 import { Check, Sparkles } from 'lucide-react';
 import './Templateshowcase.css';
+import modernImg from './images/modern.png';
+import classicImg from './images/classic.png'
+import acad from './images/academicscholar.png'
+import executive from './images/executive.png'
+import ats from './images/ats.png'
+
+
 
 const TemplatesShowcase = () => {
   const [selectedTemplate, setSelectedTemplate] = useState(null);
@@ -11,7 +18,7 @@ const TemplatesShowcase = () => {
       name: "Modern Professional",
       description: "Clean and contemporary design with a focus on readability and professional appeal",
       features: ["Two-column layout", "Accent color headers", "Skills progress bars", "Professional typography"],
-      image: "/templates/template1.png",
+      image: modernImg,
       category: "Professional"
     },
     {
@@ -27,7 +34,7 @@ const TemplatesShowcase = () => {
       name: "Minimal Classic",
       description: "Timeless black and white design emphasizing content and clarity",
       features: ["Clean typography", "Traditional layout", "Maximum readability", "ATS-friendly"],
-      image: "/templates/template3.png",
+      image: classicImg,
       category: "Classic"
     },
     {
@@ -35,7 +42,7 @@ const TemplatesShowcase = () => {
       name: "Executive Elite",
       description: "Sophisticated design for senior-level professionals and executives",
       features: ["Premium styling", "Leadership focus", "Strategic layout", "High-impact design"],
-      image: "/templates/template4.png",
+      image: executive,
       category: "Executive"
     },
     {
@@ -51,7 +58,7 @@ const TemplatesShowcase = () => {
       name: "Academic Scholar",
       description: "Professional academic design emphasizing education and research",
       features: ["Publication focus", "Research highlights", "Academic formatting", "Clean structure"],
-      image: "/templates/template6.png",
+      image: acad,
       category: "Academic"
     }
   ];

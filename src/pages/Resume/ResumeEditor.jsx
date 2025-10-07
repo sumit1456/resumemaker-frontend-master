@@ -1,7 +1,11 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import ResumeDocument from "./Template1.jsx";
-import ModernResumeDocument from "./Template2.jsx";
-import ATSFriendlyResumeDocument from "./Template3.jsx";
+import ResumeDocument from './Template1';
+import ModernResumeDocument from './Template2';
+import ATSFriendlyResumeDocument from './Template3';
+import ExecutiveEliteDocument from './Template4';
+import TechInnovatorDocument from './Template5';
+import AcademicScholarDocument from './Template6';
+import CreativeBold from './Template7';
 import "./css-files/ResumeEditor.css";
 import ErrorBoundary from "../../ErrorBoundry.jsx";
 
@@ -371,17 +375,26 @@ const [certifications, setCertifications] = useState([
       const { pdf } = await import("@react-pdf/renderer");
       let doc;
       switch (selectedTemplate) {
-      case "1":
-        doc = React.createElement(ResumeDocument, { ...debouncedData, sectionTitles });
-        break;
-      case "2":
-        doc = React.createElement(ModernResumeDocument, { ...debouncedData, sectionTitles });
-        break;
-      case "3":
-        doc = React.createElement(ATSFriendlyResumeDocument, { ...debouncedData, sectionTitles });
-        break;
-      default:
-        doc = React.createElement(ResumeDocument, { ...debouncedData, sectionTitles });
+  case "1":
+    doc = React.createElement(ResumeDocument, { ...debouncedData, sectionTitles });
+    break;
+  case "2":
+    doc = React.createElement(ModernResumeDocument, { ...debouncedData, sectionTitles });
+    break;
+  case "3":
+    doc = React.createElement(ATSFriendlyResumeDocument, { ...debouncedData, sectionTitles });
+    break;
+  case "4":
+    doc = React.createElement(ExecutiveEliteDocument, { ...debouncedData, sectionTitles });
+    break;
+  case "5":
+    doc = React.createElement(TechInnovatorDocument, { ...debouncedData, sectionTitles });
+    break;
+  case "6":
+    doc = React.createElement(AcademicScholarDocument, { ...debouncedData, sectionTitles });
+    break;
+  default:
+    doc = React.createElement(CreativeBold, { ...debouncedData, sectionTitles });
 }
 
       const asPdf = pdf(doc);
@@ -424,6 +437,8 @@ const [certifications, setCertifications] = useState([
   const handleTemplateChange = useCallback((newTemplate) => {
     setIsTemplateLoading(true);
     setSelectedTemplate(newTemplate);
+    console.log(Number(newTemplate));
+    
     setTimeout(() => setIsTemplateLoading(false), 100);
   }, []);
 
@@ -595,8 +610,18 @@ const [certifications, setCertifications] = useState([
         case "3":
           doc = React.createElement(ATSFriendlyResumeDocument, downloadData);
           break;
-        default:
-          doc = React.createElement(ResumeDocument, downloadData);
+
+         case "4":
+  doc = React.createElement(ExecutiveEliteDocument, downloadData);
+  break;
+case "5":
+  doc = React.createElement(TechInnovatorDocument, downloadData);
+  break;
+case "6":
+  doc = React.createElement(AcademicScholarDocument, downloadData);
+  break;  
+ 
+       
       }
       const asPdf = pdf(doc);
       const blob = await asPdf.toBlob();
@@ -623,6 +648,7 @@ const [certifications, setCertifications] = useState([
       const transformedSkills = skills.map(skill => ({ name: skill.trim() })).filter(skill => skill.name !== "");
       const transformedCertifications = certifications.map(cert => ({ name: cert.trim() })).filter(cert => cert.name !== "");
       const payload = {
+        templateId: Number(selectedTemplate),
         userId,
         details: {
           name: resumeDetails.name,
@@ -642,6 +668,7 @@ const [certifications, setCertifications] = useState([
         showEducation,
         showCertifications,
         customSections
+        
       };
       const res = await fetch("http://localhost:8080/saveall", {
         method: "POST",
@@ -728,13 +755,16 @@ const [certifications, setCertifications] = useState([
       <div style={{}} className="resume-editor-container">
         <div className="template-selector-header">
           <div className="template-selector-content">
-            <h2 className="template-selector-title">Go to custom editor-</h2>
+            <h2 className="template-selector-title">ATS Score</h2>
             <div className="template-selector-controls">
               <label className="template-label">Choose Template:</label>
               <select value={selectedTemplate} onChange={(e) => handleTemplateChange(e.target.value)} className="template-select">
                 <option value="1">Classic Template</option>
                 <option value="2">Modern Template</option>
                 <option value="3">ATS-Friendly Template</option>
+                <option value="4">Executive Elite</option>
+                <option value="4">Executive Elite</option>
+                <option value="6">Academic Scholar</option>
               </select>
               {(isTemplateLoading || generatingPreview) && (
                 <span className="template-loading">

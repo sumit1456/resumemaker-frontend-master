@@ -53,13 +53,24 @@ html, body, #root {
 }
 
 .sec-inputs {
-  background-color: white;
-  color: black;
+  background-color: transparent;
+  color: var(--black);
   border: none;
   outline: none;
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: bold;
   font-family: var(--font-sans);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  width: 100%;
+  padding: 0;
+  opacity: 1 !important;
+}
+
+.sec-inputs:focus {
+  background-color: var(--gray-50);
+  border-radius: 4px;
+  padding: 4px;
 }
 
 /* ===== Reset & Base Styles ===== */
@@ -79,13 +90,11 @@ body {
 /* ===== Main Container ===== */
 .resume-editor-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #000000 0%, #171717 50%, #262626 100%);
+  max-height: 120vh;
+  background: linear-gradient(135deg, #000000 0%, #0a0a0a 25%, #1a1a1a 50%, #0a0a0a 75%, #000000 100%);
   width: 100%;
   position: relative;
-  overflow: hidden;
-  
- 
-  
+  overflow: scroll;
 }
 
 /* Animated background pattern */
@@ -97,17 +106,37 @@ body {
   right: 0;
   bottom: 0;
   background-image: 
-    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-  background-size: 50px 50px;
-  animation: gridMove 20s linear infinite;
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+  animation: gridMove 30s linear infinite;
   pointer-events: none;
   z-index: 0;
 }
 
+/* Glowing orbs for depth */
+.resume-editor-container::after {
+  content: '';
+  position: absolute;
+  top: -200px;
+  right: -200px;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  animation: float 20s ease-in-out infinite;
+}
+
 @keyframes gridMove {
   0% { transform: translate(0, 0); }
-  100% { transform: translate(50px, 50px); }
+  100% { transform: translate(60px, 60px); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(-100px, 100px) rotate(180deg); }
 }
 
 /* ===== Template Selector Header ===== */
@@ -117,11 +146,11 @@ body {
   left: 0;
   right: 0;
   z-index: 999;
-  background: linear-gradient(135deg, #000000 0%, #171717 100%);
-  border-bottom: 2px solid var(--gray-800);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
 }
 
 .template-selector-content {
@@ -139,9 +168,12 @@ body {
   margin: 0;
   font-size: 28px;
   font-weight: 800;
-  color: var(--white);
+  background: linear-gradient(135deg, #ffffff 0%, #a0a0a0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   letter-spacing: -0.025em;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  text-shadow: none;
 }
 
 .template-selector-controls {
@@ -162,17 +194,19 @@ body {
   font-size: 16px;
   font-weight: 500;
   color: var(--white);
-  background: var(--gray-800);
-  border: 2px solid var(--gray-700);
+  background: rgba(38, 38, 38, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
   cursor: pointer;
   transition: all var(--transition-fast);
   min-width: 200px;
+  backdrop-filter: blur(10px);
 }
 
 .template-select:hover {
   border-color: var(--white);
-  background: var(--gray-700);
+  background: rgba(64, 64, 64, 0.8);
+  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.1);
 }
 
 .template-select:focus {
@@ -219,12 +253,11 @@ body {
   border-radius: 16px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   overflow: hidden;
-  max-height: 110vh;
+  max-height: none;
   border: 2px solid var(--gray-800);
   display: flex;
   flex-direction: column;
   transition: all 0.3s ease;
- 
 }
 
 .editor-panel:hover {
@@ -234,10 +267,8 @@ body {
 
 .ats-resume {
   padding: var(--space-6);
-  height: 100%;
   overflow-y: auto;
   font-family: Arial, Helvetica, sans-serif;
-  flex: 1;
   
   /* Custom scrollbar */
   scrollbar-width: thin;
@@ -347,15 +378,23 @@ body {
   margin-bottom: var(--space-6);
 }
 
-.section-title {
-  font-size: 14px;
-  font-weight: bold;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: var(--space-4);
-  padding-bottom: var(--space-2);
-  border-bottom: 2px solid var(--black);
-  color: var(--black);
+.section-title,
+h2.section-title,
+.ats-resume .section-title,
+.ats-resume h2 {
+  font-size: 14px !important;
+  font-weight: bold !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+  margin-bottom: var(--space-4) !important;
+  padding-bottom: var(--space-2) !important;
+  border-bottom: 2px solid var(--black) !important;
+  color: var(--black) !important;
+  opacity: 1 !important;
+  background: transparent !important;
+  -webkit-text-fill-color: var(--black) !important;
+  background-clip: unset !important;
+  -webkit-background-clip: unset !important;
 }
 
 /* ===== Text Areas ===== */
@@ -708,29 +747,34 @@ body {
 
 /* ===== Preview Panel ===== */
 .preview-panel {
-  background: linear-gradient(135deg, #f5f5f5 0%, #e5e5e5 100%);
+  background: rgba(245, 245, 245, 0.98);
   border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: 
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 20px 60px rgba(0, 0, 0, 0.8);
   overflow: hidden;
   display: flex;
   flex-direction: column;
   height: 85vh;
   position: sticky;
   top: calc(var(--navbar-height) + var(--template-header-height) + var(--space-6));
-  border: 2px solid var(--gray-800);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   transition: all 0.3s ease;
 }
 
 .preview-panel:hover {
-  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.6);
+  box-shadow: 
+    0 0 0 1px rgba(255, 255, 255, 0.2),
+    0 25px 70px rgba(0, 0, 0, 0.9),
+    0 0 80px rgba(255, 255, 255, 0.05);
   transform: translateY(-2px);
 }
 
 .preview-header {
   padding: var(--space-4) var(--space-6);
-  background: var(--black);
+  background: rgba(0, 0, 0, 0.95);
   color: var(--white);
-  border-bottom: 2px solid var(--black);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .preview-header h3 {
@@ -759,7 +803,7 @@ body {
 .loading-spinner {
   width: 40px;
   height: 40px;
-  border: 4px solid var(--gray-700);
+  border: 4px solid rgba(255, 255, 255, 0.1);
   border-top: 4px solid var(--white);
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -854,6 +898,7 @@ body {
   transition: all 0.2s ease;
   font-size: 14px;
   color: var(--black);
+  background: var(--white);
 }
 
 .custom-section-title-input:focus {
@@ -883,106 +928,5 @@ body {
     height: auto;
     padding: var(--space-4) var(--space-6);
     gap: var(--space-4);
-  }
-  
-  .template-selector-title {
-    font-size: 24px;
-  }
-}
-
-@media (max-width: 768px) {
-  .template-selector-content {
-    padding: var(--space-3) var(--space-4);
-  }
-  
-  .template-selector-controls {
-    flex-direction: column;
-    width: 100%;
-    gap: var(--space-2);
-  }
-  
-  .template-select {
-    width: 100%;
-  }
-  
-  .resume-editor-main {
-    padding: var(--space-4);
-    gap: var(--space-4);
-  }
-  
-  .ats-resume {
-    padding: var(--space-4);
-  }
-  
-  .exp-header,
-  .project-header,
-  .edu-header {
-    flex-direction: column;
-    gap: var(--space-2);
-    align-items: flex-start;
-  }
-  
-  .duration,
-  .project-duration,
-  .year {
-    text-align: left;
-  }
-  
-  .action-buttons {
-    flex-direction: column;
-  }
-  
-  .contact {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-  }
-  
-  .separator {
-    display: none;
-  }
-
-  .section-toggle-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* ===== Print Styles ===== */
-@media print {
-  .template-selector-header,
-  .preview-panel,
-  .action-buttons,
-  .add-btn,
-  .add-small-btn,
-  .remove-btn,
-  .remove-small-btn,
-  .section-manager {
-    display: none !important;
-  }
-  
-  .resume-editor-container {
-    background: var(--white);
-   
-  }
-  
-  .resume-editor-main {
-    grid-template-columns: 1fr;
-    margin-top: 0;
-    padding: 0;
-    background: white;
-    
-  }
-  
-  .editor-panel {
-    box-shadow: none;
-    border: 2px solid var(--black);
-    background: white;
-    height: auto;
-  }
-  
-  .ats-resume {
-    max-height: none;
-    overflow: visible;
-    padding: 0.5in;
   }
 }
