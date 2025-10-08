@@ -648,6 +648,7 @@ case "6":
       const transformedSkills = skills.map(skill => ({ name: skill.trim() })).filter(skill => skill.name !== "");
       const transformedCertifications = certifications.map(cert => ({ name: cert.trim() })).filter(cert => cert.name !== "");
       const payload = {
+        title : prompt("Enter the title for the resume"),
         templateId: Number(selectedTemplate),
         userId,
         details: {

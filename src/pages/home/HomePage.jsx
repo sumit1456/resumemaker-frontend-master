@@ -6,6 +6,8 @@ import ResumeDashboard from "../Dashboard/Dashboard.jsx";
 import "./css-files/HomePage.css";
 import About from "../About/About.jsx";
 import TemplatesShowcase from "../Templates showcase/Templatesshowcase.jsx";
+import MyResumes from "../UserTemplates/MyResumes.jsx";
+import ViewResume from "../UserTemplates/ViewTemplate.jsx";
 
 export default function HomePage({
   isLogged,
@@ -61,6 +63,17 @@ export default function HomePage({
           <Route
           path="templates"
           element={<TemplatesShowcase />}
+        />
+
+        
+          <Route
+          path="user-templates"
+          element={<MyResumes userId={userId} />}
+        />
+
+        <Route
+          path="my-resumes/getresume/:resumeId"
+          element={<ViewResume />}
         />
       </Routes>
     </div>

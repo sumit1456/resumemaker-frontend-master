@@ -1,0 +1,438 @@
+/* MyResumes.css - Modern Dark Theme */
+
+.my-resumes-page {
+  min-height: 100vh;
+  background-color: #000000;
+}
+
+/* Header Styles */
+.page-header {
+  background-color: #000000;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.header-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1.5rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+}
+
+.logo-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  background: #ffffff;
+  border-radius: 0.5rem;
+}
+
+.logo-text {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+}
+
+.nav-menu {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.nav-link {
+  color: #808080;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.nav-link:hover {
+  color: #ffffff;
+}
+
+.create-button {
+  padding: 0.75rem 1.5rem;
+  background-color: #ffffff;
+  color: #000000;
+  border: none;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.create-button:hover {
+  background-color: #e5e5e5;
+  transform: translateY(-1px);
+}
+
+/* Main Content */
+.main-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 4rem 2rem;
+}
+
+.page-title-section {
+  margin-bottom: 3rem;
+}
+
+.page-title {
+  font-size: 3rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 0.75rem;
+  letter-spacing: -0.02em;
+}
+
+.page-subtitle {
+  font-size: 1.25rem;
+  color: #808080;
+  font-weight: 400;
+}
+
+/* Loading State */
+.loading-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #000000;
+}
+
+.loading-spinner {
+  width: 4rem;
+  height: 4rem;
+  border: 3px solid #1a1a1a;
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-text {
+  font-size: 1.125rem;
+  color: #808080;
+}
+
+/* Error State */
+.error-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #000000;
+}
+
+.error-card {
+  background-color: #0a0a0a;
+  padding: 3rem;
+  border-radius: 1rem;
+  border: 1px solid #1a1a1a;
+  max-width: 32rem;
+  text-align: center;
+}
+
+.error-icon {
+  font-size: 3rem;
+  margin-bottom: 1.5rem;
+}
+
+.error-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 0.75rem;
+}
+
+.error-message {
+  color: #808080;
+  margin-bottom: 2rem;
+  font-size: 1.125rem;
+}
+
+.retry-button {
+  width: 100%;
+  padding: 0.875rem 1.5rem;
+  background-color: #ffffff;
+  color: #000000;
+  border: none;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.retry-button:hover {
+  background-color: #e5e5e5;
+}
+
+/* Empty State */
+.empty-state {
+  background-color: #0a0a0a;
+  border-radius: 1rem;
+  border: 1px solid #1a1a1a;
+  padding: 4rem;
+  text-align: center;
+}
+
+.empty-icon {
+  font-size: 5rem;
+  color: #1a1a1a;
+  margin-bottom: 1.5rem;
+}
+
+.empty-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 0.75rem;
+}
+
+.empty-text {
+  color: #808080;
+  margin-bottom: 2rem;
+  font-size: 1.125rem;
+}
+
+.create-first-button {
+  padding: 1rem 2rem;
+  background-color: #ffffff;
+  color: #000000;
+  border: none;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 1.125rem;
+}
+
+.create-first-button:hover {
+  background-color: #e5e5e5;
+  transform: translateY(-2px);
+}
+
+/* Resumes Grid */
+.resumes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 2rem;
+}
+
+.resume-card {
+  background-color: #1a1a1a;
+  border-radius: 1rem;
+  overflow: hidden;
+  border: 1px solid #2a2a2a;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.resume-card:hover {
+  border-color: #3a3a3a;
+  transform: translateY(-4px);
+}
+
+.card-header {
+  padding: 2.5rem 2rem 2rem 2rem;
+  position: relative;
+}
+
+.bg-gradient-to-r {
+  background: #1a1a1a;
+}
+
+.card-header-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 3rem;
+}
+
+.template-badge {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #666666;
+  background-color: transparent;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  border: 1px solid #1a1a1a;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.resume-emoji {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 1.5rem;
+}
+
+.resume-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 1rem;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.card-body {
+  padding: 0 2rem 2.5rem 2rem;
+}
+
+.resume-info {
+  margin-bottom: 2rem;
+}
+
+.info-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  color: #666666;
+  margin-bottom: 1rem;
+}
+
+.info-row::before {
+  content: '→';
+  color: #333333;
+  font-weight: 600;
+  margin-right: 0.25rem;
+}
+
+.info-label {
+  font-weight: 500;
+}
+
+.info-value {
+  color: #999999;
+}
+
+.resume-id {
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+}
+
+.card-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.view-button {
+  flex: 1;
+  padding: 0.875rem 1.5rem;
+  background-color: #ffffff;
+  color: #000000;
+  border: none;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 1rem;
+}
+
+.view-button:hover {
+  background-color: #e5e5e5;
+  transform: translateY(-1px);
+}
+
+.edit-button {
+  padding: 0.875rem 1.5rem;
+  border: 1px solid #1a1a1a;
+  color: #ffffff;
+  background-color: transparent;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.edit-button:hover {
+  background-color: #0f0f0f;
+  border-color: #2a2a2a;
+}
+
+/* Color variants removed - all cards use dark theme */
+.from-blue-500,
+.from-purple-500,
+.from-green-500,
+.from-indigo-500,
+.from-cyan-500,
+.from-amber-500,
+.from-pink-500,
+.from-gray-500 {
+  --from: #1a1a1a;
+}
+
+.to-blue-600,
+.to-purple-600,
+.to-green-600,
+.to-indigo-600,
+.to-cyan-600,
+.to-amber-600,
+.to-pink-600,
+.to-gray-600 {
+  --to: #1a1a1a;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .header-content {
+    padding: 1rem 1.5rem;
+  }
+
+  .nav-menu {
+    gap: 1rem;
+  }
+
+  .page-title {
+    font-size: 2rem;
+  }
+
+  .page-subtitle {
+    font-size: 1rem;
+  }
+
+  .resumes-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .main-content {
+    padding: 2rem 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .logo-text {
+    font-size: 1.25rem;
+  }
+
+  .nav-menu {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem;
+  }
+
+  .create-button {
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+  }
+}
