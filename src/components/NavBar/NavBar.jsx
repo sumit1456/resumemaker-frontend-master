@@ -21,12 +21,10 @@ export default function NavBar({ isLogged, setIsLogged }) {
           <h1>Resume Maker</h1>
         </div>
 
-        {/* Hamburger for mobile */}
         <div className="hamburger" onClick={toggleSidebar}>
           <i className="fa-solid fa-bars"></i>
         </div>
 
-        {/* Desktop links */}
         <div className="list">
           <p><Link to="/">Home</Link></p>
           <p><Link to="/templates">Templates</Link></p>
@@ -58,7 +56,7 @@ export default function NavBar({ isLogged, setIsLogged }) {
         </div>
       </nav>
 
-      {/* Sidebar for mobile */}
+      {/* Sidebar */}
       <div className={`sidebar ${sidebarOpen ? "open" : ""}`}>
         <p><Link to="/" onClick={toggleSidebar}>Home</Link></p>
         <p><Link to="/templates" onClick={toggleSidebar}>Templates</Link></p>
@@ -66,7 +64,7 @@ export default function NavBar({ isLogged, setIsLogged }) {
         <p><Link to="/user-templates" onClick={toggleSidebar}>User Templates</Link></p>
       </div>
 
-      {/* Overlay when sidebar is open */}
+      {/* Overlay */}
       {sidebarOpen && <div className="overlay" onClick={toggleSidebar}></div>}
     </>
   );
