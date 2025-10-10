@@ -2,6 +2,10 @@ import React, { useState } from "react";
 import axios from "axios";
 import './Signup.css';
 
+
+const API_BASE_URL2 = 'http://localhost:8080';
+const API_BASE_URL = 'https://resumemaker-1.onrender.com';
+
 export default function Signup() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -18,7 +22,7 @@ export default function Signup() {
     setLoading(true);
     try {
       const response = await axios.post(
-        "http://localhost:8080/signup",
+       `${API_BASE_URL}/signup`,
         { username, email, password }
       );
       setMessage(`Signup successful! Welcome ${response.data.username}`);

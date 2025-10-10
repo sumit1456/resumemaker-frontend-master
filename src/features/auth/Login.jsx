@@ -3,6 +3,10 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import './Login.css';
 
+
+const API_BASE_URL2 = 'http://localhost:8080';
+const API_BASE_URL = 'https://resumemaker-1.onrender.com';
+
 export default function Login({ setIsLogged, setUserId }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,7 +25,7 @@ export default function Login({ setIsLogged, setUserId }) {
     setLoading(true);
     try {
       const response = await axios.post(
-        "http://localhost:8080/login",
+        `${API_BASE_URL}/login`,
         { email, password }
       );
 

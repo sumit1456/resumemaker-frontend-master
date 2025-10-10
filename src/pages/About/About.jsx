@@ -141,64 +141,60 @@ export default function About() {
         <div className="section-header">
           <h2 className="section-title">Meet the Developer</h2>
           <p className="section-description">
-            The mind behind Resume Maker Pro
+            The mind behind this project
           </p>
         </div>
 
         <div className="developer-card">
           <div className="developer-avatar">
             <div className="avatar-circle">
-              <span className="avatar-text">DEV</span>
+              <span className="avatar-text">SH</span>
             </div>
             <div className="status-badge">
               <div className="status-dot"></div>
-              <span>Available for projects</span>
+              <span>Open to opportunities</span>
             </div>
           </div>
 
           <div className="developer-content">
-            <h3 className="developer-name">John Anderson</h3>
-            <p className="developer-title">Full Stack Developer & Product Designer</p>
+            <h3 className="developer-name">Sumit Hatekar</h3>
+            <p className="developer-title">Full Stack Developer</p>
 
             <div className="developer-bio">
               <p>
-                Passionate about creating tools that make a real difference in people's
-                careers. With over 5 years of experience in web development and a deep
-                understanding of recruitment processes, I built Resume Maker Pro to help
-                job seekers present their best selves.
+                I am passionate about designing and creating web applications using modern technologies. I love solving real-world problems, building innovative solutions, and continuously improving my skills.
               </p>
               <p>
-                This project combines modern web technologies with user-centric design
-                principles to deliver an intuitive, powerful resume building experience.
+                My expertise includes React.js, Spring Boot, Java, PostgreSQL, Oracle SQL, Hibernate/JPA, HTML, CSS, JavaScript, and cloud basics. I enjoy applying my knowledge to bring ideas to life and develop functional, user-friendly applications.
               </p>
             </div>
 
             <div className="tech-stack">
               <h4>Tech Stack</h4>
               <div className="tech-tags">
-                <span className="tech-tag">React</span>
-                <span className="tech-tag">Node.js</span>
-                <span className="tech-tag">Express</span>
-                <span className="tech-tag">MongoDB</span>
-                <span className="tech-tag">JWT Auth</span>
-                <span className="tech-tag">AWS S3</span>
-                <span className="tech-tag">REST API</span>
-                <span className="tech-tag">Stripe</span>
+                <span className="tech-tag">React.js</span>
+                <span className="tech-tag">Spring Boot</span>
+                <span className="tech-tag">Java</span>
+                <span className="tech-tag">PostgreSQL</span>
+                <span className="tech-tag">Oracle SQL</span>
+                <span className="tech-tag">HTML/CSS/JS</span>
+                <span className="tech-tag">Hibernate/JPA</span>
+                <span className="tech-tag">Cloud Basics</span>
               </div>
             </div>
 
             <div className="developer-stats">
               <div className="stat-item">
+                <div className="stat-number">0</div>
+                <div className="stat-label">Experience</div>
+              </div>
+              <div className="stat-item">
                 <div className="stat-number">5+</div>
-                <div className="stat-label">Years Experience</div>
+                <div className="stat-label">Projects Built</div>
               </div>
               <div className="stat-item">
-                <div className="stat-number">50K+</div>
-                <div className="stat-label">Resumes Created</div>
-              </div>
-              <div className="stat-item">
-                <div className="stat-number">98%</div>
-                <div className="stat-label">User Satisfaction</div>
+                <div className="stat-number">100%</div>
+                <div className="stat-label">Dedication & Learning</div>
               </div>
             </div>
 
@@ -227,25 +223,22 @@ export default function About() {
       {/* Mission Section */}
       <section className="mission-section">
         <div className="mission-content">
-          <h2 className="mission-title">Our Mission</h2>
+          <h2 className="mission-title">My Mission</h2>
           <p className="mission-text">
-            To democratize access to professional resume creation tools and help every
-            job seeker present their skills and experience in the best possible light.
-            We believe that everyone deserves a chance to showcase their talents
-            effectively, regardless of their design skills or budget.
+            To solve real-world problems, create innovative solutions, and design web applications that improve lives. I focus on building functional, user-friendly, and modern software while continuously learning and exploring new technologies.
           </p>
           <div className="mission-stats">
             <div className="mission-stat">
-              <span className="mission-stat-number">10K+</span>
-              <span className="mission-stat-label">Active Users</span>
+              <span className="mission-stat-number">10+</span>
+              <span className="mission-stat-label">Projects in Progress</span>
             </div>
             <div className="mission-stat">
-              <span className="mission-stat-number">50K+</span>
-              <span className="mission-stat-label">Resumes Created</span>
+              <span className="mission-stat-number">1000+</span>
+              <span className="mission-stat-label">Hours of Coding & Learning</span>
             </div>
             <div className="mission-stat">
-              <span className="mission-stat-number">95%</span>
-              <span className="mission-stat-label">Success Rate</span>
+              <span className="mission-stat-number">100%</span>
+              <span className="mission-stat-label">Commitment</span>
             </div>
           </div>
         </div>
@@ -253,12 +246,12 @@ export default function About() {
 
       {/* CTA Section */}
       <section className="cta-section">
-        <h2 className="cta-title">Ready to Build Your Perfect Resume?</h2>
+        <h2 className="cta-title">Ready to Build Innovative Projects?</h2>
         <p className="cta-text">
-          Join thousands of successful job seekers who landed their dream jobs
+          Let's collaborate and create web applications that solve real problems
         </p>
         <a href="/signup" className="cta-button">
-          Get Started Free
+          Get Started
           <span className="btn-arrow">→</span>
         </a>
       </section>

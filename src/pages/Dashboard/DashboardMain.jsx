@@ -52,6 +52,7 @@ export default function DashboardMain({ onUpload }) {
       {/* Nested Route for ResumeEditor */}
       <Routes>
         <Route path="resume-editor" element={<ResumeEditor />} />
+         <Route path="resume-editor/:resumeId" element={<ResumeEditor />} />
       </Routes>
     </>
   );

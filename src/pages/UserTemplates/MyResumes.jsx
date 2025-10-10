@@ -2,13 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import './MyResumes.css';
 
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL2 = 'http://localhost:8080';
+const API_BASE_URL = 'https://resumemaker-1.onrender.com';
 
 const MyResumes = ({userId}) => {
   const navigate = useNavigate();
   const [resumes, setResumes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [deleting, setDeleting] = useState(null);
 
   useEffect(() => {
     fetchResumes();
@@ -35,6 +38,28 @@ const MyResumes = ({userId}) => {
     }
   };
 
+  const handleDelete = async (resumeId) => {
+    try {
+      setDeleting(resumeId);
+      const response = await fetch(`${API_BASE_URL}/resumes/${resumeId}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete resume');
+      }
+      
+      // Remove the deleted resume from state
+      setResumes(resumes.filter(resume => resume.id !== resumeId));
+      setDeleteConfirm(null);
+    } catch (err) {
+      console.error('Error deleting resume:', err);
+      alert('Failed to delete resume. Please try again.');
+    } finally {
+      setDeleting(null);
+    }
+  };
+
   const getTemplateName = (templateId) => {
     const templates = {
       1: 'Classic Template',
@@ -50,15 +75,15 @@ const MyResumes = ({userId}) => {
 
   const getTemplateColor = (templateId) => {
     const colors = {
-      1: 'from-blue-500 to-blue-600',
-      2: 'from-purple-500 to-purple-600',
-      3: 'from-green-500 to-green-600',
-      4: 'from-indigo-500 to-indigo-600',
-      5: 'from-cyan-500 to-cyan-600',
-      6: 'from-amber-500 to-amber-600',
-      7: 'from-pink-500 to-pink-600'
+      1: '#3b82f6',
+      2: '#a855f7',
+      3: '#10b981',
+      4: '#6366f1',
+      5: '#06b6d4',
+      6: '#f59e0b',
+      7: '#ec4899'
     };
-    return colors[templateId] || 'from-gray-500 to-gray-600';
+    return colors[templateId] || '#6b7280';
   };
 
   if (loading) {
@@ -94,7 +119,6 @@ const MyResumes = ({userId}) => {
             <div className="logo-icon"></div>
             <h1 className="logo-text">Resume Maker</h1>
           </Link>
-          
         </div>
       </header>
 
@@ -123,12 +147,35 @@ const MyResumes = ({userId}) => {
           <div className="resumes-grid">
             {resumes.map((resume) => (
               <div key={resume.id} className="resume-card">
+                {/* Animated Background Gradient */}
+                <div 
+                  className="card-gradient-bg"
+                  style={{ '--template-color': getTemplateColor(resume.templateId) }}
+                ></div>
+                
+                {/* Delete Button */}
+                <button
+                  className="delete-btn"
+                  onClick={() => setDeleteConfirm(resume.id)}
+                  disabled={deleting === resume.id}
+                  title="Delete Resume"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6" />
+                  </svg>
+                </button>
+
                 {/* Card Header */}
-                <div className={`card-header bg-gradient-to-r ${getTemplateColor(resume.templateId)}`}>
+                <div className="card-header">
                   <div className="card-header-top">
-                    <span className="template-badge">
+                    <span 
+                      className="template-badge"
+                      style={{ borderColor: getTemplateColor(resume.templateId), color: getTemplateColor(resume.templateId) }}
+                    >
                       {getTemplateName(resume.templateId)}
                     </span>
+                  </div>
+                  <div className="resume-icon-wrapper">
                     <span className="resume-emoji">📄</span>
                   </div>
                   <h3 className="resume-title">{resume.title || 'Untitled Resume'}</h3>
@@ -138,15 +185,18 @@ const MyResumes = ({userId}) => {
                 <div className="card-body">
                   <div className="resume-info">
                     <div className="info-row">
+                      <span className="info-icon">🎨</span>
                       <span className="info-label">Template:</span>
                       <span className="info-value">{getTemplateName(resume.templateId)}</span>
                     </div>
                     <div className="info-row">
-                      <span className="info-label">Resume ID:</span>
-                      <span className="info-value resume-id">#{resume.id}</span>
+                      <span className="info-icon">#</span>
+                      <span className="info-label">ID:</span>
+                      <span className="info-value resume-id">{resume.id}</span>
                     </div>
                     {resume.createdAt && (
                       <div className="info-row">
+                        <span className="info-icon">📅</span>
                         <span className="info-label">Created:</span>
                         <span className="info-value">
                           {new Date(resume.createdAt).toLocaleDateString()}
@@ -161,16 +211,44 @@ const MyResumes = ({userId}) => {
                       onClick={() => navigate(`/my-resumes/getresume/${resume.id}`)}
                       className="view-button"
                     >
-                      View Resume
+                      <span className="btn-icon">👁️</span>
+                      View
                     </button>
                     <button 
-                      onClick={() => navigate(`/editor/${resume.id}`)}
+                      onClick={() => navigate(`/dashboard/resume-editor/${resume.id}`)}
                       className="edit-button"
                     >
+                      <span className="btn-icon">✏️</span>
                       Edit
                     </button>
                   </div>
                 </div>
+
+                {/* Delete Confirmation Modal */}
+                {deleteConfirm === resume.id && (
+                  <div className="delete-modal">
+                    <div className="delete-modal-content">
+                      <h4>Delete Resume?</h4>
+                      <p>This action cannot be undone.</p>
+                      <div className="delete-modal-actions">
+                        <button
+                          onClick={() => setDeleteConfirm(null)}
+                          className="cancel-delete-btn"
+                          disabled={deleting === resume.id}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => handleDelete(resume.id)}
+                          className="confirm-delete-btn"
+                          disabled={deleting === resume.id}
+                        >
+                          {deleting === resume.id ? 'Deleting...' : 'Delete'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
