@@ -10,6 +10,11 @@ import CreativeBold from './Template7';
 import "./css-files/ResumeEditor.css";
 import ErrorBoundary from "../../ErrorBoundry.jsx";
 
+
+const API_BASE_URL2 = 'http://localhost:8080';
+const API_BASE_URL = 'https://resumemaker-1.onrender.com';
+
+
 // PDF.js Viewer Component
 const PDFViewer = ({ pdfBlob }) => {
   const canvasRef = useRef(null);
@@ -779,8 +784,8 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
       
       // If resumeId exists, update; otherwise create new
       const endpoint = resumeId 
-        ? `http://localhost:8080/resume/${resumeId}`
-        : "http://localhost:8080/saveall";
+        ? `${API_BASE_URL}/resume/${resumeId}`
+        : `${API_BASE_URL}/saveall`;
       
       const method = resumeId ? "PUT" : "POST";
       
