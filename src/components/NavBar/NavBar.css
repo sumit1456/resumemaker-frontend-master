@@ -232,3 +232,65 @@
         font-size: 0.8rem;
     }
 }
+
+/* Hamburger icon */
+.hamburger {
+  display: none;
+  font-size: 1.5rem;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+/* Sidebar */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: -250px;
+  width: 200px;
+  height: 100vh;
+  background: #000000;
+  padding: 2rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  transition: left 0.3s ease;
+  z-index: 1500;
+}
+
+.sidebar p a {
+  color: #b3b3b3;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 1.1rem;
+}
+
+.sidebar p a:hover {
+  color: #ffffff;
+}
+
+.sidebar.open {
+  left: 0;
+}
+
+/* Overlay */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1400;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .list {
+    display: none;
+  }
+  
+  .hamburger {
+    display: flex;
+    align-items: center;
+  }
+}
