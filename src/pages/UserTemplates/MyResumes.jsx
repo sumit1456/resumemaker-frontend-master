@@ -20,7 +20,7 @@ const MyResumes = ({userId}) => {
   const fetchResumes = async () => {
     try {
       setLoading(true);
-      const cleanId = String(resumeId).trim();
+      const cleanId = String(userId).trim();
       const response = await fetch(`${API_BASE_URL}/my-resumes/${userId}`);
       
       if (!response.ok) {
