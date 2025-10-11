@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 
@@ -235,10 +234,10 @@ const Template5 = ({
       color: "#34495E",
     },
     projectItem: {
-      marginBottom: 18,
+      marginBottom: 16,
       backgroundColor: "#F8F9FA",
-      padding: 14,
-      borderRadius: 4,
+      padding: 12,
+      paddingLeft: 14,
       borderLeftWidth: 4,
       borderLeftColor: "#E74C3C",
     },
@@ -270,11 +269,23 @@ const Template5 = ({
       color: "#3498DB",
       marginBottom: 6,
     },
+    projectBulletItem: {
+      flexDirection: "row",
+      marginBottom: 4,
+      alignItems: "flex-start",
+    },
+    projectBullet: {
+      width: 10,
+      fontSize: 8,
+      marginRight: 8,
+      color: "#E74C3C",
+      marginTop: 1,
+    },
     projectDesc: {
+      flex: 1,
       fontSize: 9,
       lineHeight: 1.5,
       color: "#34495E",
-      marginBottom: 3,
     },
     customSectionItem: {
       flexDirection: "row",
@@ -485,9 +496,10 @@ const Template5 = ({
                     {proj.description?.map(
                       (desc, j) =>
                         desc.trim() && (
-                          <Text key={j} style={styles.projectDesc}>
-                            • {desc}
-                          </Text>
+                          <View key={j} style={styles.projectBulletItem}>
+                            <Text style={styles.projectBullet}>•</Text>
+                            <Text style={styles.projectDesc}>{desc}</Text>
+                          </View>
                         )
                     )}
                   </View>
