@@ -10,10 +10,8 @@ import CreativeBold from './Template7';
 import "./css-files/ResumeEditor.css";
 import ErrorBoundary from "../../ErrorBoundry.jsx";
 
-
 const API_BASE_URL2 = 'http://localhost:8080';
 const API_BASE_URL = 'https://resumemaker-1.onrender.com';
-
 
 // PDF.js Viewer Component
 const PDFViewer = ({ pdfBlob }) => {
@@ -193,8 +191,8 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
 
   const [isLoadingResume, setIsLoadingResume] = useState(false);
   const [resumeTitle, setResumeTitle] = useState("");
+  const [fetchError, setFetchError] = useState("");
 
-  // Section visibility state
   const [showSummary, setShowSummary] = useState(true);
   const [showSkills, setShowSkills] = useState(true);
   const [showExperience, setShowExperience] = useState(true);
@@ -202,133 +200,96 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
   const [showEducation, setShowEducation] = useState(true);
   const [showCertifications, setShowCertifications] = useState(true);
 
-  // Custom sections state
-
   const [customSections, setCustomSections] = useState([]);
-    const [resumeDetails, setResumeDetails] = useState({
-    name: "SUMIT HATEKAR",
-    title: "Full Stack Developer",
+  const [resumeDetails, setResumeDetails] = useState({
+    name: "",
+    title: "",
     contact: {
-      phone: "+91 9876543210",
-      email: "sumithatekar@gmail.com",
-      linkedin: "linkedin.com/in/sumithatekar",
-      github: "github.com/sumithatekar",
-      location: "Pune, India",
+      phone: "",
+      email: "",
+      linkedin: "",
+      github: "",
+      location: "",
     },
-    summary: "Dedicated Java Developer with expertise in Java, Spring Boot, Hibernate/JPA, and RESTful APIs, specializing in building scalable backend systems. Skilled in database design, SQL optimization, and microservices architecture, with strong understanding of OOP and design patterns. Proficient in developing secure, high-performance enterprise applications and experienced in Agile/Scrum environments. Eager to contribute backend expertise while continuously growing as a Java professional.",
+    summary: "",
   });
   
-  const [skills, setSkills] = useState([
-    "Programming Languages - Java, JavaScript (ES6+), SQL",
-    "Databases - PostgreSQL, Oracle",
-    "Frameworks & Libraries - React.js, Spring Boot, Hibernate, Express.js (basic)",
-    "Tools & Platforms - Git, GitHub, Postman, Swagger, Maven, Eclipse/IntelliJ",
-    "Cloud & Deployment - AWS (EC2, S3, RDS), Docker (basic)",
-    "Soft Skills - Problem Solving, Communication, Agile Teamwork"
-  ]);
+  const [skills, setSkills] = useState([""]);
+  const [experiences, setExperiences] = useState([{
+    position: "",
+    company: "",
+    location: "",
+    duration: "",
+    achievements: [""]
+  }]);
+  const [projects, setProjects] = useState([{
+    name: "",
+    duration: "",
+    technologies: "",
+    description: [""],
+    link: ""
+  }]);
+  const [educationList, setEducationList] = useState([{
+    degree: "",
+    institution: "",
+    location: "",
+    year: "",
+    gpa: ""
+  }]);
+  const [certifications, setCertifications] = useState([""]);
   
-  
-  const [experiences, setExperiences] = useState([
-    {
-      position: "Software Engineer",
-      company: "Tech Solutions Ltd.",
-      location: "Pune, India",
-      duration: "Jan 2022 - Present",
-      achievements: [
-        "Developed client dashboard using React",
-        "Implemented REST APIs in Node.js"
-      ],
-    },
-  ]);
-  
-  const [projects, setProjects] = useState([
-    {
-      name: "Resume Maker Pro",
-      duration: "September 2023 - ongoing",
-      technologies: "React, Java, Spring Boot, Spring Security, Docker",
-      description: [
-        "Developed the backend using Java Spring Boot with Hibernate/JPA for efficient data storage and retrieval.",
-        "Built RESTful APIs to manage resume sections such as personal info, skills, certifications, and experience.",
-        "Implemented React.js frontend for real-time editing and live preview of resume templates.",
-        "Integrated resume download/export functionality (PDF/Docx) with formatted layouts.",
-        "Ensured scalable, modular architecture with clean code and reusable components."
-      ],
-      link: "https://janedoe.dev",
-    },
-    {
-      name: "Find Issue Web Application",
-      duration: "June 2023 - August 2023",
-      technologies: "Java, Spring Boot, Thymeleaf, MySQL",
-      description: [
-        "Built a web application to log, track, and manage software issues.",
-        "Implemented Spring Boot backend with RESTful APIs for CRUD operations on issues.",
-        "Designed MySQL database schema for efficient issue storage and retrieval.",
-        "Created user-friendly UI using Thymeleaf for issue submission and tracking.",
-        "Added role-based access control to allow admin and user-specific views."
-      ],
-      link: "https://github.com/sumithatekar/find-issue-app",
-    }
-  ]);
-  
-  const [educationList, setEducationList] = useState([
-    {
-      degree: "Master of Science in Computer Applications",
-      institution: "Savitribai Phule University",
-      location: "Pune, India",
-      year: "2025",
-      gpa: "Currently pursuing",
-    },
-    {
-      degree: "BSc Chemistry",
-      institution: "Shivaji University",
-      location: "Koregaon Satara, India",
-      year: "2021",
-      gpa: "7.52",
-    },
-  ]);
-  
-  const [certifications, setCertifications] = useState([
-    "Java Full Stack Development - QSpiders Wakad 2024",
-    "Scrum Master Certified",
-  ]);
-  
-   const [sectionTitles, setSectionTitles] = useState({
-      summary: "Summary",
-      skills: "Skills",
-      experience: "Experience",
-      projects: "Projects",
-      education: "Education",
-      certifications: "Certifications"
-    });
-  
-    
-    
-  
-    
-  
-   
-  
+  const [sectionTitles, setSectionTitles] = useState({
+    summary: "Summary",
+    skills: "Skills",
+    experience: "Experience",
+    projects: "Projects",
+    education: "Education",
+    certifications: "Certifications"
+  });
 
   const [saving, setSaving] = useState(false);
   const [downloading, setDownloading] = useState(false);
-  const [error, setError] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState("1");
   const [isTemplateLoading, setIsTemplateLoading] = useState(false);
   const [pdfBlob, setPdfBlob] = useState(null);
   const [generatingPreview, setGeneratingPreview] = useState(false);
 
-  // FIXED: Fetch existing resume if resumeId exists
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => setSuccessMessage(""), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+
+  useEffect(() => {
+    if (saveError) {
+      const timer = setTimeout(() => setSaveError(""), 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [saveError]);
+
   useEffect(() => {
     const fetchResume = async () => {
       if (!resumeId) return;
       
       setIsLoadingResume(true);
-      setError("");
+      setFetchError("");
       try {
-        const response = await fetch(`http://localhost:8080/my-resumes/getresume/${resumeId}`);
+        const isDevelopment = window.location.hostname === 'localhost';
+        const baseUrl = isDevelopment ? API_BASE_URL2 : API_BASE_URL;
+        
+        const response = await fetch(`${baseUrl}/my-resumes/getresume/${resumeId}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+        });
         
         if (response.status === 404) {
-          setError("Resume not found. It may have been deleted.");
+          setFetchError("Resume not found. It may have been deleted.");
           setIsLoadingResume(false);
           return;
         }
@@ -340,13 +301,9 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
         const data = await response.json();
         console.log("Fetched resume data:", data);
         
-        // Set resume title
         setResumeTitle(data.title || "");
-        
-        // Set template
         setSelectedTemplate(data.templateId ? String(data.templateId) : "1");
         
-        // FIXED: Properly set resume details including contact
         setResumeDetails({
           name: data.details?.name || "",
           title: data.details?.title || "",
@@ -360,7 +317,6 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
           }
         });
         
-        // FIXED: Handle skills array properly
         if (data.skills) {
           let skillsArray = [];
           if (Array.isArray(data.skills)) {
@@ -375,7 +331,6 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
           setSkills(skillsArray.length > 0 ? skillsArray : [""]);
         }
         
-        // FIXED: Ensure experiences have all required fields
         if (data.experiences && Array.isArray(data.experiences)) {
           const mappedExperiences = data.experiences.map(exp => ({
             position: exp.position || "",
@@ -387,7 +342,6 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
           setExperiences(mappedExperiences);
         }
         
-        // FIXED: Ensure projects have all required fields including link
         if (data.projects && Array.isArray(data.projects)) {
           const mappedProjects = data.projects.map(proj => ({
             name: proj.name || "",
@@ -399,7 +353,6 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
           setProjects(mappedProjects);
         }
         
-        // FIXED: Ensure education has all required fields
         if (data.educationList && Array.isArray(data.educationList)) {
           const mappedEducation = data.educationList.map(edu => ({
             degree: edu.degree || "",
@@ -411,7 +364,6 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
           setEducationList(mappedEducation);
         }
         
-        // FIXED: Handle certifications array properly
         if (data.certifications) {
           let certsArray = [];
           if (Array.isArray(data.certifications)) {
@@ -426,7 +378,6 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
           setCertifications(certsArray.length > 0 ? certsArray : [""]);
         }
         
-        // Set visibility flags
         setShowSummary(data.showSummary !== undefined ? data.showSummary : true);
         setShowSkills(data.showSkills !== undefined ? data.showSkills : true);
         setShowExperience(data.showExperience !== undefined ? data.showExperience : true);
@@ -434,12 +385,10 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
         setShowEducation(data.showEducation !== undefined ? data.showEducation : true);
         setShowCertifications(data.showCertifications !== undefined ? data.showCertifications : true);
         
-        // Set custom sections
         if (data.customSections && Array.isArray(data.customSections)) {
           setCustomSections(data.customSections);
         }
         
-        // FIXED: Set section titles if available
         if (data.sectionTitles) {
           setSectionTitles({
             summary: data.sectionTitles.summary || "Summary",
@@ -451,9 +400,11 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
           });
         }
         
+        setFetchError("");
+        
       } catch (err) {
         console.error("Error fetching resume:", err);
-        setError(`Failed to load resume: ${err.message}. Please check if the backend server is running.`);
+        setFetchError(`Failed to load resume: ${err.message}`);
       } finally {
         setIsLoadingResume(false);
       }
@@ -462,7 +413,6 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
     fetchResume();
   }, [resumeId]);
 
-  // Custom section handlers
   const addCustomSection = useCallback(() => {
     setCustomSections(prev => [...prev, {
       id: Date.now(),
@@ -715,6 +665,7 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
 
   const downloadPDF = async () => {
     setDownloading(true);
+    setSaveError("");
     try {
       const { pdf } = await import("@react-pdf/renderer");
       
@@ -764,14 +715,15 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${resumeDetails.name.replace(/\s+/g, "_")}_Resume.pdf`;
+      link.download = `${resumeDetails.name.replace(/\s+/g, "_") || "Resume"}_Resume.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
+      setSuccessMessage("PDF downloaded successfully!");
     } catch (err) {
       console.error(err);
-      alert("Error generating PDF");
+      setSaveError("Error generating PDF");
     } finally {
       setDownloading(false);
     }
@@ -779,14 +731,14 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
 
   const handleSaveAll = async () => {
     setSaving(true);
-    setError("");
+    setSaveError("");
+    setSuccessMessage("");
     try {
       const transformedSkills = skills.map(skill => ({ name: skill.trim() })).filter(skill => skill.name !== "");
       const transformedCertifications = certifications.map(cert => ({ name: cert.trim() })).filter(cert => cert.name !== "");
       
       let title = resumeTitle;
       
-      // Only prompt for title if creating new resume
       if (!resumeId && !title) {
         title = prompt("Enter the title for the resume");
         if (!title) {
@@ -794,6 +746,9 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
           return;
         }
       }
+      
+      const isDevelopment = window.location.hostname === 'localhost';
+      const baseUrl = isDevelopment ? API_BASE_URL2 : API_BASE_URL;
       
       const payload = {
         title,
@@ -820,40 +775,45 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
         sectionTitles
       };
       
-      // If resumeId exists, update; otherwise create new
       const endpoint = resumeId 
-        ? `${API_BASE_URL}/resume/${resumeId}`
-        : `${API_BASE_URL}/saveall`;
+        ? `${baseUrl}/resume/${resumeId}`
+        : `${baseUrl}/saveall`;
       
       const method = resumeId ? "PUT" : "POST";
       
       const res = await fetch(endpoint, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
         body: JSON.stringify(payload),
       });
       
-      if (!res.ok) throw new Error("Save failed");
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Save failed: ${errorText || res.status}`);
+      }
       
       const message = resumeId ? "Resume updated successfully!" : "Resume saved successfully!";
-      alert(message);
+      setSuccessMessage(message);
       
-      // If this was a new resume, optionally redirect to edit page with new ID
       if (!resumeId) {
         const data = await res.json();
         if (data.id) {
-          window.location.href = `/dashboard/resume-editor/${data.id}`;
+          setTimeout(() => {
+            window.location.href = `/dashboard/resume-editor/${data.id}`;
+          }, 1500);
         }
       }
     } catch (err) {
       console.error(err);
-      setError("Failed to save resume");
+      setSaveError(`Failed to save resume: ${err.message}`);
     } finally {
       setSaving(false);
     }
   };
 
-  // Show loading state while fetching resume
   if (isLoadingResume) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -865,14 +825,13 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
     );
   }
 
-  // Show error if resume fetch failed
-  if (resumeId && error && !resumeDetails.name) {
+  if (resumeId && fetchError && !resumeDetails.name) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', padding: '2rem' }}>
         <div style={{ textAlign: 'center', maxWidth: '500px' }}>
           <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚠️</div>
           <h2 style={{ marginBottom: '1rem', color: '#e74c3c' }}>Failed to Load Resume</h2>
-          <p style={{ marginBottom: '1.5rem', color: '#666' }}>{error}</p>
+          <p style={{ marginBottom: '1.5rem', color: '#666' }}>{fetchError}</p>
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
             <button 
               onClick={() => window.location.reload()} 
@@ -986,6 +945,40 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
           outline: none;
           border-bottom-color: #000;
         }
+        .success-message {
+          background-color: #d4edda;
+          border: 1px solid #c3e6cb;
+          color: #155724;
+          padding: 12px 20px;
+          border-radius: 4px;
+          margin-bottom: 1rem;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          animation: slideIn 0.3s ease-out;
+        }
+        .error-message {
+          background-color: #f8d7da;
+          border: 1px solid #f5c6cb;
+          color: #721c24;
+          padding: 12px 20px;
+          border-radius: 4px;
+          margin-bottom: 1rem;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
       `}</style>
       
       <div className="resume-editor-container">
@@ -1018,7 +1011,20 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
           <div className="editor-panel">
             <div className="ats-resume" ref={resumeRef}>
               
-              {/* Section Manager */}
+              {successMessage && (
+                <div className="success-message">
+                  <span>✓</span>
+                  <span>{successMessage}</span>
+                </div>
+              )}
+
+              {saveError && (
+                <div className="error-message">
+                  <span>⚠</span>
+                  <span>{saveError}</span>
+                </div>
+              )}
+              
               <div className="section-manager">
                 <h3 style={{ marginBottom: '0.75rem', fontSize: '1.1rem' }}>Manage Sections</h3>
                 <div className="section-toggle-grid">
@@ -1052,7 +1058,6 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
                 </button>
               </div>
 
-              {/* Header */}
               <header className="header">
                 <input className="name" value={resumeDetails.name} onChange={(e) => handleResumeDetailChange("name", e.target.value)} placeholder="Full Name" />
                 <input className="title" value={resumeDetails.title} onChange={(e) => handleResumeDetailChange("title", e.target.value)} placeholder="Professional Title" />
@@ -1069,7 +1074,6 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
                 </div>
               </header>
 
-              {/* Summary */}
               {showSummary && (
                 <section className="section">  
                   <div className="section-title">
@@ -1081,7 +1085,6 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
                 </section>
               )}
 
-              {/* Skills */}
               {showSkills && (
                 <section className="section">
                   <div className="section-title">
@@ -1100,7 +1103,6 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
                 </section>
               )}
 
-              {/* Experience */}
               {showExperience && (
                 <section className="section"> 
                   <div className="section-title">
@@ -1132,7 +1134,6 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
                 </section>
               )}
 
-              {/* Projects */}
               {showProjects && (
                 <section className="section">
                   <div className="section-title">
@@ -1164,7 +1165,6 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
                 </section>
               )}
 
-              {/* Education */}
               {showEducation && (
                 <section className="section">
                   <div className="section-title">
@@ -1188,7 +1188,6 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
                 </section>
               )}
 
-              {/* Certifications */}
               {showCertifications && (
                 <section className="section">
                   <div className="section-title">
@@ -1206,7 +1205,6 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
                 </section>
               )}
 
-              {/* Custom Sections */}
               {customSections.map((section) => (
                 <div key={section.id} className="custom-section-container">
                   <div className="custom-section-header">
@@ -1224,7 +1222,6 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
                 </div>
               ))}
 
-              {/* Action Buttons */}
               <div className="action-buttons">
                 <button className="btn-primary" onClick={handleSaveAll} disabled={saving}>
                   {saving ? "Saving..." : resumeId ? "Update Resume" : "Save Resume"}
@@ -1233,7 +1230,6 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
                   {downloading ? "Generating..." : "Download PDF"}
                 </button>
               </div>
-              {error && <div className="error-message">{error}</div>}
             </div>
           </div>
 

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { useParams } from "react-router-dom";
 import ResumeDocument from './Template1';
 import ModernResumeDocument from './Template2';
 import ATSFriendlyResumeDocument from './Template3';
@@ -8,6 +9,11 @@ import AcademicScholarDocument from './Template6';
 import CreativeBold from './Template7';
 import "./css-files/ResumeEditor.css";
 import ErrorBoundary from "../../ErrorBoundry.jsx";
+
+
+const API_BASE_URL2 = 'http://localhost:8080';
+const API_BASE_URL = 'https://resumemaker-1.onrender.com';
+
 
 // PDF.js Viewer Component
 const PDFViewer = ({ pdfBlob }) => {
@@ -67,8 +73,14 @@ const PDFViewer = ({ pdfBlob }) => {
   }, [pdfBlob]);
 
   useEffect(() => {
+    let renderTask = null;
     const renderPage = async () => {
       if (!pdfDoc || !canvasRef.current) return;
+      
+      if (renderTask) {
+        renderTask.cancel();
+      }
+      
       try {
         const page = await pdfDoc.getPage(currentPage);
         const baseViewport = page.getViewport({ scale: 1 });
@@ -84,13 +96,26 @@ const PDFViewer = ({ pdfBlob }) => {
         canvas.style.height = `${viewport.height}px`;
         context.scale(devicePixelRatio, devicePixelRatio);
         context.clearRect(0, 0, canvas.width, canvas.height);
-        await page.render({ canvasContext: context, viewport: viewport }).promise;
+        
+        renderTask = page.render({ canvasContext: context, viewport: viewport });
+        await renderTask.promise;
+        renderTask = null;
       } catch (error) {
-        console.error('Error rendering page:', error);
-        setError(`Failed to render page: ${error.message}`);
+        if (error.name === 'RenderingCancelledException') {
+          console.log('Rendering cancelled');
+        } else {
+          console.error('Error rendering page:', error);
+          setError(`Failed to render page: ${error.message}`);
+        }
       }
     };
     renderPage();
+    
+    return () => {
+      if (renderTask) {
+        renderTask.cancel();
+      }
+    };
   }, [pdfDoc, currentPage, scale, containerWidth]);
 
   const goToPrevious = () => setCurrentPage(prev => Math.max(1, prev - 1));
@@ -163,9 +188,13 @@ function useDebounce(value, delay) {
 }
 
 export default function ResumeEditor({ resume: propsResume, userId }) {
+  const { resumeId } = useParams();
   const resumeRef = useRef();
 
-  // Section visibility state - using explicit boolean flags
+  const [isLoadingResume, setIsLoadingResume] = useState(false);
+  const [resumeTitle, setResumeTitle] = useState("");
+
+  // Section visibility state
   const [showSummary, setShowSummary] = useState(true);
   const [showSkills, setShowSkills] = useState(true);
   const [showExperience, setShowExperience] = useState(true);
@@ -174,114 +203,111 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
   const [showCertifications, setShowCertifications] = useState(true);
 
   // Custom sections state
+
   const [customSections, setCustomSections] = useState([]);
-  const [resumeDetails, setResumeDetails] = useState({
-  name: "SUMIT HATEKAR",
-  title: "Full Stack Developer",
-  contact: {
-    phone: "+91 9876543210",
-    email: "sumithatekar@gmail.com",
-    linkedin: "linkedin.com/in/sumithatekar",
-    github: "github.com/sumithatekar",
-    location: "Pune, India",
-  },
-  summary: "Dedicated Java Developer with expertise in Java, Spring Boot, Hibernate/JPA, and RESTful APIs, specializing in building scalable backend systems. Skilled in database design, SQL optimization, and microservices architecture, with strong understanding of OOP and design patterns. Proficient in developing secure, high-performance enterprise applications and experienced in Agile/Scrum environments. Eager to contribute backend expertise while continuously growing as a Java professional.",
-});
-
-const [skills, setSkills] = useState([
-  "Programming Languages - Java, JavaScript (ES6+), SQL",
-  "Databases - PostgreSQL, Oracle",
-  "Frameworks & Libraries - React.js, Spring Boot, Hibernate, Express.js (basic)",
-  "Tools & Platforms - Git, GitHub, Postman, Swagger, Maven, Eclipse/IntelliJ",
-  "Cloud & Deployment - AWS (EC2, S3, RDS), Docker (basic)",
-  "Soft Skills - Problem Solving, Communication, Agile Teamwork"
-]);
-
-
-const [experiences, setExperiences] = useState([
-  {
-    position: "Software Engineer",
-    company: "Tech Solutions Ltd.",
-    location: "Pune, India",
-    duration: "Jan 2022 - Present",
-    achievements: [
-      "Developed client dashboard using React",
-      "Implemented REST APIs in Node.js"
-    ],
-  },
-]);
-
-const [projects, setProjects] = useState([
-  {
-    name: "Resume Maker Pro",
-    duration: "September 2023 - ongoing",
-    technologies: "React, Java, Spring Boot, Spring Security, Docker",
-    description: [
-      "Developed the backend using Java Spring Boot with Hibernate/JPA for efficient data storage and retrieval.",
-      "Built RESTful APIs to manage resume sections such as personal info, skills, certifications, and experience.",
-      "Implemented React.js frontend for real-time editing and live preview of resume templates.",
-      "Integrated resume download/export functionality (PDF/Docx) with formatted layouts.",
-      "Ensured scalable, modular architecture with clean code and reusable components."
-    ],
-    link: "https://janedoe.dev",
-  },
-  {
-    name: "Find Issue Web Application",
-    duration: "June 2023 - August 2023",
-    technologies: "Java, Spring Boot, Thymeleaf, MySQL",
-    description: [
-      "Built a web application to log, track, and manage software issues.",
-      "Implemented Spring Boot backend with RESTful APIs for CRUD operations on issues.",
-      "Designed MySQL database schema for efficient issue storage and retrieval.",
-      "Created user-friendly UI using Thymeleaf for issue submission and tracking.",
-      "Added role-based access control to allow admin and user-specific views."
-    ],
-    link: "https://github.com/sumithatekar/find-issue-app",
-  }
-]);
-
-const [educationList, setEducationList] = useState([
-  {
-    degree: "Master of Science in Computer Applications",
-    institution: "Savitribai Phule University",
-    location: "Pune, India",
-    year: "2025",
-    gpa: "Currently pursuing",
-  },
-  {
-    degree: "BSc Chemistry",
-    institution: "Shivaji University",
-    location: "Koregaon Satara, India",
-    year: "2021",
-    gpa: "7.52",
-  },
-]);
-
-const [certifications, setCertifications] = useState([
-  "Java Full Stack Development - QSpiders Wakad 2024",
-  "Scrum Master Certified",
-]);
-
- const [sectionTitles, setSectionTitles] = useState({
-    summary: "Summary",
-    skills: "Skills",
-    experience: "Experience",
-    projects: "Projects",
-    education: "Education",
-    certifications: "Certifications"
+    const [resumeDetails, setResumeDetails] = useState({
+    name: "SUMIT HATEKAR",
+    title: "Full Stack Developer",
+    contact: {
+      phone: "+91 9876543210",
+      email: "sumithatekar@gmail.com",
+      linkedin: "linkedin.com/in/sumithatekar",
+      github: "github.com/sumithatekar",
+      location: "Pune, India",
+    },
+    summary: "Dedicated Java Developer with expertise in Java, Spring Boot, Hibernate/JPA, and RESTful APIs, specializing in building scalable backend systems. Skilled in database design, SQL optimization, and microservices architecture, with strong understanding of OOP and design patterns. Proficient in developing secure, high-performance enterprise applications and experienced in Agile/Scrum environments. Eager to contribute backend expertise while continuously growing as a Java professional.",
   });
-
+  
+  const [skills, setSkills] = useState([
+    "Programming Languages - Java, JavaScript (ES6+), SQL",
+    "Databases - PostgreSQL, Oracle",
+    "Frameworks & Libraries - React.js, Spring Boot, Hibernate, Express.js (basic)",
+    "Tools & Platforms - Git, GitHub, Postman, Swagger, Maven, Eclipse/IntelliJ",
+    "Cloud & Deployment - AWS (EC2, S3, RDS), Docker (basic)",
+    "Soft Skills - Problem Solving, Communication, Agile Teamwork"
+  ]);
   
   
-
+  const [experiences, setExperiences] = useState([
+    {
+      position: "Software Engineer",
+      company: "Tech Solutions Ltd.",
+      location: "Pune, India",
+      duration: "Jan 2022 - Present",
+      achievements: [
+        "Developed client dashboard using React",
+        "Implemented REST APIs in Node.js"
+      ],
+    },
+  ]);
   
-
- 
-
-
-
-
-
+  const [projects, setProjects] = useState([
+    {
+      name: "Resume Maker Pro",
+      duration: "September 2023 - ongoing",
+      technologies: "React, Java, Spring Boot, Spring Security, Docker",
+      description: [
+        "Developed the backend using Java Spring Boot with Hibernate/JPA for efficient data storage and retrieval.",
+        "Built RESTful APIs to manage resume sections such as personal info, skills, certifications, and experience.",
+        "Implemented React.js frontend for real-time editing and live preview of resume templates.",
+        "Integrated resume download/export functionality (PDF/Docx) with formatted layouts.",
+        "Ensured scalable, modular architecture with clean code and reusable components."
+      ],
+      link: "https://janedoe.dev",
+    },
+    {
+      name: "Find Issue Web Application",
+      duration: "June 2023 - August 2023",
+      technologies: "Java, Spring Boot, Thymeleaf, MySQL",
+      description: [
+        "Built a web application to log, track, and manage software issues.",
+        "Implemented Spring Boot backend with RESTful APIs for CRUD operations on issues.",
+        "Designed MySQL database schema for efficient issue storage and retrieval.",
+        "Created user-friendly UI using Thymeleaf for issue submission and tracking.",
+        "Added role-based access control to allow admin and user-specific views."
+      ],
+      link: "https://github.com/sumithatekar/find-issue-app",
+    }
+  ]);
+  
+  const [educationList, setEducationList] = useState([
+    {
+      degree: "Master of Science in Computer Applications",
+      institution: "Savitribai Phule University",
+      location: "Pune, India",
+      year: "2025",
+      gpa: "Currently pursuing",
+    },
+    {
+      degree: "BSc Chemistry",
+      institution: "Shivaji University",
+      location: "Koregaon Satara, India",
+      year: "2021",
+      gpa: "7.52",
+    },
+  ]);
+  
+  const [certifications, setCertifications] = useState([
+    "Java Full Stack Development - QSpiders Wakad 2024",
+    "Scrum Master Certified",
+  ]);
+  
+   const [sectionTitles, setSectionTitles] = useState({
+      summary: "Summary",
+      skills: "Skills",
+      experience: "Experience",
+      projects: "Projects",
+      education: "Education",
+      certifications: "Certifications"
+    });
+  
+    
+    
+  
+    
+  
+   
+  
 
   const [saving, setSaving] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -290,6 +316,151 @@ const [certifications, setCertifications] = useState([
   const [isTemplateLoading, setIsTemplateLoading] = useState(false);
   const [pdfBlob, setPdfBlob] = useState(null);
   const [generatingPreview, setGeneratingPreview] = useState(false);
+
+  // FIXED: Fetch existing resume if resumeId exists
+  useEffect(() => {
+    const fetchResume = async () => {
+      if (!resumeId) return;
+      
+      setIsLoadingResume(true);
+      setError("");
+      try {
+        const response = await fetch(`http://localhost:8080/my-resumes/getresume/${resumeId}`);
+        
+        if (response.status === 404) {
+          setError("Resume not found. It may have been deleted.");
+          setIsLoadingResume(false);
+          return;
+        }
+        
+        if (!response.ok) {
+          throw new Error(`Server error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log("Fetched resume data:", data);
+        
+        // Set resume title
+        setResumeTitle(data.title || "");
+        
+        // Set template
+        setSelectedTemplate(data.templateId ? String(data.templateId) : "1");
+        
+        // FIXED: Properly set resume details including contact
+        setResumeDetails({
+          name: data.details?.name || "",
+          title: data.details?.title || "",
+          summary: data.details?.summary || "",
+          contact: {
+            phone: data.contact?.phone || "",
+            email: data.contact?.email || "",
+            linkedin: data.contact?.linkedin || "",
+            github: data.contact?.github || "",
+            location: data.contact?.location || ""
+          }
+        });
+        
+        // FIXED: Handle skills array properly
+        if (data.skills) {
+          let skillsArray = [];
+          if (Array.isArray(data.skills)) {
+            skillsArray = data.skills.map(s => {
+              if (typeof s === 'string') return s;
+              if (s && s.name) return s.name;
+              return '';
+            }).filter(s => s !== '');
+          } else if (typeof data.skills === 'string') {
+            skillsArray = [data.skills];
+          }
+          setSkills(skillsArray.length > 0 ? skillsArray : [""]);
+        }
+        
+        // FIXED: Ensure experiences have all required fields
+        if (data.experiences && Array.isArray(data.experiences)) {
+          const mappedExperiences = data.experiences.map(exp => ({
+            position: exp.position || "",
+            company: exp.company || "",
+            location: exp.location || "",
+            duration: exp.duration || "",
+            achievements: Array.isArray(exp.achievements) && exp.achievements.length > 0 ? exp.achievements : [""]
+          }));
+          setExperiences(mappedExperiences);
+        }
+        
+        // FIXED: Ensure projects have all required fields including link
+        if (data.projects && Array.isArray(data.projects)) {
+          const mappedProjects = data.projects.map(proj => ({
+            name: proj.name || "",
+            duration: proj.duration || "",
+            technologies: proj.technologies || "",
+            description: Array.isArray(proj.description) && proj.description.length > 0 ? proj.description : [""],
+            link: proj.link || ""
+          }));
+          setProjects(mappedProjects);
+        }
+        
+        // FIXED: Ensure education has all required fields
+        if (data.educationList && Array.isArray(data.educationList)) {
+          const mappedEducation = data.educationList.map(edu => ({
+            degree: edu.degree || "",
+            institution: edu.institution || "",
+            location: edu.location || "",
+            year: edu.year || "",
+            gpa: edu.gpa || ""
+          }));
+          setEducationList(mappedEducation);
+        }
+        
+        // FIXED: Handle certifications array properly
+        if (data.certifications) {
+          let certsArray = [];
+          if (Array.isArray(data.certifications)) {
+            certsArray = data.certifications.map(c => {
+              if (typeof c === 'string') return c;
+              if (c && c.name) return c.name;
+              return '';
+            }).filter(c => c !== '');
+          } else if (typeof data.certifications === 'string') {
+            certsArray = [data.certifications];
+          }
+          setCertifications(certsArray.length > 0 ? certsArray : [""]);
+        }
+        
+        // Set visibility flags
+        setShowSummary(data.showSummary !== undefined ? data.showSummary : true);
+        setShowSkills(data.showSkills !== undefined ? data.showSkills : true);
+        setShowExperience(data.showExperience !== undefined ? data.showExperience : true);
+        setShowProjects(data.showProjects !== undefined ? data.showProjects : true);
+        setShowEducation(data.showEducation !== undefined ? data.showEducation : true);
+        setShowCertifications(data.showCertifications !== undefined ? data.showCertifications : true);
+        
+        // Set custom sections
+        if (data.customSections && Array.isArray(data.customSections)) {
+          setCustomSections(data.customSections);
+        }
+        
+        // FIXED: Set section titles if available
+        if (data.sectionTitles) {
+          setSectionTitles({
+            summary: data.sectionTitles.summary || "Summary",
+            skills: data.sectionTitles.skills || "Skills",
+            experience: data.sectionTitles.experience || "Experience",
+            projects: data.sectionTitles.projects || "Projects",
+            education: data.sectionTitles.education || "Education",
+            certifications: data.sectionTitles.certifications || "Certifications"
+          });
+        }
+        
+      } catch (err) {
+        console.error("Error fetching resume:", err);
+        setError(`Failed to load resume: ${err.message}. Please check if the backend server is running.`);
+      } finally {
+        setIsLoadingResume(false);
+      }
+    };
+
+    fetchResume();
+  }, [resumeId]);
 
   // Custom section handlers
   const addCustomSection = useCallback(() => {
@@ -363,39 +534,30 @@ const [certifications, setCertifications] = useState([
     if (isTemplateLoading) return;
     setGeneratingPreview(true);
     try {
-      console.log('Generating preview with visibility flags:', {
-        showSummary: debouncedData.showSummary,
-        showSkills: debouncedData.showSkills,
-        showExperience: debouncedData.showExperience,
-        showProjects: debouncedData.showProjects,
-        showEducation: debouncedData.showEducation,
-        showCertifications: debouncedData.showCertifications
-      });
-      
       const { pdf } = await import("@react-pdf/renderer");
       let doc;
       switch (selectedTemplate) {
-  case "1":
-    doc = React.createElement(ResumeDocument, { ...debouncedData, sectionTitles });
-    break;
-  case "2":
-    doc = React.createElement(ModernResumeDocument, { ...debouncedData, sectionTitles });
-    break;
-  case "3":
-    doc = React.createElement(ATSFriendlyResumeDocument, { ...debouncedData, sectionTitles });
-    break;
-  case "4":
-    doc = React.createElement(ExecutiveEliteDocument, { ...debouncedData, sectionTitles });
-    break;
-  case "5":
-    doc = React.createElement(TechInnovatorDocument, { ...debouncedData, sectionTitles });
-    break;
-  case "6":
-    doc = React.createElement(AcademicScholarDocument, { ...debouncedData, sectionTitles });
-    break;
-  default:
-    doc = React.createElement(CreativeBold, { ...debouncedData, sectionTitles });
-}
+        case "1":
+          doc = React.createElement(ResumeDocument, { ...debouncedData, sectionTitles });
+          break;
+        case "2":
+          doc = React.createElement(ModernResumeDocument, { ...debouncedData, sectionTitles });
+          break;
+        case "3":
+          doc = React.createElement(ATSFriendlyResumeDocument, { ...debouncedData, sectionTitles });
+          break;
+        case "4":
+          doc = React.createElement(ExecutiveEliteDocument, { ...debouncedData, sectionTitles });
+          break;
+        case "5":
+          doc = React.createElement(TechInnovatorDocument, { ...debouncedData, sectionTitles });
+          break;
+        case "6":
+          doc = React.createElement(AcademicScholarDocument, { ...debouncedData, sectionTitles });
+          break;
+        default:
+          doc = React.createElement(CreativeBold, { ...debouncedData, sectionTitles });
+      }
 
       const asPdf = pdf(doc);
       const blob = await asPdf.toBlob();
@@ -406,39 +568,17 @@ const [certifications, setCertifications] = useState([
     } finally {
       setGeneratingPreview(false);
     }
-  }, [selectedTemplate, debouncedData, isTemplateLoading]);
+  }, [selectedTemplate, debouncedData, sectionTitles, isTemplateLoading]);
 
   useEffect(() => {
-    generatePreview();
-  }, [generatePreview]);
-
-  useEffect(() => {
-    if (propsResume) {
-      setResumeDetails({
-        name: propsResume.name || resumeDetails.name,
-        title: propsResume.title || resumeDetails.title,
-        contact: propsResume.contact || resumeDetails.contact,
-        summary: propsResume.summary || resumeDetails.summary,
-      });
-      if (propsResume.skills) {
-        if (typeof propsResume.skills === 'string') {
-          setSkills(propsResume.skills.split(',').map(skill => skill.trim()).filter(skill => skill));
-        } else if (Array.isArray(propsResume.skills)) {
-          setSkills(propsResume.skills);
-        }
-      }
-      setExperiences(propsResume.experience || experiences);
-      setProjects(propsResume.projects || projects);
-      setEducationList(propsResume.education || educationList);
-      setCertifications(propsResume.certifications || certifications);
+    if (!isLoadingResume) {
+      generatePreview();
     }
-  }, [propsResume]);
+  }, [generatePreview, isLoadingResume]);
 
   const handleTemplateChange = useCallback((newTemplate) => {
     setIsTemplateLoading(true);
     setSelectedTemplate(newTemplate);
-    console.log(Number(newTemplate));
-    
     setTimeout(() => setIsTemplateLoading(false), 100);
   }, []);
 
@@ -578,7 +718,6 @@ const [certifications, setCertifications] = useState([
     try {
       const { pdf } = await import("@react-pdf/renderer");
       
-      // Use current data with visibility flags for download
       const downloadData = {
         resumeDetails,
         skills,
@@ -596,9 +735,6 @@ const [certifications, setCertifications] = useState([
         sectionTitles
       };
 
-      
-      
-      
       let doc;
       switch (selectedTemplate) {
         case "1":
@@ -610,19 +746,19 @@ const [certifications, setCertifications] = useState([
         case "3":
           doc = React.createElement(ATSFriendlyResumeDocument, downloadData);
           break;
-
-         case "4":
-  doc = React.createElement(ExecutiveEliteDocument, downloadData);
-  break;
-case "5":
-  doc = React.createElement(TechInnovatorDocument, downloadData);
-  break;
-case "6":
-  doc = React.createElement(AcademicScholarDocument, downloadData);
-  break;  
- 
-       
+        case "4":
+          doc = React.createElement(ExecutiveEliteDocument, downloadData);
+          break;
+        case "5":
+          doc = React.createElement(TechInnovatorDocument, downloadData);
+          break;
+        case "6":
+          doc = React.createElement(AcademicScholarDocument, downloadData);
+          break;
+        default:
+          doc = React.createElement(CreativeBold, downloadData);
       }
+      
       const asPdf = pdf(doc);
       const blob = await asPdf.toBlob();
       const url = URL.createObjectURL(blob);
@@ -647,8 +783,20 @@ case "6":
     try {
       const transformedSkills = skills.map(skill => ({ name: skill.trim() })).filter(skill => skill.name !== "");
       const transformedCertifications = certifications.map(cert => ({ name: cert.trim() })).filter(cert => cert.name !== "");
+      
+      let title = resumeTitle;
+      
+      // Only prompt for title if creating new resume
+      if (!resumeId && !title) {
+        title = prompt("Enter the title for the resume");
+        if (!title) {
+          setSaving(false);
+          return;
+        }
+      }
+      
       const payload = {
-        title : prompt("Enter the title for the resume"),
+        title,
         templateId: Number(selectedTemplate),
         userId,
         details: {
@@ -668,16 +816,35 @@ case "6":
         showProjects,
         showEducation,
         showCertifications,
-        customSections
-        
+        customSections,
+        sectionTitles
       };
-      const res = await fetch("http://localhost:8080/saveall", {
-        method: "POST",
+      
+      // If resumeId exists, update; otherwise create new
+      const endpoint = resumeId 
+        ? `${API_BASE_URL}/resume/${resumeId}`
+        : `${API_BASE_URL}/saveall`;
+      
+      const method = resumeId ? "PUT" : "POST";
+      
+      const res = await fetch(endpoint, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      
       if (!res.ok) throw new Error("Save failed");
-      alert("Saved successfully!");
+      
+      const message = resumeId ? "Resume updated successfully!" : "Resume saved successfully!";
+      alert(message);
+      
+      // If this was a new resume, optionally redirect to edit page with new ID
+      if (!resumeId) {
+        const data = await res.json();
+        if (data.id) {
+          window.location.href = `/dashboard/resume-editor/${data.id}`;
+        }
+      }
     } catch (err) {
       console.error(err);
       setError("Failed to save resume");
@@ -686,21 +853,53 @@ case "6":
     }
   };
 
+  // Show loading state while fetching resume
+  if (isLoadingResume) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ border: '4px solid #f3f3f3', borderTop: '4px solid #3498db', borderRadius: '50%', width: '60px', height: '60px', animation: 'spin 2s linear infinite', margin: '0 auto 1rem' }}></div>
+          <p>Loading resume...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if resume fetch failed
+  if (resumeId && error && !resumeDetails.name) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', padding: '2rem' }}>
+        <div style={{ textAlign: 'center', maxWidth: '500px' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚠️</div>
+          <h2 style={{ marginBottom: '1rem', color: '#e74c3c' }}>Failed to Load Resume</h2>
+          <p style={{ marginBottom: '1.5rem', color: '#666' }}>{error}</p>
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+            <button 
+              onClick={() => window.location.reload()} 
+              style={{ padding: '0.75rem 1.5rem', backgroundColor: '#3498db', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '1rem' }}
+            >
+              Retry
+            </button>
+            <button 
+              onClick={() => window.location.href = '/dashboard'} 
+              style={{ padding: '0.75rem 1.5rem', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '1rem' }}
+            >
+              Go to Dashboard
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
-
-    
-    
-
-     
-      
       <style>{`
         @keyframes spin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
         }
         .section-manager {
-          
           padding: 1rem;
           margin-bottom: 1rem;
           border-radius: 8px;
@@ -751,12 +950,50 @@ case "6":
           border-radius: 4px;
           font-weight: bold;
         }
+        .sec-inputs {
+          background: transparent;
+          border: none;
+          border-bottom: 1px solid #000;
+          font-size: 18px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          padding: 0.25rem 0;
+          width: auto;
+          min-width: 150px;
+        }
+        .sec-inputs:focus {
+          outline: none;
+          border-bottom: 2px solid #000;
+        }
+        .skill {
+          display: flex;
+          align-items: flex-start;
+          gap: 0.5rem;
+          margin-bottom: 0.5rem;
+        }
+        .skill-text {
+          flex: 1;
+          font-size: 14px;
+          color: #262626;
+          background: transparent;
+          border: none;
+          border-bottom: 1px solid #e5e5e5;
+          padding: 0.25rem 0;
+          line-height: 1.4;
+        }
+        .skill-text:focus {
+          outline: none;
+          border-bottom-color: #000;
+        }
       `}</style>
       
-      <div style={{}} className="resume-editor-container">
+      <div className="resume-editor-container">
         <div className="template-selector-header">
           <div className="template-selector-content">
-            <h2 className="template-selector-title">ATS Score</h2>
+            <h2 className="template-selector-title">
+              {resumeId ? `Edit Resume: ${resumeTitle || 'Untitled'}` : 'Create New Resume'}
+            </h2>
             <div className="template-selector-controls">
               <label className="template-label">Choose Template:</label>
               <select value={selectedTemplate} onChange={(e) => handleTemplateChange(e.target.value)} className="template-select">
@@ -764,8 +1001,9 @@ case "6":
                 <option value="2">Modern Template</option>
                 <option value="3">ATS-Friendly Template</option>
                 <option value="4">Executive Elite</option>
-                <option value="4">Executive Elite</option>
+                <option value="5">Tech Innovator</option>
                 <option value="6">Academic Scholar</option>
+                <option value="7">Creative Bold</option>
               </select>
               {(isTemplateLoading || generatingPreview) && (
                 <span className="template-loading">
@@ -834,9 +1072,11 @@ case "6":
               {/* Summary */}
               {showSummary && (
                 <section className="section">  
-                  <div className="section-title"><input className="sec-inputs" type="text" value={sectionTitles.summary} onChange={(e)=>{
-                    setSectionTitles({...sectionTitles, summary : e.target.value})
-                  }} /></div>
+                  <div className="section-title">
+                    <input className="sec-inputs" type="text" value={sectionTitles.summary} onChange={(e) => {
+                      setSectionTitles({...sectionTitles, summary: e.target.value})
+                    }} />
+                  </div>
                   <textarea className="summary" value={resumeDetails.summary} onChange={(e) => handleResumeDetailChange("summary", e.target.value)} />
                 </section>
               )}
@@ -845,8 +1085,8 @@ case "6":
               {showSkills && (
                 <section className="section">
                   <div className="section-title">
-                    <input type="text" className="sec-inputs" value={sectionTitles.skills} onChange={(s)=>{
-                      setSectionTitles({...sectionTitles, skills : s.target.value})
+                    <input type="text" className="sec-inputs" value={sectionTitles.skills} onChange={(e) => {
+                      setSectionTitles({...sectionTitles, skills: e.target.value})
                     }} />
                   </div>
                   {Array.isArray(skills) && skills.map((skill, i) => (
@@ -865,8 +1105,8 @@ case "6":
                 <section className="section"> 
                   <div className="section-title">
                     <input type="text" value={sectionTitles.experience} className="sec-inputs"
-                    onChange={(e)=>{
-                     setSectionTitles({...sectionTitles, experience : e.target.value})
+                    onChange={(e) => {
+                     setSectionTitles({...sectionTitles, experience: e.target.value})
                     }} />
                   </div>
                   {Array.isArray(experiences) && experiences.map((exp, i) => (
@@ -896,9 +1136,8 @@ case "6":
               {showProjects && (
                 <section className="section">
                   <div className="section-title">
-                    <input className="sec-inputs" type="text" value={sectionTitles.projects} onChange={
-                      (e)=>{
-                        setSectionTitles({...sectionTitles, projects : e.target.value})
+                    <input className="sec-inputs" type="text" value={sectionTitles.projects} onChange={(e) => {
+                        setSectionTitles({...sectionTitles, projects: e.target.value})
                       }
                     } />
                   </div>
@@ -928,7 +1167,11 @@ case "6":
               {/* Education */}
               {showEducation && (
                 <section className="section">
-                  <div className="section-title">Education</div>
+                  <div className="section-title">
+                    <input type="text" className="sec-inputs" value={sectionTitles.education} onChange={(e) => {
+                      setSectionTitles({...sectionTitles, education: e.target.value})
+                    }} />
+                  </div>
                   {Array.isArray(educationList) && educationList.map((edu, i) => (
                     <div className="education" key={`edu-${i}`}>
                       <div className="edu-header">
@@ -948,7 +1191,11 @@ case "6":
               {/* Certifications */}
               {showCertifications && (
                 <section className="section">
-                  <div className="section-title">Certifications</div>
+                  <div className="section-title">
+                    <input type="text" className="sec-inputs" value={sectionTitles.certifications} onChange={(e) => {
+                      setSectionTitles({...sectionTitles, certifications: e.target.value})
+                    }} />
+                  </div>
                   {Array.isArray(certifications) && certifications.map((cert, i) => (
                     <div className="certification" key={`cert-${i}`}>
                       <input className="cert-text" value={cert || ""} onChange={(e) => handleCertificationChange(i, e.target.value)} placeholder="Certification Name" />
@@ -980,7 +1227,7 @@ case "6":
               {/* Action Buttons */}
               <div className="action-buttons">
                 <button className="btn-primary" onClick={handleSaveAll} disabled={saving}>
-                  {saving ? "Saving..." : "Save Resume"}
+                  {saving ? "Saving..." : resumeId ? "Update Resume" : "Save Resume"}
                 </button>
                 <button className="btn-secondary" onClick={downloadPDF} disabled={downloading}>
                   {downloading ? "Generating..." : "Download PDF"}
