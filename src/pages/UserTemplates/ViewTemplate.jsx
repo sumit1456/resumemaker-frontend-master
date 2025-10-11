@@ -10,7 +10,6 @@ import AcademicScholarDocument from "../Resume/Template6";
 import CreativeBold from "../Resume/Template7";
 import './ViewTemplate.css';
 
-
 const API_BASE_URL2 = 'http://localhost:8080';
 const API_BASE_URL = 'https://resumemaker-1.onrender.com';
 
@@ -91,8 +90,6 @@ const PDFViewer = ({ pdfBlob }) => {
   if (!pdfBlob) return <div className="pdf-generating"><div className="loading-spinner"></div><p>Generating preview...</p></div>;
 
   return (
-
-    
     <div ref={containerRef} className="pdf-viewer-container">
       <div className="pdf-controls">
         <div className="pdf-navigation">
@@ -261,15 +258,59 @@ const ViewResume = () => {
         setLoading(true);
         console.log(`Fetching resume with ID: ${resumeId}`);
 
-        const response = await fetch(`${API_BASE_URL}/my-resumes/getresume/${resumeId}`);
-        if (!response.ok) throw new Error(`Failed to fetch resume. Status: ${response.status}`);
+        // Determine which API to use based on environment
+        const isDevelopment = window.location.hostname === 'localhost';
+        const baseUrl = isDevelopment ? API_BASE_URL2 : API_BASE_URL;
+
+        console.log(`Using API: ${baseUrl}`);
+
+        const response = await fetch(`${baseUrl}/my-resumes/getresume/${resumeId}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          credentials: 'include', // Include credentials if needed
+        });
+
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Error response:', errorText);
+          throw new Error(`Failed to fetch resume. Status: ${response.status} - ${errorText}`);
+        }
         
         const data = await response.json();
         console.log('Fetched resume data:', data);
         setResume(data);
       } catch (err) {
-        setError(err.message);
         console.error('Error fetching resume:', err);
+        setError(err.message);
+        
+        // If production API fails, try localhost as fallback
+        if (!window.location.hostname.includes('localhost')) {
+          console.log('Attempting localhost fallback...');
+          try {
+            const response = await fetch(`${API_BASE_URL2}/my-resumes/getresume/${resumeId}`, {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+              },
+            });
+            
+            if (response.ok) {
+              const data = await response.json();
+              setResume(data);
+              setError(null);
+              console.log('Successfully fetched from localhost fallback');
+            }
+          } catch (fallbackErr) {
+            console.error('Localhost fallback also failed:', fallbackErr);
+          }
+        }
       } finally {
         setLoading(false);
       }
