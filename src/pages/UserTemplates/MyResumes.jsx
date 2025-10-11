@@ -20,7 +20,8 @@ const MyResumes = ({userId}) => {
   const fetchResumes = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/my-resumes/${userId}`);
+      const cleanId = String(resumeId).trim();
+      const response = await fetch(`${API_BASE_URL}/my-resumes/${cleanId}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch resumes');
