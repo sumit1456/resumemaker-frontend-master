@@ -1,8 +1,7 @@
 import React from "react";
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 
-
-const Template5 = ({
+const Template4 = ({
   resumeDetails,
   skills,
   experiences,
@@ -22,171 +21,155 @@ const Template5 = ({
     page: {
       flexDirection: "column",
       backgroundColor: "#FFFFFF",
-      padding: 35,
+      padding: 50,
       fontFamily: "Helvetica",
-      fontSize: 9,
-    },
-    sidebar: {
-      position: "absolute",
-      left: 0,
-      top: 0,
-      bottom: 0,
-      width: 4,
-      backgroundColor: "#00D9FF",
+      fontSize: 10.5,
     },
     header: {
-      marginBottom: 16,
-      paddingLeft: 12,
+      marginBottom: 24,
+      paddingBottom: 16,
+      borderBottomWidth: 1.5,
+      borderBottomColor: "#000000",
     },
     name: {
-      fontSize: 28,
+      fontSize: 26,
       fontWeight: "bold",
-      color: "#0A0A0A",
-      marginBottom: 3,
+      color: "#000000",
+      marginBottom: 6,
       letterSpacing: 0.5,
+      textTransform: "uppercase",
     },
     title: {
-      fontSize: 12,
-      color: "#00D9FF",
-      marginBottom: 6,
-      fontWeight: "bold",
+      fontSize: 13,
+      color: "#333333",
+      marginBottom: 10,
+      letterSpacing: 0.3,
     },
     contactRow: {
-      fontSize: 8.5,
+      fontSize: 9.5,
       flexDirection: "row",
+      justifyContent: "flex-start",
+      color: "#444444",
+      gap: 3,
       flexWrap: "wrap",
-      color: "#4A4A4A",
-      gap: 10,
     },
     contactItem: {
       flexDirection: "row",
-      alignItems: "center",
     },
-    separator: {
-      color: "#00D9FF",
-      marginHorizontal: 4,
+    divider: {
+      marginHorizontal: 8,
+      color: "#666666",
     },
     sectionHeader: {
-      fontSize: 11,
+      fontSize: 11.5,
       fontWeight: "bold",
-      color: "#0A0A0A",
-      marginTop: 12,
-      marginBottom: 6,
-      paddingBottom: 3,
-      borderBottomWidth: 2,
-      borderBottomColor: "#00D9FF",
+      color: "#000000",
+      marginTop: 18,
+      marginBottom: 10,
+      paddingBottom: 4,
+      borderBottomWidth: 1,
+      borderBottomColor: "#000000",
       textTransform: "uppercase",
-      letterSpacing: 1,
+      letterSpacing: 1.5,
     },
     summaryText: {
-      fontSize: 9,
-      lineHeight: 1.45,
-      color: "#2A2A2A",
+      fontSize: 10.5,
+      lineHeight: 1.6,
+      color: "#1a1a1a",
       textAlign: "justify",
-      marginBottom: 3,
-    },
-    skillsSection: {
       marginBottom: 4,
+    },
+    skillsContainer: {
+      marginBottom: 4,
+    },
+    skillsRow: {
+      flexDirection: "row",
+      marginBottom: 6,
     },
     skillCategory: {
-      flexDirection: "row",
-      marginBottom: 4,
-    },
-    skillLabel: {
-      fontSize: 9,
+      fontSize: 10,
       fontWeight: "bold",
-      color: "#00D9FF",
-      width: 100,
+      color: "#000000",
+      width: 110,
+      marginRight: 10,
     },
-    skillValue: {
-      fontSize: 9,
-      color: "#2A2A2A",
+    skillsList: {
       flex: 1,
-      lineHeight: 1.3,
-    },
-    skillTags: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: 5,
-      marginTop: 2,
-    },
-    skillTag: {
-      backgroundColor: "#F0FBFF",
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 2,
-      fontSize: 8,
-      color: "#0A0A0A",
-      borderWidth: 0.5,
-      borderColor: "#00D9FF",
+      fontSize: 10,
+      color: "#2a2a2a",
+      lineHeight: 1.5,
     },
     experienceItem: {
-      marginBottom: 10,
+      marginBottom: 14,
     },
     experienceHeader: {
       flexDirection: "row",
       justifyContent: "space-between",
-      marginBottom: 2,
+      marginBottom: 3,
       alignItems: "flex-start",
     },
     jobTitle: {
-      fontSize: 10,
+      fontSize: 11,
       fontWeight: "bold",
-      color: "#0A0A0A",
+      color: "#000000",
       flex: 1,
     },
     dateRange: {
-      fontSize: 8.5,
-      color: "#00D9FF",
-      fontWeight: "bold",
+      fontSize: 9.5,
+      color: "#333333",
+      fontStyle: "italic",
     },
     companyInfo: {
-      fontSize: 9,
-      color: "#4A4A4A",
-      marginBottom: 3,
+      fontSize: 10,
+      color: "#333333",
+      marginBottom: 5,
+      fontStyle: "italic",
     },
     bulletPoint: {
       flexDirection: "row",
-      marginBottom: 2.5,
-      marginLeft: 10,
+      marginBottom: 4,
+      paddingLeft: 0,
     },
     bullet: {
-      width: 8,
+      width: 12,
       fontSize: 8,
-      marginRight: 5,
-      color: "#00D9FF",
-      fontWeight: "bold",
+      marginRight: 8,
+      color: "#000000",
+      marginTop: 1,
     },
     bulletText: {
       flex: 1,
-      fontSize: 9,
-      lineHeight: 1.4,
-      color: "#2A2A2A",
+      fontSize: 10,
+      lineHeight: 1.5,
+      color: "#1a1a1a",
     },
     projectItem: {
-      marginBottom: 9,
-      paddingLeft: 6,
-      borderLeftWidth: 2,
-      borderLeftColor: "#E0E0E0",
+      marginBottom: 12,
     },
     projectHeader: {
       flexDirection: "row",
       justifyContent: "space-between",
-      marginBottom: 2,
+      marginBottom: 3,
     },
     projectTitle: {
-      fontSize: 10,
+      fontSize: 11,
       fontWeight: "bold",
-      color: "#0A0A0A",
+      color: "#000000",
+      flex: 1,
     },
     projectTech: {
-      fontSize: 8.5,
-      color: "#00D9FF",
-      marginBottom: 3,
-      fontWeight: "bold",
+      fontSize: 9.5,
+      color: "#333333",
+      marginBottom: 4,
+      fontStyle: "italic",
+    },
+    projectLink: {
+      fontSize: 9,
+      color: "#0066cc",
+      marginBottom: 4,
     },
     educationItem: {
-      marginBottom: 7,
+      marginBottom: 10,
     },
     educationHeader: {
       flexDirection: "row",
@@ -194,130 +177,123 @@ const Template5 = ({
       marginBottom: 2,
     },
     degreeName: {
-      fontSize: 10,
+      fontSize: 11,
       fontWeight: "bold",
-      color: "#0A0A0A",
+      color: "#000000",
+      flex: 1,
     },
     institutionName: {
-      fontSize: 9,
-      color: "#4A4A4A",
+      fontSize: 10,
+      color: "#333333",
+      marginBottom: 2,
     },
     educationDetails: {
-      fontSize: 8.5,
-      color: "#4A4A4A",
-      marginTop: 1,
+      fontSize: 9.5,
+      color: "#444444",
     },
     certItem: {
-      flexDirection: "row",
-      marginBottom: 3,
+      fontSize: 10,
+      color: "#1a1a1a",
+      marginBottom: 5,
+      lineHeight: 1.4,
     },
-    certBullet: {
-      width: 8,
-      fontSize: 8,
-      marginRight: 5,
-      color: "#00D9FF",
-      fontWeight: "bold",
-    },
-    certText: {
-      flex: 1,
-      fontSize: 9,
-      color: "#2A2A2A",
+    customSectionItem: {
+      fontSize: 10,
+      color: "#1a1a1a",
+      marginBottom: 5,
+      lineHeight: 1.4,
     },
   });
 
-  // Group skills by category
-  const groupedSkills = {};
-  const ungroupedSkills = [];
-  if (skills && Array.isArray(skills)) {
-    skills.forEach((skill) => {
-      if (skill.includes(" - ")) {
-        const [category, values] = skill.split(" - ");
-        groupedSkills[category.trim()] = values.trim();
-      } else if (skill.trim()) {
-        ungroupedSkills.push(skill.trim());
-      }
-    });
-  }
+  // Group skills by category if they contain colons
+  const renderSkills = () => {
+    const hasCategories = skills.some((skill) => skill.includes(":"));
+
+    if (hasCategories) {
+      return (
+        <View style={styles.skillsContainer}>
+          {skills.map((skill, idx) => {
+            if (skill.includes(":")) {
+              const [category, items] = skill.split(":");
+              return (
+                <View key={idx} style={styles.skillsRow}>
+                  <Text style={styles.skillCategory}>{category.trim()}:</Text>
+                  <Text style={styles.skillsList}>{items.trim()}</Text>
+                </View>
+              );
+            }
+            return (
+              <Text key={idx} style={styles.skillsList}>
+                {skill}
+              </Text>
+            );
+          })}
+        </View>
+      );
+    }
+
+    return (
+      <Text style={styles.skillsList}>
+        {skills.join(" • ")}
+      </Text>
+    );
+  };
 
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        <View style={styles.sidebar} />
-
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.name}>{resumeDetails.name}</Text>
           <Text style={styles.title}>{resumeDetails.title}</Text>
           <View style={styles.contactRow}>
-            {resumeDetails.contact?.email && <Text>{resumeDetails.contact.email}</Text>}
-            {resumeDetails.contact?.phone && (
+            {resumeDetails.contact?.phone && <Text>{resumeDetails.contact.phone}</Text>}
+            {resumeDetails.contact?.email && (
               <>
-                <Text style={styles.separator}>●</Text>
-                <Text>{resumeDetails.contact.phone}</Text>
-              </>
-            )}
-            {resumeDetails.contact?.github && (
-              <>
-                <Text style={styles.separator}>●</Text>
-                <Text>{resumeDetails.contact.github}</Text>
+                <Text style={styles.divider}>|</Text>
+                <Text>{resumeDetails.contact.email}</Text>
               </>
             )}
             {resumeDetails.contact?.linkedin && (
               <>
-                <Text style={styles.separator}>●</Text>
+                <Text style={styles.divider}>|</Text>
                 <Text>{resumeDetails.contact.linkedin}</Text>
               </>
             )}
             {resumeDetails.contact?.location && (
               <>
-                <Text style={styles.separator}>●</Text>
+                <Text style={styles.divider}>|</Text>
                 <Text>{resumeDetails.contact.location}</Text>
               </>
             )}
           </View>
         </View>
 
-        {/* Summary */}
+        {/* Professional Summary */}
         {showSummary && resumeDetails.summary && (
           <View>
             <Text style={styles.sectionHeader}>
-              {sectionTitles.summary || "ABOUT"}
+              {sectionTitles.summary || "PROFESSIONAL SUMMARY"}
             </Text>
             <Text style={styles.summaryText}>{resumeDetails.summary}</Text>
           </View>
         )}
 
-        {/* Technical Skills */}
+        {/* Skills */}
         {showSkills && skills?.length > 0 && (
           <View>
             <Text style={styles.sectionHeader}>
-              {sectionTitles.skills || "TECH STACK"}
+              {sectionTitles.skills || "CORE COMPETENCIES"}
             </Text>
-            <View style={styles.skillsSection}>
-              {Object.entries(groupedSkills).map(([category, values], idx) => (
-                <View key={idx} style={styles.skillCategory}>
-                  <Text style={styles.skillLabel}>{category}:</Text>
-                  <Text style={styles.skillValue}>{values}</Text>
-                </View>
-              ))}
-              {ungroupedSkills.length > 0 && (
-                <View style={styles.skillTags}>
-                  {ungroupedSkills.map((skill, idx) => (
-                    <Text key={idx} style={styles.skillTag}>
-                      {skill}
-                    </Text>
-                  ))}
-                </View>
-              )}
-            </View>
+            {renderSkills()}
           </View>
         )}
 
-        {/* Experience */}
+        {/* Professional Experience */}
         {showExperience && experiences?.length > 0 && (
           <View>
             <Text style={styles.sectionHeader}>
-              {sectionTitles.experience || "EXPERIENCE"}
+              {sectionTitles.experience || "PROFESSIONAL EXPERIENCE"}
             </Text>
             {experiences.map((exp, idx) => (
               <View key={idx} style={styles.experienceItem}>
@@ -327,13 +303,13 @@ const Template5 = ({
                 </View>
                 <Text style={styles.companyInfo}>
                   {exp.company}
-                  {exp.location ? ` • ${exp.location}` : ""}
+                  {exp.location ? ` — ${exp.location}` : ""}
                 </Text>
                 {exp.achievements?.map(
                   (ach, j) =>
                     ach.trim() && (
                       <View key={j} style={styles.bulletPoint}>
-                        <Text style={styles.bullet}>▸</Text>
+                        <Text style={styles.bullet}>•</Text>
                         <Text style={styles.bulletText}>{ach}</Text>
                       </View>
                     )
@@ -347,7 +323,7 @@ const Template5 = ({
         {showProjects && projects?.length > 0 && (
           <View>
             <Text style={styles.sectionHeader}>
-              {sectionTitles.projects || "PROJECTS"}
+              {sectionTitles.projects || "KEY PROJECTS"}
             </Text>
             {projects.map((proj, idx) => (
               <View key={idx} style={styles.projectItem}>
@@ -356,13 +332,16 @@ const Template5 = ({
                   {proj.duration && <Text style={styles.dateRange}>{proj.duration}</Text>}
                 </View>
                 {proj.technologies && (
-                  <Text style={styles.projectTech}>{proj.technologies}</Text>
+                  <Text style={styles.projectTech}>Technologies: {proj.technologies}</Text>
+                )}
+                {proj.link && (
+                  <Text style={styles.projectLink}>{proj.link}</Text>
                 )}
                 {proj.description?.map(
                   (desc, j) =>
                     desc.trim() && (
                       <View key={j} style={styles.bulletPoint}>
-                        <Text style={styles.bullet}>▸</Text>
+                        <Text style={styles.bullet}>•</Text>
                         <Text style={styles.bulletText}>{desc}</Text>
                       </View>
                     )
@@ -408,10 +387,9 @@ const Template5 = ({
             {certifications
               .filter((c) => c.trim())
               .map((cert, idx) => (
-                <View key={idx} style={styles.certItem}>
-                  <Text style={styles.certBullet}>▸</Text>
-                  <Text style={styles.certText}>{cert}</Text>
-                </View>
+                <Text key={idx} style={styles.certItem}>
+                  • {cert}
+                </Text>
               ))}
           </View>
         )}
@@ -425,10 +403,9 @@ const Template5 = ({
                 {section.items
                   .filter((item) => item.trim())
                   .map((item, idx) => (
-                    <View key={idx} style={styles.certItem}>
-                      <Text style={styles.certBullet}>▸</Text>
-                      <Text style={styles.certText}>{item}</Text>
-                    </View>
+                    <Text key={idx} style={styles.customSectionItem}>
+                      • {item}
+                    </Text>
                   ))}
               </View>
             )
@@ -438,4 +415,4 @@ const Template5 = ({
   );
 };
 
-export default Template5;
+export default Template4;
