@@ -201,52 +201,105 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
   const [showCertifications, setShowCertifications] = useState(true);
 
   const [customSections, setCustomSections] = useState([]);
-  const [resumeDetails, setResumeDetails] = useState({
-    name: "",
-    title: "",
+  
+    const [resumeDetails, setResumeDetails] = useState({
+    name: "SUMIT HATEKAR",
+    title: "Full Stack Developer",
     contact: {
-      phone: "",
-      email: "",
-      linkedin: "",
-      github: "",
-      location: "",
+      phone: "+91 9876543210",
+      email: "sumithatekar@gmail.com",
+      linkedin: "linkedin.com/in/sumithatekar",
+      github: "github.com/sumithatekar",
+      location: "Pune, India",
     },
-    summary: "",
+    summary: "Dedicated Java Developer with expertise in Java, Spring Boot, Hibernate/JPA, and RESTful APIs, specializing in building scalable backend systems. Skilled in database design, SQL optimization, and microservices architecture, with strong understanding of OOP and design patterns. Proficient in developing secure, high-performance enterprise applications and experienced in Agile/Scrum environments. Eager to contribute backend expertise while continuously growing as a Java professional.",
   });
   
-  const [skills, setSkills] = useState([""]);
-  const [experiences, setExperiences] = useState([{
-    position: "",
-    company: "",
-    location: "",
-    duration: "",
-    achievements: [""]
-  }]);
-  const [projects, setProjects] = useState([{
-    name: "",
-    duration: "",
-    technologies: "",
-    description: [""],
-    link: ""
-  }]);
-  const [educationList, setEducationList] = useState([{
-    degree: "",
-    institution: "",
-    location: "",
-    year: "",
-    gpa: ""
-  }]);
-  const [certifications, setCertifications] = useState([""]);
+  const [skills, setSkills] = useState([
+    "Programming Languages - Java, JavaScript (ES6+), SQL",
+    "Databases - PostgreSQL, Oracle",
+    "Frameworks & Libraries - React.js, Spring Boot, Hibernate, Express.js (basic)",
+    "Tools & Platforms - Git, GitHub, Postman, Swagger, Maven, Eclipse/IntelliJ",
+    "Cloud & Deployment - AWS (EC2, S3, RDS), Docker (basic)",
+    "Soft Skills - Problem Solving, Communication, Agile Teamwork"
+  ]);
   
-  const [sectionTitles, setSectionTitles] = useState({
-    summary: "Summary",
-    skills: "Skills",
-    experience: "Experience",
-    projects: "Projects",
-    education: "Education",
-    certifications: "Certifications"
-  });
-
+  
+  const [experiences, setExperiences] = useState([
+    {
+      position: "Software Engineer",
+      company: "Tech Solutions Ltd.",
+      location: "Pune, India",
+      duration: "Jan 2022 - Present",
+      achievements: [
+        "Developed client dashboard using React",
+        "Implemented REST APIs in Node.js"
+      ],
+    },
+  ]);
+  
+  const [projects, setProjects] = useState([
+    {
+      name: "Resume Maker Pro",
+      duration: "September 2023 - ongoing",
+      technologies: "React, Java, Spring Boot, Spring Security, Docker",
+      description: [
+        "Developed the backend using Java Spring Boot with Hibernate/JPA for efficient data storage and retrieval.",
+        "Built RESTful APIs to manage resume sections such as personal info, skills, certifications, and experience.",
+        "Implemented React.js frontend for real-time editing and live preview of resume templates.",
+        "Integrated resume download/export functionality (PDF/Docx) with formatted layouts.",
+        "Ensured scalable, modular architecture with clean code and reusable components."
+      ],
+      link: "https://janedoe.dev",
+    },
+    {
+      name: "Find Issue Web Application",
+      duration: "June 2023 - August 2023",
+      technologies: "Java, Spring Boot, Thymeleaf, MySQL",
+      description: [
+        "Built a web application to log, track, and manage software issues.",
+        "Implemented Spring Boot backend with RESTful APIs for CRUD operations on issues.",
+        "Designed MySQL database schema for efficient issue storage and retrieval.",
+        "Created user-friendly UI using Thymeleaf for issue submission and tracking.",
+        "Added role-based access control to allow admin and user-specific views."
+      ],
+      link: "https://github.com/sumithatekar/find-issue-app",
+    }
+  ]);
+  
+  const [educationList, setEducationList] = useState([
+    {
+      degree: "Master of Science in Computer Applications",
+      institution: "Savitribai Phule University",
+      location: "Pune, India",
+      year: "2025",
+      gpa: "Currently pursuing",
+    },
+    {
+      degree: "BSc Chemistry",
+      institution: "Shivaji University",
+      location: "Koregaon Satara, India",
+      year: "2021",
+      gpa: "7.52",
+    },
+  ]);
+  
+  const [certifications, setCertifications] = useState([
+    "Java Full Stack Development - QSpiders Wakad 2024",
+    "Scrum Master Certified",
+  ]);
+  
+   const [sectionTitles, setSectionTitles] = useState({
+      summary: "Summary",
+      skills: "Skills",
+      experience: "Experience",
+      projects: "Projects",
+      education: "Education",
+      certifications: "Certifications"
+    });
+  
+    
+    
   const [saving, setSaving] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [saveError, setSaveError] = useState("");
