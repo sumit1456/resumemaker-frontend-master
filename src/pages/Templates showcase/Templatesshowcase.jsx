@@ -6,6 +6,9 @@ import classicImg from './images/classic.png'
 import acad from './images/academicscholar.png'
 import executive from './images/executive.png'
 import ats from './images/ats.png'
+import tech from './images/tech.png'
+import creative from './images/creative.png'
+import newmodern from './images/newmodern.png'
 
 
 
@@ -18,7 +21,7 @@ const TemplatesShowcase = () => {
       name: "Modern Professional",
       description: "Clean and contemporary design with a focus on readability and professional appeal",
       features: ["Two-column layout", "Accent color headers", "Skills progress bars", "Professional typography"],
-      image: modernImg,
+      image: newmodern,
       category: "Professional"
     },
     {
@@ -26,7 +29,7 @@ const TemplatesShowcase = () => {
       name: "Creative Bold",
       description: "Eye-catching design with strong visual hierarchy and creative elements",
       features: ["Bold section dividers", "Visual skill ratings", "Color-coded sections", "Modern aesthetic"],
-      image: "/templates/template2.png",
+      image: creative,
       category: "Creative"
     },
     {
@@ -50,7 +53,7 @@ const TemplatesShowcase = () => {
       name: "Tech Innovator",
       description: "Modern tech-focused design with clean lines and contemporary styling",
       features: ["Tech-forward design", "Skill showcasing", "Project highlights", "GitHub integration"],
-      image: "/templates/template5.png",
+      image: tech,
       category: "Technical"
     },
     {
