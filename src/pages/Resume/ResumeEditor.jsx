@@ -10,7 +10,7 @@ import CreativeBold from './Template7';
 import "./css-files/ResumeEditor.css";
 import ErrorBoundary from "../../ErrorBoundry.jsx";
 
-const API_BASE_URL2 = 'http://localhost:8080';
+// const API_BASE_URL2 = 'http://localhost:8080';
 const API_BASE_URL = 'https://resumemaker-1.onrender.com';
 
 // PDF.js Viewer Component
@@ -782,90 +782,105 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
     }
   };
 
-  const handleSaveAll = async () => {
-    setSaving(true);
-    setSaveError("");
-    setSuccessMessage("");
-    try {
-      const transformedSkills = skills.map(skill => ({ name: skill.trim() })).filter(skill => skill.name !== "");
-      const transformedCertifications = certifications.map(cert => ({ name: cert.trim() })).filter(cert => cert.name !== "");
-      
-      let title = resumeTitle;
-      
-      if (!resumeId && !title) {
-        title = prompt("Enter the title for the resume");
-        if (!title) {
-          setSaving(false);
-          return;
-        }
+ const handleSaveAll = async () => {
+  setSaving(true);
+  setSaveError("");
+  setSuccessMessage("");
+  try {
+    const transformedSkills = skills.map(skill => ({ name: skill.trim() })).filter(skill => skill.name !== "");
+    const transformedCertifications = certifications.map(cert => ({ name: cert.trim() })).filter(cert => cert.name !== "");
+    
+    let title = resumeTitle;
+    
+    if (!resumeId && !title) {
+      title = prompt("Enter the title for the resume");
+      if (!title) {
+        setSaving(false);
+        return;
       }
-      
-      const isDevelopment = window.location.hostname === 'localhost';
-      const baseUrl = isDevelopment ? API_BASE_URL2 : API_BASE_URL;
-      
-      const payload = {
-        title,
-        templateId: Number(selectedTemplate),
-        userId,
-        details: {
-          name: resumeDetails.name,
-          title: resumeDetails.title,
-          summary: resumeDetails.summary
-        },
-        contact: resumeDetails.contact,
-        skills: transformedSkills,
-        experiences,
-        projects,
-        educationList,
-        certifications: transformedCertifications,
-        showSummary,
-        showSkills,
-        showExperience,
-        showProjects,
-        showEducation,
-        showCertifications,
-        customSections,
-        sectionTitles
-      };
-      
-      const endpoint = resumeId 
-        ? `${baseUrl}/resume/${resumeId}`
-        : `${baseUrl}/saveall`;
-      
-      const method = resumeId ? "PUT" : "POST";
-      
-      const res = await fetch(endpoint, {
-        method,
-        headers: { 
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
-        body: JSON.stringify(payload),
-      });
-      
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(`Save failed: ${errorText || res.status}`);
-      }
-      
-      const message = resumeId ? "Resume updated successfully!" : "Resume saved successfully!";
-      setSuccessMessage(message);
-      
-      if (!resumeId) {
-        const data = await res.json();
-        if (data.id) {
-          setTimeout(() => {
-            window.location.href = `/dashboard/resume-editor/${data.id}`;
-          }, 1500);
-        }
-      }
-    } catch (err) {
-      console.error(err);
-      setSaveError(`Failed to save resume: ${err.message}`);
-    } finally {
-      setSaving(false);
     }
-  };
+    
+    const baseUrl = API_BASE_URL;
+    
+    const payload = {
+      title,
+      templateId: Number(selectedTemplate),
+      userId,
+      details: {
+        name: resumeDetails.name,
+        title: resumeDetails.title,
+        summary: resumeDetails.summary
+      },
+      contact: resumeDetails.contact,
+      skills: transformedSkills,
+      experiences,
+      projects,
+      educationList,
+      certifications: transformedCertifications,
+      showSummary,
+      showSkills,
+      showExperience,
+      showProjects,
+      showEducation,
+      showCertifications,
+      customSections,
+      sectionTitles
+    };
+    
+    console.log("Sending payload:", JSON.stringify(payload, null, 2));
+    
+    const endpoint = resumeId 
+      ? `${baseUrl}/resume/${resumeId}`
+      : `${baseUrl}/saveall`;
+    
+    const method = resumeId ? "PUT" : "POST";
+    
+    console.log(`Making ${method} request to:`, endpoint);
+    
+    const res = await fetch(endpoint, {
+      method,
+      headers: { 
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      body: JSON.stringify(payload),
+    });
+    
+    console.log("Response status:", res.status);
+    console.log("Response headers:", res.headers);
+    
+    // Check content type before parsing
+    const contentType = res.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      const textResponse = await res.text();
+      console.error("Non-JSON response received:", textResponse);
+      throw new Error(`Server returned non-JSON response. Status: ${res.status}`);
+    }
+    
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => null);
+      const errorMessage = errorData?.message || `Save failed with status ${res.status}`;
+      throw new Error(errorMessage);
+    }
+    
+    const data = await res.json();
+    console.log("Response data:", data);
+    
+    const message = resumeId ? "Resume updated successfully!" : "Resume saved successfully!";
+    setSuccessMessage(message);
+    
+    if (!resumeId && data.id) {
+      setTimeout(() => {
+        window.location.href = `/dashboard/resume-editor/${data.id}`;
+      }, 1500);
+    }
+  } catch (err) {
+    console.error("Save error:", err);
+    setSaveError(`Failed to save resume: ${err.message}`);
+  } finally {
+    setSaving(false);
+  }
+};
 
   if (isLoadingResume) {
     return (
@@ -1218,28 +1233,32 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
                 </section>
               )}
 
-              {showEducation && (
-                <section className="section">
-                  <div className="section-title">
-                    <input type="text" className="sec-inputs" value={sectionTitles.education} onChange={(e) => {
-                      setSectionTitles({...sectionTitles, education: e.target.value})
-                    }} />
-                  </div>
-                  {Array.isArray(educationList) && educationList.map((edu, i) => (
-                    <div className="education" key={`edu-${i}`}>
-                      <div className="edu-header">
-                        <input className="degree" value={edu?.degree || ""} onChange={(e) => handleEducationChange(i, "degree", e.target.value)} placeholder="Degree" />
-                        <input className="institution" value={edu?.institution || ""} onChange={(e) => handleEducationChange(i, "institution", e.target.value)} placeholder="Institution" />
-                        <input className="year" value={edu?.year || ""} onChange={(e) => handleEducationChange(i, "year", e.target.value)} placeholder="Year" />
-                        <button type="button" className="remove-small-btn" onClick={(e) => { e.preventDefault(); removeEducation(i); }}>Remove</button>
-                      </div>
-                      <input className="edu-location" value={edu?.location || ""} onChange={(e) => handleEducationChange(i, "location", e.target.value)} placeholder="Location" />
-                      <input className="gpa" value={edu?.gpa || ""} onChange={(e) => handleEducationChange(i, "gpa", e.target.value)} placeholder="GPA/Score (optional)" />
-                    </div>
-                  ))}
-                  <button type="button" className="add-btn" onClick={addEducation}>Add Education</button>
-                </section>
-              )}
+             {showEducation && (
+  <section className="section">
+    <div className="section-title">
+      <input type="text" className="sec-inputs" value={sectionTitles.education} onChange={(e) => {
+        setSectionTitles({...sectionTitles, education: e.target.value})
+      }} />
+    </div>
+    {Array.isArray(educationList) && educationList.map((edu, i) => (
+      <div className="education" key={`edu-${i}`}>
+        <div className="edu-header">
+          <div className="edu-fields-wrapper">
+            <div className="edu-fields-row">
+              <input className="degree" value={edu?.degree || ""} onChange={(e) => handleEducationChange(i, "degree", e.target.value)} placeholder="Degree" />
+              <input className="year" value={edu?.year || ""} onChange={(e) => handleEducationChange(i, "year", e.target.value)} placeholder="Year" />
+            </div>
+            <input className="institution" value={edu?.institution || ""} onChange={(e) => handleEducationChange(i, "institution", e.target.value)} placeholder="Institution" />
+            <input className="edu-location" value={edu?.location || ""} onChange={(e) => handleEducationChange(i, "location", e.target.value)} placeholder="Location" />
+            <input className="gpa" value={edu?.gpa || ""} onChange={(e) => handleEducationChange(i, "gpa", e.target.value)} placeholder="GPA/Score (optional)" />
+          </div>
+          <button type="button" className="remove-btn" onClick={(e) => { e.preventDefault(); removeEducation(i); }}>Remove</button>
+        </div>
+      </div>
+    ))}
+    <button type="button" className="add-btn" onClick={addEducation}>Add Education</button>
+  </section>
+)}
 
               {showCertifications && (
                 <section className="section">

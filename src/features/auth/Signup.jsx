@@ -1,10 +1,9 @@
 import React, { useState } from "react";
 import axios from "axios";
-import './Signup.css';
+import { useNavigate } from "react-router-dom"; // ✅ only useNavigate (not Navigate)
+import "./Signup.css";
 
-
-const API_BASE_URL2 = 'http://localhost:8080';
-const API_BASE_URL = 'https://resumemaker-1.onrender.com';
+const API_BASE_URL = "https://resumemaker-1.onrender.com";
 
 export default function Signup() {
   const [username, setUsername] = useState("");
@@ -13,22 +12,35 @@ export default function Signup() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const navigate = useNavigate(); // ✅ initialize the hook
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!username || !email || !password) {
       setMessage("All fields are required");
       return;
     }
+
     setLoading(true);
+    setMessage("");
+
     try {
-      const response = await axios.post(
-       `${API_BASE_URL}/signup`,
-        { username, email, password }
-      );
+      const response = await axios.post(`${API_BASE_URL}/signup`, {
+        username,
+        email,
+        password,
+      });
+
       setMessage(`Signup successful! Welcome ${response.data.username}`);
+
+   
+      setTimeout(() => {
+        navigate("/login"); 
+      }, 1000);
     } catch (error) {
       if (error.response) {
-        setMessage(`Server error: ${error.response.status}`);
+        setMessage(`Server error: ${error.response.data.message || error.response.status}`);
       } else {
         setMessage(`Request failed: ${error.message}`);
       }
@@ -44,7 +56,7 @@ export default function Signup() {
         <form onSubmit={handleSubmit}>
           <h2>Create Account</h2>
           <p className="form-subtitle">Join us and start building your professional resume</p>
-          
+
           <div className="input-group">
             <label htmlFor="username">Username</label>
             <input
@@ -52,10 +64,10 @@ export default function Signup() {
               type="text"
               placeholder="Choose a username"
               value={username}
-              onChange={e => setUsername(e.target.value)}
+              onChange={(e) => setUsername(e.target.value)}
             />
           </div>
-          
+
           <div className="input-group">
             <label htmlFor="email">Email Address</label>
             <input
@@ -63,10 +75,10 @@ export default function Signup() {
               type="email"
               placeholder="Enter your email"
               value={email}
-              onChange={e => setEmail(e.target.value)}
+              onChange={(e) => setEmail(e.target.value)}
             />
           </div>
-          
+
           <div className="input-group">
             <label htmlFor="password">Password</label>
             <input
@@ -74,14 +86,14 @@ export default function Signup() {
               type="password"
               placeholder="Create a strong password"
               value={password}
-              onChange={e => setPassword(e.target.value)}
+              onChange={(e) => setPassword(e.target.value)}
             />
           </div>
-          
+
           <button type="submit" disabled={loading}>
             {loading ? "Signing up…" : "Sign Up"}
           </button>
-          
+
           {message && (
             <p className={message.includes("successful") ? "success" : "error"}>
               {message}
@@ -95,8 +107,8 @@ export default function Signup() {
         <h1>Resume Maker</h1>
         <p className="signup-tagline">Start Your Journey</p>
         <p className="signup-subtagline">
-          Join thousands of professionals who have transformed their careers with our AI-powered resume builder. 
-          Create stunning resumes that get noticed.
+          Join thousands of professionals who have transformed their careers with our AI-powered
+          resume builder. Create stunning resumes that get noticed.
         </p>
         <ul className="benefit-list">
           <li>Free to start, upgrade anytime</li>
