@@ -863,7 +863,7 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
       throw new Error(errorMessage);
     }
     
-    const data = await res.json();
+    const data = await res.text();
     console.log("Response data:", data);
     
     const message = resumeId ? "Resume updated successfully!" : "Resume saved successfully!";
