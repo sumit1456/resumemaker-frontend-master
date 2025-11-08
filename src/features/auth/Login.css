@@ -245,6 +245,7 @@
 
 /* Google Login Button */
 .google-login-btn {
+   width: 100% !important;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -259,7 +260,7 @@
   transition: all 0.2s ease-in-out;
   width: fit-content; /* 👈 This ensures width matches text label */
   margin: 0 auto; /* optional: centers it horizontally */
-  width: 100%;
+ 
 }
 
 .google-login-btn:hover {
