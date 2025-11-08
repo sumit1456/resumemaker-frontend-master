@@ -6,8 +6,8 @@ import { useSelector, useDispatch } from "react-redux";
 import { logInUser } from "../../redux/store.js";
 import { GoogleLogin } from '@react-oauth/google';
 
-const API_BASE_URL2 = 'https://resumemaker-1.onrender.com';
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL = 'https://resumemaker-1.onrender.com';
+const API_BASE_URL2 = 'http://localhost:8080';
 
 export default function Login({ setUserId }) {
   const isLoggedIn = useSelector((state) => state.auth.isLoggedIn);
