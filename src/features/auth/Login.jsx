@@ -92,7 +92,11 @@ export default function Login({ setUserId }) {
       {/* Right Side - Login Form */}
       <div className="login-form">
         <form onSubmit={handleSubmit}>
-          <h2>Welcome Back</h2>
+          <div className="headline">
+             <h2>Welcome Back</h2>
+
+          </div>
+         
           <p className="form-subtitle">Login to continue building your career</p>
           
           <div className="input-group">

@@ -5,6 +5,13 @@
   box-sizing: border-box;
 }
 
+.headline{
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* Login Page Container */
 .login-container {
   min-height: 100vh;
