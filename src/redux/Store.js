@@ -14,10 +14,10 @@ const authSlice = createSlice({
 export const { logInUser, logOutUser } = authSlice.actions;
 
 // Step 3: Create the store
-const store = configureStore({
+const Store = configureStore({
   reducer: {
     auth: authSlice.reducer, // use slice name instead of 'counter'
   },
 });
 
-export default store;
+export default Store;
