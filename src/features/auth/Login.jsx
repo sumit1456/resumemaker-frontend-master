@@ -1,15 +1,14 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import './Login.css';
+import "./Login.css";
 import { useSelector, useDispatch } from "react-redux";
 import { logInUser } from "../../redux/store.js";
-import { GoogleLogin } from '@react-oauth/google';
+import { GoogleOAuthProvider, useGoogleLogin } from "@react-oauth/google";
 
-const API_BASE_URL = 'https://resumemaker-1.onrender.com';
-const API_BASE_URL2 = 'http://localhost:8080';
+const API_BASE_URL = "https://resumemaker-1.onrender.com";
 
-export default function Login({ setUserId }) {
+function LoginInner({ setUserId }) {
   const isLoggedIn = useSelector((state) => state.auth.isLoggedIn);
   const dispatch = useDispatch();
 
@@ -19,7 +18,6 @@ export default function Login({ setUserId }) {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Regular email/password login
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !password) {
@@ -30,56 +28,46 @@ export default function Login({ setUserId }) {
     setLoading(true);
     try {
       const response = await axios.post(`${API_BASE_URL}/login`, { email, password });
-
       dispatch(logInUser());
       setUserId(response.data.id);
       setMessage("Login successful!");
       navigate("/");
     } catch (error) {
-      if (error.response) {
-        setMessage(`Login failed: ${error.response.data}`);
-      } else {
-        setMessage(`Request error: ${error.message}`);
+      setMessage(error.response ? `Login failed: ${error.response.data}` : `Error: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ Google Login Hook
+  const googleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      try {
+        setLoading(true);
+        const response = await axios.post(`${API_BASE_URL}/google-login`, {
+          token: tokenResponse.credential || tokenResponse.access_token,
+        });
+        dispatch(logInUser());
+        setUserId(response.data.id);
+        setMessage("Google login successful!");
+        navigate("/");
+      } catch (error) {
+        console.error(error);
+        setMessage("Google login failed");
+      } finally {
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Google login
-  const handleGoogleLoginSuccess = async (credentialResponse) => {
-    try {
-      setLoading(true);
-
-      const response = await axios.post(`${API_BASE_URL}/google-login`, {
-        token: credentialResponse.credential
-      });
-
-      dispatch(logInUser());
-      setUserId(response.data.id);
-      setMessage("Google login successful!");
-      navigate("/");
-    } catch (error) {
-      setMessage("Google login failed");
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGoogleLoginError = () => {
-    setMessage("Google login failed");
-  };
+    },
+    onError: () => setMessage("Google login failed"),
+  });
 
   return (
     <div className="login-container">
-      {/* Left Side - Branding */}
       <div className="login-header">
         <h1>Resume Maker</h1>
         <p className="login-tagline">AI for Career Success</p>
         <p className="login-subtagline">
-          Create professional, ATS-friendly resumes in minutes with our intelligent resume builder. 
-          Stand out from the crowd and land your dream job.
+          Create professional, ATS-friendly resumes in minutes with our intelligent resume builder.
         </p>
         <ul className="feature-list">
           <li>AI-powered content suggestions</li>
@@ -89,69 +77,58 @@ export default function Login({ setUserId }) {
         </ul>
       </div>
 
-      {/* Right Side - Login Form */}
       <div className="login-form">
         <form onSubmit={handleSubmit}>
           <div className="headline">
-             <h2>Welcome Back</h2>
-
+            <h2>Welcome Back</h2>
           </div>
-         
+
           <p className="form-subtitle">Login to continue building your career</p>
-          
+
           <div className="input-group">
-            <label htmlFor="email">Email Address</label>
+            <label>Email Address</label>
             <input
-              id="email"
               type="email"
               placeholder="Enter your email"
               value={email}
-              onChange={e => setEmail(e.target.value)}
+              onChange={(e) => setEmail(e.target.value)}
             />
           </div>
-          
+
           <div className="input-group">
-            <label htmlFor="password">Password</label>
+            <label>Password</label>
             <input
-              id="password"
               type="password"
               placeholder="Enter your password"
               value={password}
-              onChange={e => setPassword(e.target.value)}
+              onChange={(e) => setPassword(e.target.value)}
             />
           </div>
-          
+
           <button type="submit" disabled={loading}>
             {loading ? "Logging in…" : "Log In"}
           </button>
 
-          {/* Separator */}
           <p className="separator">or</p>
 
-          {/* Google Login Button */}
-          <div 
-            className="google-login-btn" 
-            onClick={() => document.getElementById('google-login-btn').click()}
-          >
+          {/* ✅ Custom Google Button */}
+          <div className="google-login-btn" onClick={() => googleLogin()}>
             <span>Continue with Google</span>
           </div>
 
-          {/* Hidden GoogleLogin component */}
-          <GoogleLogin
-            id="google-login-btn"
-            onSuccess={handleGoogleLoginSuccess}
-            onError={handleGoogleLoginError}
-            useOneTap
-            style={{ display: 'hidden' }}
-          />
-
           {message && (
-            <p className={message.includes("successful") ? "success" : "error"}>
-              {message}
-            </p>
+            <p className={message.includes("successful") ? "success" : "error"}>{message}</p>
           )}
         </form>
       </div>
     </div>
+  );
+}
+
+export default function Login(props) {
+  return (
+    <GoogleOAuthProvider clientId="YOUR_GOOGLE_CLIENT_ID">
+      <LoginInner {...props} />
+    </GoogleOAuthProvider>
   );
 }
