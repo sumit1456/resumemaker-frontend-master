@@ -9,7 +9,7 @@ const authSlice = createSlice({
     logOutUser: (state) => { state.isLoggedIn = false; },
   },
 });
-
+//renamed 
 // Step 2: Export actions
 export const { logInUser, logOutUser } = authSlice.actions;
 
