@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import "./css-files/HomePageContainer.css";
 import { useNavigate } from "react-router-dom";
-import store from "../../redux/store";
+
 import { useSelector } from "react-redux";
 
 export default function HomePageContainer() {

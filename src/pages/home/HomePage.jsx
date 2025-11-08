@@ -9,7 +9,7 @@ import TemplatesShowcase from "../Templates showcase/Templatesshowcase.jsx";
 import MyResumes from "../UserTemplates/MyResumes.jsx";
 import ViewResume from "../UserTemplates/ViewTemplate.jsx";
 import { useSelector} from "react-redux";
-import store from "../../redux/store.js";
+
 
 
 export default function HomePage(
