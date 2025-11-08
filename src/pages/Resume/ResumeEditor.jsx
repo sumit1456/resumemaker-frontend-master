@@ -11,7 +11,7 @@ import "./css-files/ResumeEditor.css";
 import ErrorBoundary from "../../ErrorBoundry.jsx";
 
 
-const API_BASE_UR1L = 'http://localhost:8080';
+const API_BASE_URL2 = 'http://localhost:8080';
 const API_BASE_URL = 'https://resumemaker-1.onrender.com';
 
 // PDF.js Viewer Component

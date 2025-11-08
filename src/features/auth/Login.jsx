@@ -3,15 +3,13 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import './Login.css';
 import { useSelector, useDispatch } from "react-redux";
-import { logInUser, logOutUser } from "../../redux/store.js";
+import { logInUser } from "../../redux/store.js";
+import { GoogleLogin } from '@react-oauth/google';
 
-
-
-const API_BASE_URL2 = 'http://localhost:8080';
-const API_BASE_URL = 'https://resumemaker-1.onrender.com';
+const API_BASE_URL2 = 'https://resumemaker-1.onrender.com';
+const API_BASE_URL = 'http://localhost:8080';
 
 export default function Login({ setUserId }) {
-  
   const isLoggedIn = useSelector((state) => state.auth.isLoggedIn);
   const dispatch = useDispatch();
 
@@ -20,10 +18,10 @@ export default function Login({ setUserId }) {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  
+
+  // Regular email/password login
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!email || !password) {
       setMessage("Email and password are required");
       return;
@@ -31,20 +29,10 @@ export default function Login({ setUserId }) {
 
     setLoading(true);
     try {
-      const response = await axios.post(
-        `${API_BASE_URL}/login`,
-        { email, password }
-      );
+      const response = await axios.post(`${API_BASE_URL}/login`, { email, password });
 
-     
-
-      //this is a redux synyax
       dispatch(logInUser());
-
-
       setUserId(response.data.id);
-      console.log(response.data.id);
-      
       setMessage("Login successful!");
       navigate("/");
     } catch (error) {
@@ -56,6 +44,31 @@ export default function Login({ setUserId }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Google login
+  const handleGoogleLoginSuccess = async (credentialResponse) => {
+    try {
+      setLoading(true);
+
+      const response = await axios.post(`${API_BASE_URL}/google-login`, {
+        token: credentialResponse.credential
+      });
+
+      dispatch(logInUser());
+      setUserId(response.data.id);
+      setMessage("Google login successful!");
+      navigate("/");
+    } catch (error) {
+      setMessage("Google login failed");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLoginError = () => {
+    setMessage("Google login failed");
   };
 
   return (
@@ -107,7 +120,27 @@ export default function Login({ setUserId }) {
           <button type="submit" disabled={loading}>
             {loading ? "Logging in…" : "Log In"}
           </button>
-          
+
+          {/* Separator */}
+          <p className="separator">or</p>
+
+          {/* Google Login Button */}
+          <div 
+            className="google-login-btn" 
+            onClick={() => document.getElementById('google-login-btn').click()}
+          >
+            <span>Continue with Google</span>
+          </div>
+
+          {/* Hidden GoogleLogin component */}
+          <GoogleLogin
+            id="google-login-btn"
+            onSuccess={handleGoogleLoginSuccess}
+            onError={handleGoogleLoginError}
+            useOneTap
+            style={{ display: 'none' }}
+          />
+
           {message && (
             <p className={message.includes("successful") ? "success" : "error"}>
               {message}
