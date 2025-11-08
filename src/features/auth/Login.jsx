@@ -133,17 +133,18 @@ export default function Login({ setUserId }) {
             className="google-login-btn" 
             onClick={() => document.getElementById('google-login-btn').click()}
           >
-            <span>Continue with Google</span>
-          </div>
-
-          {/* Hidden GoogleLogin component */}
-          <GoogleLogin
+            <span>Click here to continue to</span>
+            <GoogleLogin
             id="google-login-btn"
             onSuccess={handleGoogleLoginSuccess}
             onError={handleGoogleLoginError}
             useOneTap
-            style={{ display: 'none', width : '100%', color : 'red' }}
+            style={{ display: 'none' }}
           />
+          </div>
+
+          {/* Hidden GoogleLogin component */}
+          
 
           {message && (
             <p className={message.includes("successful") ? "success" : "error"}>
