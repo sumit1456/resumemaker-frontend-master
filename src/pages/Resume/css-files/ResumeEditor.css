@@ -73,7 +73,7 @@ body {
 
 .resume-editor-container {
   min-height: 100vh;
-  max-height: 120vh;
+  max-height: 150vh;
   background: linear-gradient(180deg, #000000 0%, #0a0a0a 50%, #000000 100%);
   width: 100%;
   position: relative;

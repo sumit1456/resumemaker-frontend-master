@@ -8,14 +8,24 @@ import About from "../About/About.jsx";
 import TemplatesShowcase from "../Templates showcase/Templatesshowcase.jsx";
 import MyResumes from "../UserTemplates/MyResumes.jsx";
 import ViewResume from "../UserTemplates/ViewTemplate.jsx";
+import { useSelector} from "react-redux";
+import store from "../../redux/store.js";
 
-export default function HomePage({
-  isLogged,
-  setIsLogged,
+
+export default function HomePage(
+  {
+  
   userId,
   setUserId,
 }) {
+
+  const isLoggedIn = useSelector((state)=> state.auth.isLoggedIn);
+  
+
+ 
   return (
+
+     
     <div className="home-container">
       {/* Animated background elements */}
       <div className="bg-decoration">
@@ -26,7 +36,7 @@ export default function HomePage({
       </div>
 
       {/* Welcome banner */}
-      {isLogged && userId && (
+      {isLoggedIn && userId && (
         <div className="welcome-banner">
           <div className="welcome-content">
             <div className="welcome-icon">👋</div>
@@ -41,12 +51,12 @@ export default function HomePage({
       <Routes>
         <Route
           index
-          element={<MainLanding isLogged={isLogged} userId={userId} />}
+          element={<MainLanding userId={userId} />}
         />
         <Route
           path="login"
           element={
-            <Login setIsLogged={setIsLogged} setUserId={setUserId} />
+            <Login  setUserId={setUserId} />
           }
         />
         <Route path="signup" element={<Signup />} />
@@ -80,7 +90,9 @@ export default function HomePage({
   );
 }
 
-function MainLanding({ isLogged, userId }) {
+function MainLanding({userId }) {
+  
+  const isLoggedIn = useSelector((state)=> state.auth.isLoggedIn);
   return (
     <div className="main-landing">
       <div className="hero-section">
@@ -99,7 +111,7 @@ function MainLanding({ isLogged, userId }) {
             intelligent builder. Stand out from the crowd and land your dream job.
           </p>
 
-          {isLogged && userId ? (
+          {isLoggedIn && userId ? (
             <div className="user-actions">
               <div className="user-status">
                 <div className="status-indicator"></div>

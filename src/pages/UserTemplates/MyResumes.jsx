@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import './MyResumes.css';
 
-const API_BASE_URL2 = 'http://localhost:8080';
-const API_BASE_URL = 'https://resumemaker-1.onrender.com';
+const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL2 = 'https://resumemaker-1.onrender.com';
 
 const MyResumes = ({userId}) => {
   const navigate = useNavigate();
@@ -42,7 +42,7 @@ const MyResumes = ({userId}) => {
   const handleDelete = async (resumeId) => {
     try {
       setDeleting(resumeId);
-      const response = await fetch(`${API_BASE_URL}/resumes/${resumeId}`, {
+      const response = await fetch(`${API_BASE_URL}/my-resumes/${resumeId}`, {
         method: 'DELETE',
       });
       
@@ -76,13 +76,13 @@ const MyResumes = ({userId}) => {
 
   const getTemplateColor = (templateId) => {
     const colors = {
-      1: '#3b82f6',
-      2: '#a855f7',
-      3: '#10b981',
-      4: '#6366f1',
-      5: '#06b6d4',
-      6: '#f59e0b',
-      7: '#ec4899'
+      1: 'white',
+      2: 'white',
+      3: 'white',
+      4: 'white',
+      5: 'white',
+      6: 'white',
+      7: 'white'
     };
     return colors[templateId] || '#6b7280';
   };
@@ -104,7 +104,7 @@ const MyResumes = ({userId}) => {
           <h2 className="error-title">Error Loading Resumes</h2>
           <p className="error-message">{error}</p>
           <button onClick={fetchResumes} className="retry-button">
-            Try Again
+            Please Login First
           </button>
         </div>
       </div>
@@ -160,7 +160,7 @@ const MyResumes = ({userId}) => {
                   onClick={() => setDeleteConfirm(resume.id)}
                   disabled={deleting === resume.id}
                   title="Delete Resume"
-                >
+                > ❎
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6" />
                   </svg>

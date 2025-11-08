@@ -261,10 +261,10 @@ const ViewResume = () => {
         // Determine which API to use based on environment
         const isDevelopment = window.location.hostname === 'localhost';
         const baseUrl = isDevelopment ? API_BASE_URL2 : API_BASE_URL;
+        console.log(`using url ${API_BASE_URL}`);
+        
 
-        console.log(`Using API: ${baseUrl}`);
-
-        const response = await fetch(`${baseUrl}/my-resumes/getresume/${resumeId}`, {
+        const response = await fetch(`${API_BASE_URL}/my-resumes/getresume/${resumeId}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -293,7 +293,7 @@ const ViewResume = () => {
         if (!window.location.hostname.includes('localhost')) {
           console.log('Attempting localhost fallback...');
           try {
-            const response = await fetch(`${API_BASE_URL2}/my-resumes/getresume/${resumeId}`, {
+            const response = await fetch(`${API_BASE_URL}/my-resumes/getresume/${resumeId}`, {
               method: 'GET',
               headers: {
                 'Content-Type': 'application/json',
@@ -500,12 +500,6 @@ const ViewResume = () => {
             </span>
           </div>
           <div className="header-actions">
-            <button onClick={handlePrint} className="action-btn print-btn">
-              🖨️ Print
-            </button>
-            <button onClick={handleShare} className="action-btn share-btn">
-              📤 Share
-            </button>
             <button 
               onClick={handleDownload} 
               className="action-btn download-btn" 
@@ -514,7 +508,7 @@ const ViewResume = () => {
               ⬇️ {pdfBlob ? 'Download' : 'Loading...'}
             </button>
             <button 
-              onClick={() => navigate(`/editor/${resumeId}`)} 
+              onClick={() => navigate(`/dashboard/resume-editor/${resumeId}`)} 
               className="action-btn edit-btn"
             >
               ✏️ Edit

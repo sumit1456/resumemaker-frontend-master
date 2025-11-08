@@ -4,10 +4,38 @@ import NavBar from "./components/NavBar/NavBar.jsx";
 import HomePage from "./pages/home/HomePage.jsx";
 import Dashboard from "./pages/Dashboard/Dashboard.jsx";
 import "./App.css";
+import { useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
+
+
 
 export default function App() {
+ 
+  const isLoggedIn = useSelector( (state)=> state.auth.isLoggedIn);
+
   const [isLogged, setIsLogged] = useState(false);
   const [userId, setUserId] = useState(null);
+
+  useEffect(()=>{
+    const wakeserver = async()=>{
+      try {
+        const res = await fetch("https://resumemaker-1.onrender.com/ping");
+        if(!res.ok){
+          throw new Error("Unable to wake up the server");
+        }
+        const data = await res.text();
+        console.log(data);
+        
+       
+        
+      } catch (error) {
+        console.log(error);
+      }
+    }
+
+    wakeserver();
+  
+  }, [])
 
   return (
     <div className="app-container">
@@ -19,7 +47,7 @@ export default function App() {
           path="/*"
           element={
             <HomePage
-              isLogged={isLogged}
+              isLogged={isLoggedIn}
               setIsLogged={setIsLogged}
               userId={userId}
               setUserId={setUserId}

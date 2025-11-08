@@ -1,12 +1,22 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import "./NavBar.css";
+import { useSelector, useDispatch } from "react-redux";
+import { logInUser, logOutUser } from "../../redux/store";
+import { useNavigate } from "react-router-dom";
 
-export default function NavBar({ isLogged, setIsLogged }) {
+
+export default function NavBar() {
+  const naviaate = useNavigate();
+  const dispatch = useDispatch();
+  const isLoggedIn = useSelector( (state) => state.auth.isLoggedIn);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+
   const handleLogout = () => {
-    setIsLogged(false);
+    dispatch(logOutUser());
+    naviaate("/");
+   
   };
 
   const toggleSidebar = () => {
@@ -45,7 +55,7 @@ export default function NavBar({ isLogged, setIsLogged }) {
         </div>
 
         <div className="auth-buttons">
-          {isLogged ? (
+          {isLoggedIn ? (
             <button onClick={handleLogout} className="btn-logout">Logout</button>
           ) : (
             <>

@@ -2,12 +2,19 @@ import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import './Login.css';
+import { useSelector, useDispatch } from "react-redux";
+import { logInUser, logOutUser } from "../../redux/store.js";
+import store from "../../redux/store.js";
 
 
 const API_BASE_URL2 = 'http://localhost:8080';
 const API_BASE_URL = 'https://resumemaker-1.onrender.com';
 
-export default function Login({ setIsLogged, setUserId }) {
+export default function Login({ setUserId }) {
+  
+  const isLoggedIn = useSelector((state) => state.auth.isLoggedIn);
+  const dispatch = useDispatch();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -29,7 +36,12 @@ export default function Login({ setIsLogged, setUserId }) {
         { email, password }
       );
 
-      setIsLogged(true);
+     
+
+      //this is a redux synyax
+      dispatch(logInUser());
+
+
       setUserId(response.data.id);
       console.log(response.data.id);
       

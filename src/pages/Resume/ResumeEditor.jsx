@@ -10,7 +10,8 @@ import CreativeBold from './Template7';
 import "./css-files/ResumeEditor.css";
 import ErrorBoundary from "../../ErrorBoundry.jsx";
 
-// const API_BASE_URL2 = 'http://localhost:8080';
+
+const API_BASE_UR1L = 'http://localhost:8080';
 const API_BASE_URL = 'https://resumemaker-1.onrender.com';
 
 // PDF.js Viewer Component
@@ -830,8 +831,11 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
     console.log("Sending payload:", JSON.stringify(payload, null, 2));
     
     const endpoint = resumeId 
-      ? `${baseUrl}/resume/${resumeId}`
+      ? `${baseUrl}/update/${resumeId}`
       : `${baseUrl}/saveall`;
+
+    console.log(`The endpoint was ${endpoint}`);
+      
     
     const method = resumeId ? "PUT" : "POST";
     
@@ -879,6 +883,7 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
     setSaveError(`Failed to save resume: ${err.message}`);
   } finally {
     setSaving(false);
+    alert("Resume has been saved successfully");
   }
 };
 
@@ -1305,7 +1310,7 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
             </div>
           </div>
 
-          <div className="preview-panel" style={{ height: "800px", overflow: "hidden"}}>
+          <div className="preview-panel" style={{ height: "1100px"}}>
             <div className="preview-header">
               <h3>Live Preview</h3>
             </div>
