@@ -27,7 +27,7 @@ export default function NavBar() {
     <>
       <nav className="nav-bar">
         <div className="left">
-          <img src="./images/logo-s.png" alt="Resume Maker Logo" />
+          <img src="./web-logo.png" alt="Resume Maker Logo" />
           <h1>Resume Maker</h1>
         </div>
 
