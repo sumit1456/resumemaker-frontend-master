@@ -142,7 +142,7 @@ export default function Login({ setUserId }) {
             onSuccess={handleGoogleLoginSuccess}
             onError={handleGoogleLoginError}
             useOneTap
-            style={{ display: 'none', width : '100%' }}
+            style={{ display: 'none', width : '100%', color : 'red' }}
           />
 
           {message && (
