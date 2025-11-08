@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import './MyResumes.css';
 
-const API_BASE_URL = 'http://localhost:8080';
-const API_BASE_URL2 = 'https://resumemaker-1.onrender.com';
+const API_BASE_URL2 = 'http://localhost:8080';
+const API_BASE_URL = 'https://resumemaker-1.onrender.com';
 
 const MyResumes = ({userId}) => {
   const navigate = useNavigate();
