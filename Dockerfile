@@ -2,9 +2,12 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
+RUN npm install --include=dev
 COPY . .
 RUN npm run build       # creates /app/dist
+
+
+
 
 # Stage 2: Serve with Nginx
 FROM nginx:alpine
