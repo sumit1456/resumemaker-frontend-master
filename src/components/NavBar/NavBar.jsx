@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import "./NavBar.css";
 import { useSelector, useDispatch } from "react-redux";
-import { logInUser, logOutUser } from "../../redux/store";
+import { logInUser, logOutUser } from "../../redux/store.js";
 import { useNavigate } from "react-router-dom";
 
 
