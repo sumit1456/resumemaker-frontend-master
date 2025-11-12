@@ -7,6 +7,7 @@ import ATSFriendlyResumeDocument from "../Resume/Template3";
 import ExecutiveEliteDocument from "../Resume/Template4";
 import TechInnovatorDocument from "../Resume/Template5";
 import AcademicScholarDocument from "../Resume/Template6";
+import NewTemplate from "../Resume/Template8"
 import CreativeBold from "../Resume/Template7";
 import './ViewTemplate.css';
 
@@ -350,7 +351,7 @@ const ViewResume = () => {
       4: ExecutiveEliteDocument,
       5: TechInnovatorDocument,
       6: AcademicScholarDocument,
-      7: CreativeBold
+      7: NewTemplate
     };
     
     return templates[templateId] || ResumeDocument;

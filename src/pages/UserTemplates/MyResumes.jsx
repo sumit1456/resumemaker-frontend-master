@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import './MyResumes.css';
+import { useSelector } from 'react-redux';
 
 const API_BASE_URL2 = 'http://localhost:8080';
 const API_BASE_URL = 'https://resumemaker-1.onrender.com';
 
-const MyResumes = ({userId}) => {
+const MyResumes = () => {
   const navigate = useNavigate();
   const [resumes, setResumes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -13,15 +14,18 @@ const MyResumes = ({userId}) => {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [deleting, setDeleting] = useState(null);
 
+  const id = useSelector((state)=> state.auth.userId);
+
   useEffect(() => {
     fetchResumes();
-  }, [userId]);
+  }, [id]);
 
   const fetchResumes = async () => {
+   
     try {
       setLoading(true);
-      const cleanId = String(userId).trim();
-      const response = await fetch(`${API_BASE_URL}/my-resumes/${userId}`);
+      // const cleanId = String(id).trim();
+      const response = await fetch(`${API_BASE_URL}/my-resumes/${id}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch resumes');

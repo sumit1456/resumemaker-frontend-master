@@ -8,6 +8,7 @@ import About from "../About/About.jsx";
 import TemplatesShowcase from "../Templates showcase/Templatesshowcase.jsx";
 import MyResumes from "../UserTemplates/MyResumes.jsx";
 import ViewResume from "../UserTemplates/ViewTemplate.jsx";
+import EmailVerification from "../../features/auth/Verification.jsx";
 import { useSelector} from "react-redux";
 
 
@@ -20,6 +21,7 @@ export default function HomePage(
 }) {
 
   const isLoggedIn = useSelector((state)=> state.auth.isLoggedIn);
+  const id = useSelector((state)=> state.auth.userId);
   
 
  
@@ -36,13 +38,13 @@ export default function HomePage(
       </div>
 
       {/* Welcome banner */}
-      {isLoggedIn && userId && (
+      {isLoggedIn && id && (
         <div className="welcome-banner">
           <div className="welcome-content">
             <div className="welcome-icon">👋</div>
             <div className="welcome-text">
               <span>Welcome back!</span>
-              <div className="user-id">ID: <strong>{userId}</strong></div>
+              <div className="user-id">ID: <strong>{id}</strong></div>
             </div>
           </div>
         </div>
@@ -78,21 +80,27 @@ export default function HomePage(
         
           <Route
           path="user-templates"
-          element={<MyResumes userId={userId} />}
+          element={<MyResumes/>}
         />
 
         <Route
           path="my-resumes/getresume/:resumeId"
           element={<ViewResume />}
         />
+
+        <Route path="/verify" element={<Login />} />
+
       </Routes>
     </div>
   );
 }
 
 function MainLanding({userId }) {
+
+
   
   const isLoggedIn = useSelector((state)=> state.auth.isLoggedIn);
+  const id = useSelector((s)=>s.auth.userId);
   return (
     <div className="main-landing">
       <div className="hero-section">
@@ -115,7 +123,7 @@ function MainLanding({userId }) {
             <div className="user-actions">
               <div className="user-status">
                 <div className="status-indicator"></div>
-                <span>Logged in as ID: <strong>{userId}</strong></span>
+                <span>Logged in as ID: <strong>{id}</strong></span>
               </div>
               <Link to="/dashboard" className="btn btn-primary">
                 Go to Dashboard

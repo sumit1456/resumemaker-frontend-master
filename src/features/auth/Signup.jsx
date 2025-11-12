@@ -3,7 +3,8 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom"; // ✅ only useNavigate (not Navigate)
 import "./Signup.css";
 
-const API_BASE_URL = "https://resumemaker-1.onrender.com";
+const API_BASE_URL1 = "https://resumemaker-1.onrender.com";
+const API_BASE_URL = 'http://localhost:8080';
 
 export default function Signup() {
   const [username, setUsername] = useState("");
@@ -29,10 +30,10 @@ export default function Signup() {
       const response = await axios.post(`${API_BASE_URL}/signup`, {
         username,
         email,
-        password,
+        password
       });
 
-      setMessage(`Signup successful! Welcome ${response.data.username}`);
+      setMessage(`Please check your email for verification ${response.data.username}`);
 
    
       setTimeout(() => {

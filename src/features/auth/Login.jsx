@@ -11,6 +11,8 @@ const API_BASE_URL2 = 'http://localhost:8080';
 
 export default function Login({ setUserId }) {
   const isLoggedIn = useSelector((state) => state.auth.isLoggedIn);
+  const id = useSelector((state)=> state.auth.userId);
+
   const dispatch = useDispatch();
 
   const [email, setEmail] = useState("");
@@ -30,9 +32,12 @@ export default function Login({ setUserId }) {
     setLoading(true);
     try {
       const response = await axios.post(`${API_BASE_URL}/login`, { email, password });
-
-      dispatch(logInUser());
+      console.log(`THis is the userId from the store ${id}`);
+      
+      dispatch(logInUser(response.data.id));
       setUserId(response.data.id);
+      
+      
       setMessage("Login successful!");
       navigate("/");
     } catch (error) {
@@ -55,7 +60,7 @@ export default function Login({ setUserId }) {
         token: credentialResponse.credential
       });
 
-      dispatch(logInUser());
+      dispatch(logInUser(response.data.id));
       setUserId(response.data.id);
       setMessage("Google login successful!");
       navigate("/");

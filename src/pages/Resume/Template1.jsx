@@ -2,7 +2,7 @@
 import React from "react";
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 
-const Template4 = ({ 
+const Template1 = ({ 
   resumeDetails, 
   skills, 
   experiences, 
@@ -442,4 +442,4 @@ const Template4 = ({
   );
 };
 
-export default Template4;
+export default Template1;

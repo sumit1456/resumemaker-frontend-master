@@ -6,6 +6,7 @@ import Dashboard from "./pages/Dashboard/Dashboard.jsx";
 import "./App.css";
 import { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
+import EmailVerification from "./features/auth/Verification.jsx";
 
 
 
@@ -59,6 +60,8 @@ export default function App() {
           path="/dashboard/*"
           element={<Dashboard userId={userId} setUserId={setUserId} />}
         />
+
+        <Route path="/verify" element={<EmailVerification />} />
 
         
       </Routes>

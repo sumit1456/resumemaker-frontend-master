@@ -8,6 +8,7 @@ import TechInnovatorDocument from './Template5';
 import AcademicScholarDocument from './Template6';
 import CreativeBold from './Template7';
 import "./css-files/ResumeEditor.css";
+import NewTemplate from './Template8.jsx';
 import ErrorBoundary from "../../ErrorBoundry.jsx";
 
 
@@ -310,6 +311,10 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
   const [pdfBlob, setPdfBlob] = useState(null);
   const [generatingPreview, setGeneratingPreview] = useState(false);
 
+
+
+  // State rhat renders the preview real time
+
   useEffect(() => {
     if (successMessage) {
       const timer = setTimeout(() => setSuccessMessage(""), 5000);
@@ -559,6 +564,9 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
         case "6":
           doc = React.createElement(AcademicScholarDocument, { ...debouncedData, sectionTitles });
           break;
+        case "7":
+          doc = React.createElement(NewTemplate, { ...debouncedData, sectionTitles });
+          break;
         default:
           doc = React.createElement(CreativeBold, { ...debouncedData, sectionTitles });
       }
@@ -759,6 +767,9 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
           break;
         case "6":
           doc = React.createElement(AcademicScholarDocument, downloadData);
+          break;
+        case "7":  
+          doc = React.createElement(NewTemplate, downloadData);
           break;
         default:
           doc = React.createElement(CreativeBold, downloadData);
@@ -1069,7 +1080,8 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
                 <option value="4">Executive Elite</option>
                 <option value="5">Tech Innovator</option>
                 <option value="6">Academic Scholar</option>
-                <option value="7">Creative Bold</option>
+                <option value="7">New ATS-Friendly Template</option>
+                <option value="8">Creative Bold</option>
               </select>
               {(isTemplateLoading || generatingPreview) && (
                 <span className="template-loading">
