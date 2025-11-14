@@ -34,6 +34,10 @@ export default function ResumeAnalyzer({
   const [foundVerbs, setFoundVerbs] = useState([]);
   const [jobDescriptionInsights, setJobDescriptionInsights] = useState("");
 
+  
+const API_BASE_URL2 = 'http://localhost:8080';
+const API_BASE_URL = 'https://resumemaker-1.onrender.com';
+
   // Build resume string for AI analysis
   const buildResumeString = () => {
     let r = `${resumeDetails.name}\n${resumeDetails.title}\n`;
@@ -674,7 +678,9 @@ const analyzeWithAI = async () => {
       resume: buildResumeString()
     };
 
-    const res = await fetch("http://localhost:8080/analyze", {
+
+
+    const res = await fetch(`${API_BASE_URL}/analyze`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
