@@ -10,6 +10,9 @@ import CreativeBold from './Template7';
 import "./css-files/ResumeEditor.css";
 import NewTemplate from './Template8.jsx';
 import ErrorBoundary from "../../ErrorBoundry.jsx";
+import ResumeAnalyzer from "./ResumeAnalyzer.jsx";
+import { useSelector } from "react-redux";
+import { AlignRight } from "lucide-react";
 
 
 const API_BASE_URL2 = 'http://localhost:8080';
@@ -187,9 +190,24 @@ function useDebounce(value, delay) {
   return debouncedValue;
 }
 
-export default function ResumeEditor({ resume: propsResume, userId }) {
+
+
+
+export default function ResumeEditor({ resume: propsResume}) {
   const { resumeId } = useParams();
   const resumeRef = useRef();
+  const [jobDescription, setJobDescription] = useState('');
+  const [jobDescriptionInsights, setJobDescriptionInsights] = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isAnalyzingAI, setIsAnalyzingAI] = useState(false);
+  const [isAIAnalysis, setIsAIAnalysis] = useState(false);
+  const id = useSelector((s)=>s.auth.userId);
+  const [userId, setUserId] = useState(id);
+
+  console.log("From the state the user id is"+ userId);
+  
+
+
 
   const [isLoadingResume, setIsLoadingResume] = useState(false);
   const [resumeTitle, setResumeTitle] = useState("");
@@ -203,6 +221,13 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
   const [showCertifications, setShowCertifications] = useState(true);
 
   const [customSections, setCustomSections] = useState([]);
+
+  
+  
+  
+
+
+  
   
     const [resumeDetails, setResumeDetails] = useState({
     name: "SUMIT HATEKAR",
@@ -299,7 +324,12 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
       education: "Education",
       certifications: "Certifications"
     });
+
+
   
+
+// AI-powered detailed analysis
+
     
     
   const [saving, setSaving] = useState(false);
@@ -794,6 +824,8 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
     }
   };
 
+ 
+  
  const handleSaveAll = async () => {
   setSaving(true);
   setSaveError("");
@@ -817,7 +849,7 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
     const payload = {
       title,
       templateId: Number(selectedTemplate),
-      userId,
+      userId : 1 ,
       details: {
         name: resumeDetails.name,
         title: resumeDetails.title,
@@ -838,8 +870,16 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
       customSections,
       sectionTitles
     };
+
+    console.log(payload);
+    if(userId==null){
+      alert("Apparently user id is null");
+      return;
+    }
     
-    console.log("Sending payload:", JSON.stringify(payload, null, 2));
+    
+   
+   
     
     const endpoint = resumeId 
       ? `${baseUrl}/update/${resumeId}`
@@ -897,6 +937,7 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
     alert("Resume has been saved successfully");
   }
 };
+
 
   if (isLoadingResume) {
     return (
@@ -1109,6 +1150,35 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
                   <span>{saveError}</span>
                 </div>
               )}
+
+
+
+                <div>
+      {/* Job Description Editor */}
+      <ResumeAnalyzer
+        jobDescription={jobDescription}
+        resumeDetails={resumeDetails}
+        skills={skills}
+        experiences={experiences}
+        projects={projects}
+        educationList={educationList}
+        certifications={certifications}
+        customSections={customSections}
+        showSummary={true}
+        showSkills={true}
+        showExperience={true}
+        showProjects={true}
+        showEducation={true}
+        showCertifications={true}
+      />
+    </div>
+
+              
+
+
+
+          
+
               
               <div className="section-manager">
                 <h3 style={{ marginBottom: '0.75rem', fontSize: '1.1rem' }}>Manage Sections</h3>

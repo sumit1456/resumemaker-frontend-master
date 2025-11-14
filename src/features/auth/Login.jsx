@@ -33,10 +33,15 @@ export default function Login({ setUserId }) {
     try {
       const response = await axios.post(`${API_BASE_URL}/login`, { email, password });
       console.log(`THis is the userId from the store ${id}`);
+      console.log(response.data + " this is the id from responce");
       
-      dispatch(logInUser(response.data.id));
-      setUserId(response.data.id);
-      
+
+      if(response){
+          dispatch(logInUser(response.data));
+          setUserId(response.data);
+      }
+    
+     
       
       setMessage("Login successful!");
       navigate("/");
@@ -60,8 +65,14 @@ export default function Login({ setUserId }) {
         token: credentialResponse.credential
       });
 
-      dispatch(logInUser(response.data.id));
-      setUserId(response.data.id);
+
+     console.log(`${response.data} this is the responce `);
+     
+      
+
+      dispatch(logInUser(response.data));
+      
+      
       setMessage("Google login successful!");
       navigate("/");
     } catch (error) {

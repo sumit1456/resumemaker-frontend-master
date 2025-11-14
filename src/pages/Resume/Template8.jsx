@@ -68,7 +68,6 @@ const Template8 = ({
       marginTop: 8,
       marginBottom: 4,
       paddingBottom: 3,
-      paddingLeft: 2,
       borderBottomWidth: 2,
       borderBottomColor: "#000",
       textTransform: "uppercase",
@@ -83,11 +82,10 @@ const Template8 = ({
       color: "#1a1a1a", 
       textAlign: "justify", 
       marginBottom: 2,
-      fontFamily: "Helvetica"
+      fontFamily: "Times-Roman"
     },
     skillsContainer: { 
       marginBottom: 2,
-      backgroundColor: "#fafafa",
       padding: 6,
       borderLeftWidth: 2,
       borderLeftColor: "#000"
@@ -107,7 +105,7 @@ const Template8 = ({
       color: "#1a1a1a", 
       flex: 1, 
       lineHeight: 1.3,
-      fontFamily: "Helvetica"
+      fontFamily: "Times-Roman"
     },
     experienceItem: { 
       marginBottom: 6,
@@ -149,14 +147,14 @@ const Template8 = ({
       fontSize: 9, 
       marginRight: 4, 
       color: "#000",
-      fontFamily: "Helvetica-Bold"
+      fontFamily: "Helvetica"
     },
     bulletText: { 
       flex: 1, 
       fontSize: 9, 
       lineHeight: 1.35, 
       color: "#1a1a1a",
-      fontFamily: "Helvetica"
+      fontFamily: "Times-Roman"
     },
     projectItem: { 
       marginBottom: 5,
@@ -204,7 +202,7 @@ const Template8 = ({
     institutionName: { 
       fontSize: 9, 
       color: "#1a1a1a",
-      fontFamily: "Helvetica"
+      fontFamily: "Times-Roman"
     },
     educationDetails: { 
       fontSize: 8.5, 
@@ -317,7 +315,7 @@ const Template8 = ({
                   (ach, j) =>
                     ach.trim() && (
                       <View key={j} style={styles.bulletPoint}>
-                        <Text style={styles.bullet}>▪</Text>
+                        <Text style={styles.bullet}>-</Text>
                         <Text style={styles.bulletText}>{ach}</Text>
                       </View>
                     )
@@ -342,7 +340,7 @@ const Template8 = ({
                   (desc, j) =>
                     desc.trim() && (
                       <View key={j} style={styles.bulletPoint}>
-                        <Text style={styles.bullet}>▪</Text>
+                        <Text style={styles.bullet}>-</Text>
                         <Text style={styles.bulletText}>{desc}</Text>
                       </View>
                     )
@@ -387,7 +385,7 @@ const Template8 = ({
               .filter((c) => c.trim())
               .map((cert, idx) => (
                 <View key={idx} style={[styles.bulletPoint, styles.certificationBullet]}>
-                  <Text style={styles.bullet}>▪</Text>
+                  <Text style={styles.bullet}>-</Text>
                   <Text style={styles.bulletText}>{cert}</Text>
                 </View>
               ))}
@@ -404,7 +402,7 @@ const Template8 = ({
                   .filter((item) => item.trim())
                   .map((item, idx) => (
                     <View key={idx} style={[styles.bulletPoint, styles.certificationBullet]}>
-                      <Text style={styles.bullet}>▪</Text>
+                      <Text style={styles.bullet}>-</Text>
                       <Text style={styles.bulletText}>{item}</Text>
                     </View>
                   ))}

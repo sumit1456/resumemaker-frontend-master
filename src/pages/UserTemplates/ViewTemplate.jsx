@@ -259,10 +259,14 @@ const ViewResume = () => {
         setLoading(true);
         console.log(`Fetching resume with ID: ${resumeId}`);
 
+
         // Determine which API to use based on environment
         const isDevelopment = window.location.hostname === 'localhost';
         const baseUrl = isDevelopment ? API_BASE_URL2 : API_BASE_URL;
-        console.log(`using url ${API_BASE_URL}`);
+
+        console.log(`using url ${API_BASE_URL} for fetching resumes in view template`);
+        console.log(` ${resumeId} is the resumeId for the request`);
+        
         
 
         const response = await fetch(`${API_BASE_URL}/my-resumes/getresume/${resumeId}`, {

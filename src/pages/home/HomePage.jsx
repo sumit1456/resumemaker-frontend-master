@@ -10,6 +10,7 @@ import MyResumes from "../UserTemplates/MyResumes.jsx";
 import ViewResume from "../UserTemplates/ViewTemplate.jsx";
 import EmailVerification from "../../features/auth/Verification.jsx";
 import { useSelector} from "react-redux";
+import store from "../../redux/store.js";
 
 
 
@@ -22,6 +23,12 @@ export default function HomePage(
 
   const isLoggedIn = useSelector((state)=> state.auth.isLoggedIn);
   const id = useSelector((state)=> state.auth.userId);
+  console.log(isLoggedIn);
+  console.log(id);
+  console.log(store.getState());
+  
+  
+  
   
 
  
@@ -119,8 +126,10 @@ function MainLanding({userId }) {
             intelligent builder. Stand out from the crowd and land your dream job.
           </p>
 
-          {isLoggedIn && userId ? (
+          {isLoggedIn && id ? (
+            
             <div className="user-actions">
+              
               <div className="user-status">
                 <div className="status-indicator"></div>
                 <span>Logged in as ID: <strong>{id}</strong></span>
