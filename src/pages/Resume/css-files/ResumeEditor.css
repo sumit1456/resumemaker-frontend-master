@@ -423,6 +423,15 @@ h2.section-title,
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);
 }
 
+.education{
+  justify-content: center;
+}
+
+
+
+.education input:first-child{
+  width: 100%;
+}
 .exp-header,
 .project-header,
 .edu-header {
@@ -441,8 +450,8 @@ h2.section-title,
 .project-duration,
 .degree,
 .institution,
-.year,
 .technologies,
+.year,
 .project-link {
   font-size: 14px;
   background: transparent;
@@ -454,6 +463,10 @@ h2.section-title,
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }
 
+.year{
+  
+}
+
 .position,
 .project-name,
 .degree {
@@ -463,12 +476,20 @@ h2.section-title,
 }
 
 .duration,
-.project-duration,
-.year {
+.project-duration{
   text-align: right;
   min-width: 130px;
   font-weight: 500;
   color: var(--gray-200);
+}
+
+.year{
+
+ 
+  min-width: 130px;
+  font-weight: 500;
+  color: var(--gray-200);
+
 }
 
 .location,

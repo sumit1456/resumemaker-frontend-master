@@ -7,6 +7,7 @@ import "./App.css";
 import { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import EmailVerification from "./features/auth/Verification.jsx";
+import BackendWakePopup from "./components/PopUp/Backendpopup.jsx";
 
 
 
@@ -21,12 +22,7 @@ export default function App() {
   useEffect(()=>{
     const wakeserver = async()=>{
       try {
-        const res = await fetch("https://resumemaker-1.onrender.com/ping");
-        if(!res.ok){
-          throw new Error("Unable to wake up the server");
-        }
-        const data = await res.text();
-        console.log(data);
+        
         
        
         
@@ -43,6 +39,7 @@ export default function App() {
     <div className="app-container">
       {/* Pass login status and user ID to the NavBar */}
       <NavBar isLogged={isLogged} userId={userId} setIsLogged={setIsLogged} />
+      <BackendWakePopup/>
 
       <Routes>
         <Route

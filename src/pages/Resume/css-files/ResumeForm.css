@@ -330,14 +330,23 @@ body {
 
 /* ===== Experience/Project/Education Blocks ===== */
 .experience,
-.project,
-.education {
+.project {
   margin-bottom: var(--space-6);
   padding: var(--space-4);
   background: var(--gray-50);
   border-radius: 8px;
   border: 1px solid var(--gray-200);
   transition: all var(--transition-fast);
+}
+
+.education{
+  margin-bottom: var(--space-4);
+  padding: var(--space-4);
+  background: var(--gray-50);
+  border-radius: 8px;
+  border: 1px solid var(--gray-200);
+  transition: all var(--transition-fast);
+
 }
 
 .experience:hover,
