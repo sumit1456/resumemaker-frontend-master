@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 
 export default function BackendWakePopup() {
   const [visible, setVisible] = useState(true);
-  const [message, setMessage] = useState("Waking up server… please wait");
+  const [message, setMessage] = useState("Waking up server… please wait It takes around 2-3 minutes to wake service. Thank You for your patience ");
 
   useEffect(() => {
     let interval;
