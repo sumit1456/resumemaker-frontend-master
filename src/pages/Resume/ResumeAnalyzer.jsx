@@ -755,9 +755,52 @@ const analyzeWithAI = async () => {
   }
 };
 
+
+  const improveATSContent = async ()=>{
+
+    try{
+
+       const payload = {
+      details: {
+        name: resumeDetails.name,
+        title: resumeDetails.title,
+        summary: resumeDetails.summary
+      },
+      contact: resumeDetails.contact,
+      skills: transformedSkills,
+      experiences,
+      projects,
+      educationList,
+      certifications: transformedCertifications,
+    };
+
+      
+     
+
+      // const res = await fetch(`${API_BASE_URL}/enhanceResume`, {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify(payload),
+      // });
+
+
+
+     
+
+    }
+
+    catch(err){
+
+    }
+
+
+   
+
+  }
+
   return (
     <div className="section-manager job-description-section">
-      <h3>Job Description</h3>
+      <h3>AI Analysis Section</h3>
       <textarea
         className="job-description-textarea"
         placeholder="Paste job description here..."
@@ -774,6 +817,12 @@ const analyzeWithAI = async () => {
         <button onClick={analyzeWithAI} disabled={isAnalyzing || isAIAnalysis}>
           {isAIAnalysis ? "Analyzing..." : "AI Detailed Review"}
         </button>
+
+        
+       
+       <button onClick={improveATSContent} disabled={isAnalyzing}>
+          Enhance Your Resume  
+       </button>
 
         <button
           onClick={() => {
