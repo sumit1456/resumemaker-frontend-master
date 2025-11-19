@@ -122,7 +122,7 @@ const MyResumes = () => {
         <div className="header-content">
           <Link to="/" className="logo-link">
             <div className="logo-icon"></div>
-            <h1 className="logo-text">Resume Maker</h1>
+            <h1 className="logo-text">Manage your Resumes</h1>
           </Link>
         </div>
       </header>

@@ -4,6 +4,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import { setCurrentResume, setEnhancedResume } from "../../redux/store";
 import { retry } from "@reduxjs/toolkit/query";
 import { useEffect } from "react";
+import "./css-files/analyze.css"
+
 
 
 
@@ -50,6 +52,18 @@ export default function ResumeAnalyzer({
   const [currentLocalResume, setCurrentLocalResume] = useState(null);
   const [newLocalResume, setNewLocalResume] = useState(null);
   const [reportOutput, setReportOutput] = useState(null);
+
+  const canGenerateReport =
+  currentLocalResume &&
+  newLocalResume;
+
+  const isDisabled = !canGenerateReport || createComparisonReport;
+  const isJDPresent = jobDescription.trim().length > 0;
+
+const disableQuick = !isJDPresent || isAnalyzing || isAIAnalysis || isEnhancing;
+const disableAIDetailed = !isJDPresent || isAnalyzing || isAIAnalysis || isEnhancing;
+
+
 
 
   
@@ -175,9 +189,10 @@ const STYLES = {
     backgroundColor: COLORS.secondary,
     color: COLORS.white,
     padding: '24px',
-    borderRadius: '12px',   // smoother corners
+    borderRadius: '12px',
     minHeight: '500px',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+    fontFamily: "'Inter', sans-serif",
   },
 
   // Header
@@ -190,16 +205,20 @@ const STYLES = {
   headerTitle: {
     margin: '0 0 8px 0',
     fontSize: '1.5rem',
-    fontWeight: '700',
+    fontWeight: 700,
     color: COLORS.white,
-    letterSpacing: '1px'
+    letterSpacing: '0.5px',
+    fontFamily: "'Space Grotesk', sans-serif",
+    lineHeight: 1.2,
   },
 
   headerSubtitle: {
     margin: '0',
-    fontSize: '0.9rem',
+    fontSize: '0.95rem',
     color: COLORS.gray,
-    letterSpacing: '0.5px'
+    letterSpacing: '0.3px',
+    fontFamily: "'Inter', sans-serif",
+    lineHeight: 1.45,
   },
 
   // Card
@@ -208,7 +227,8 @@ const STYLES = {
     padding: '20px',
     borderRadius: '10px',
     backgroundColor: COLORS.tertiary,
-    boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+    fontFamily: "'Inter', sans-serif",
   },
 
   cardAccent: {
@@ -218,7 +238,8 @@ const STYLES = {
     backgroundColor: COLORS.accent,
     textAlign: 'center',
     color: COLORS.white,
-    boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+    fontFamily: "'Inter', sans-serif",
   },
 
   cardLight: {
@@ -227,48 +248,65 @@ const STYLES = {
     borderRadius: '12px',
     backgroundColor: COLORS.white,
     color: COLORS.primary,
-    boxShadow: '0 2px 12px rgba(0,0,0,0.1)'
+    boxShadow: '0 2px 12px rgba(0,0,0,0.1)',
+    fontFamily: "'Inter', sans-serif",
   },
 
   // Typography
   sectionTitle: {
     fontSize: '1.2rem',
-    fontWeight: '700',
+    fontWeight: 700,
     color: COLORS.white,
     marginBottom: '16px',
     textTransform: 'uppercase',
-    letterSpacing: '1px',
+    letterSpacing: '0.5px',
     borderBottom: `1px solid ${COLORS.gray}`,
-    paddingBottom: '8px'
+    paddingBottom: '8px',
+    fontFamily: "'Space Grotesk', sans-serif",
+    lineHeight: 1.2,
   },
 
   cardTitle: {
-    fontSize: '0.9rem',
-    fontWeight: '700',
+    fontSize: '1rem',
+    fontWeight: 600,
     color: COLORS.white,
-    marginBottom: '10px'
+    marginBottom: '10px',
+    letterSpacing: '0.3px',
+    fontFamily: "'Space Grotesk', sans-serif",
   },
 
   label: {
-    fontSize: '0.75rem',
+    fontSize: '0.8rem',
     color: COLORS.gray,
     marginBottom: '6px',
-    textTransform: 'uppercase',
-    fontWeight: '600'
+    fontWeight: 600,
+    fontFamily: "'Inter', sans-serif",
+    letterSpacing: '0.3px',
+  },
+
+  bodyText: {
+    fontSize: '0.95rem',
+    fontWeight: 400,
+    lineHeight: 1.55,
+    letterSpacing: '0.25px',
+    fontFamily: "'Inter', sans-serif",
+    color: COLORS.lightGray,
   },
 
   bigNumber: {
     fontSize: '2rem',
-    fontWeight: '900',
+    fontWeight: 800,
     color: COLORS.white,
-    letterSpacing: '-0.5px'
+    letterSpacing: '-0.5px',
+    fontFamily: "'Space Grotesk', sans-serif",
   },
 
   mediumNumber: {
     fontSize: '1.5rem',
-    fontWeight: '800',
+    fontWeight: 700,
     color: COLORS.white,
-    letterSpacing: '-0.5px'
+    letterSpacing: '-0.3px',
+    fontFamily: "'Space Grotesk', sans-serif",
   },
 
   // Badge/Pill
@@ -278,8 +316,9 @@ const STYLES = {
     backgroundColor: COLORS.primary,
     fontSize: '0.75rem',
     color: COLORS.white,
-    fontWeight: '600',
-    letterSpacing: '0.5px'
+    fontWeight: 600,
+    letterSpacing: '0.4px',
+    fontFamily: "'Inter', sans-serif",
   },
 
   // Grid
@@ -287,27 +326,26 @@ const STYLES = {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, 1fr)',
     gap: '20px',
-    marginBottom: '32px'
+    marginBottom: '32px',
   },
 
   grid2: {
     display: 'grid',
     gridTemplateColumns: 'repeat(2, 1fr)',
-    gap: '20px'
+    gap: '20px',
   },
 
   // List
   list: {
     margin: '0',
     paddingLeft: '20px',
-    fontSize: '0.85rem',
-    lineHeight: '1.8',
-    color: COLORS.lightGray
-  }
-
-
-  
+    fontSize: '0.9rem',
+    lineHeight: 1.8,
+    fontFamily: "'Inter', sans-serif",
+    color: COLORS.lightGray,
+  },
 };
+
 
 
 // ==================== UTILITY COMPONENTS ====================
@@ -407,275 +445,231 @@ const ErrorState = ({ title, message, subtitle }) => (
   </div>
 );
 
+const formatAIResponse = (json) => {
+  if (!json) return null;
 
-// const formatValue = (val) => {
-//   if (!val) return "—";
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+      
+      {/* SUMMARY SECTION */}
+      <div style={{ 
+        background: "#2a2a2a", 
+        borderRadius: "8px", 
+        border: "1px solid #3a3a3a",
+        padding: "24px" 
+      }}>
+        <h4 style={{
+          margin: "0 0 20px 0",
+          fontSize: "1rem",
+          fontWeight: "600",
+          color: "#ffffff",
+          letterSpacing: "0.5px",
+          paddingBottom: "12px",
+          borderBottom: "2px solid #3a3a3a"
+        }}>📋 {json.summary.title}</h4>
 
-//   // If value is string → show directly
-//   if (typeof val === "string") return val;
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          {json.summary.points.map((p, i) => (
+            <div key={i} style={{ 
+              display: "flex", 
+              gap: "12px", 
+              lineHeight: "1.7", 
+              color: "#d4d4d4", 
+              fontSize: "0.88rem" 
+            }}>
+              <span style={{ 
+                color: "#fbbf24", 
+                fontWeight: "bold", 
+                fontSize: "1.1rem", 
+                marginTop: "2px" 
+              }}>•</span>
+              <span>{p}</span>
+            </div>
+          ))}
+        </div>
+      </div>
 
-//   // If value is array → render each item
-//   if (Array.isArray(val)) {
-//     return val.map((item, idx) => (
-//       <div key={idx} style={{ 
-//         marginBottom: "12px",
-//         paddingBottom: "12px",
-//         borderBottom: idx < val.length - 1 ? "1px solid #333" : "none"
-//       }}>
-//         {typeof item === "string" ? (
-//           item
-//         ) : (
-//           <div>
-//             {item.title && (
-//               <div style={{ color: "#fff", fontWeight: "600", marginBottom: "6px" }}>
-//                 {item.title}
-//               </div>
-//             )}
-//             {item.description && (
-//               <div style={{ color: "#d0d0d0", fontSize: "13px", marginBottom: "6px" }}>
-//                 {item.description}
-//               </div>
-//             )}
-//             {item.technologies && (
-//               <div style={{ color: "#888", fontSize: "12px" }}>
-//                 Technologies: {Array.isArray(item.technologies) ? item.technologies.join(", ") : item.technologies}
-//               </div>
-//             )}
-//             {item.url && (
-//               <div style={{ color: "#ffb86c", fontSize: "12px", marginTop: "4px" }}>
-//                 {item.url}
-//               </div>
-//             )}
-//             {/* Fallback for any other object structure */}
-//             {!item.title && !item.description && (
-//               <pre style={{ 
-//                 whiteSpace: "pre-wrap", 
-//                 color: "#ccc", 
-//                 fontSize: "12px",
-//                 margin: 0,
-//                 fontFamily: "monospace"
-//               }}>
-//                 {JSON.stringify(item, null, 2)}
-//               </pre>
-//             )}
-//           </div>
-//         )}
-//       </div>
-//     ));
-//   }
+      {/* STRENGTHS */}
+      <div style={{ 
+        background: "#2a2a2a", 
+        borderRadius: "8px", 
+        border: "1px solid #3a3a3a",
+        padding: "24px" 
+      }}>
+        <h4 style={{
+          margin: "0 0 20px 0",
+          fontSize: "1rem",
+          fontWeight: "600",
+          color: "#ffffff",
+          letterSpacing: "0.5px",
+          paddingBottom: "12px",
+          borderBottom: "2px solid #3a3a3a"
+        }}>💼 Strengths</h4>
 
-//   // If value is object → pretty print
-//   if (typeof val === "object") {
-//     return (
-//       <pre style={{ 
-//         whiteSpace: "pre-wrap", 
-//         color: "#ccc",
-//         fontSize: "12px",
-//         margin: 0,
-//         fontFamily: "monospace"
-//       }}>
-//         {JSON.stringify(val, null, 2)}
-//       </pre>
-//     );
-//   }
+        {json.strengths.map((item, i) => (
+          <div key={i} style={{
+            background: "#1e1e1e",
+            padding: "18px",
+            borderRadius: "6px",
+            marginBottom: i < json.strengths.length - 1 ? "14px" : "0",
+            borderLeft: "3px solid #4a4a4a",
+            display: "flex",
+            flexDirection: "column",
+            gap: "10px",
+            fontSize: "0.88rem",
+            color: "#d4d4d4",
+            lineHeight: "1.7"
+          }}>
+            <div><strong style={{ color: "#e5e5e5" }}>Area:</strong> {item.area}</div>
+            <div><strong style={{ color: "#e5e5e5" }}>Strong:</strong> {item.strong}</div>
+            <div><strong style={{ color: "#e5e5e5" }}>Why It Matters:</strong> {item.why}</div>
+          </div>
+        ))}
+      </div>
 
-//   return String(val);
-// };
+      {/* IMPROVEMENTS */}
+      <div style={{ 
+        background: "#2a2a2a", 
+        borderRadius: "8px", 
+        border: "1px solid #3a3a3a",
+        padding: "24px" 
+      }}>
+        <h4 style={{
+          margin: "0 0 20px 0",
+          fontSize: "1rem",
+          fontWeight: "600",
+          color: "#ffffff",
+          letterSpacing: "0.5px",
+          paddingBottom: "12px",
+          borderBottom: "2px solid #3a3a3a"
+        }}>⚠️ Improvements</h4>
 
-// const formatComparisonReport = (report) => {
-//   if (!report?.differences) return <p>No comparison found.</p>;
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          {json.improvements.map((item, i) => (
+            <div key={i} style={{ 
+              display: "flex", 
+              gap: "12px", 
+              lineHeight: "1.7", 
+              color: "#d4d4d4", 
+              fontSize: "0.88rem" 
+            }}>
+              <span style={{ 
+                color: "#fbbf24", 
+                fontWeight: "bold", 
+                fontSize: "1.1rem", 
+                marginTop: "2px" 
+              }}>•</span>
+              <span>
+                <strong style={{ color: "#e5e5e5" }}>{item.issue}:</strong> {item.suggestion}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
 
-//   return (
-//     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-//       {Object.entries(report.differences).map(([section, data], idx) => {
-//         const icon = section.includes("summary")
-//           ? "💼"
-//           : section.includes("skills")
-//           ? "🧩"
-//           : section.includes("project")
-//           ? "🛠️"
-//           : "📄";
-
-//         return (
-//           <div
-//             key={idx}
-//             style={{
-//               background: "linear-gradient(145deg, #2d2d2d 0%, #262626 100%)",
-//               border: "1px solid #404040",
-//               borderRadius: "12px",
-//               padding: "0",
-//               overflow: "hidden",
-//               boxShadow: "0 4px 6px rgba(0, 0, 0, 0.3)",
-//             }}
-//           >
-//             {/* Header with gradient background */}
-//             <div style={{ 
-//               background: "linear-gradient(135deg, #3a3a3a 0%, #2d2d2d 100%)",
-//               display: "flex", 
-//               alignItems: "center", 
-//               gap: "12px",
-//               padding: "16px 20px",
-//               borderBottom: "1px solid #404040"
-//             }}>
-//               <div style={{
-//                 background: "linear-gradient(135deg, #4a4a4a, #3a3a3a)",
-//                 width: "40px",
-//                 height: "40px",
-//                 borderRadius: "10px",
-//                 display: "flex",
-//                 alignItems: "center",
-//                 justifyContent: "center",
-//                 fontSize: "20px",
-//                 boxShadow: "0 2px 8px rgba(0, 0, 0, 0.3)"
-//               }}>
-//                 {icon}
-//               </div>
-//               <h3 style={{ 
-//                 color: "#fff", 
-//                 margin: 0, 
-//                 fontSize: "15px", 
-//                 fontWeight: "600",
-//                 letterSpacing: "0.5px"
-//               }}>
-//                 {section.replace(/_/g, " ").toUpperCase()}
-//               </h3>
-//             </div>
-
-//             <div style={{ padding: "20px" }}>
-//               {/* Old Version */}
-//               <div style={{ marginBottom: "20px" }}>
-//                 <div style={{ 
-//                   display: "flex",
-//                   alignItems: "center",
-//                   gap: "8px",
-//                   marginBottom: "10px" 
-//                 }}>
-//                   <div style={{
-//                     width: "4px",
-//                     height: "14px",
-//                     background: "#888",
-//                     borderRadius: "2px"
-//                   }}></div>
-//                   <span style={{ 
-//                     color: "#888", 
-//                     fontSize: "11px", 
-//                     fontWeight: "700",
-//                     textTransform: "uppercase",
-//                     letterSpacing: "1px"
-//                   }}>
-//                     Old Version
-//                   </span>
-//                 </div>
-//                 <div style={{ 
-//                   color: "#d0d0d0",
-//                   background: "#1e1e1e",
-//                   padding: "14px 16px",
-//                   borderRadius: "8px",
-//                   border: "1px solid #333",
-//                   fontSize: "13.5px",
-//                   lineHeight: "1.6"
-//                 }}>
-//                   {formatValue(data.old)}
-//                 </div>
-//               </div>
-
-//               {/* New Version */}
-//               <div style={{ marginBottom: "20px" }}>
-//                 <div style={{ 
-//                   display: "flex",
-//                   alignItems: "center",
-//                   gap: "8px",
-//                   marginBottom: "10px" 
-//                 }}>
-//                   <div style={{
-//                     width: "4px",
-//                     height: "14px",
-//                     background: "#888",
-//                     borderRadius: "2px"
-//                   }}></div>
-//                   <span style={{ 
-//                     color: "#888", 
-//                     fontSize: "11px", 
-//                     fontWeight: "700",
-//                     textTransform: "uppercase",
-//                     letterSpacing: "1px"
-//                   }}>
-//                     New Version
-//                   </span>
-//                 </div>
-//                 <div style={{ 
-//                   color: "#d0d0d0",
-//                   background: "#1e1e1e",
-//                   padding: "14px 16px",
-//                   borderRadius: "8px",
-//                   border: "1px solid #333",
-//                   fontSize: "13.5px",
-//                   lineHeight: "1.6"
-//                 }}>
-//                   {formatValue(data.new)}
-//                 </div>
-//               </div>
-
-//               {/* Changes Detected */}
-//               {Array.isArray(data.changes) && data.changes.length > 0 && (
-//                 <div style={{
-//                   background: "#1e1e1e",
-//                   padding: "16px",
-//                   borderRadius: "8px",
-//                   border: "1px solid #333"
-//                 }}>
-//                   <div style={{ 
-//                     display: "flex",
-//                     alignItems: "center",
-//                     gap: "8px",
-//                     marginBottom: "12px" 
-//                   }}>
-//                     <span style={{ 
-//                       color: "#ffb86c", 
-//                       fontSize: "11px", 
-//                       fontWeight: "700",
-//                       textTransform: "uppercase",
-//                       letterSpacing: "1px"
-//                     }}>
-//                       Changes Detected
-//                     </span>
-//                   </div>
-//                   <ul style={{ 
-//                     color: "#d0d0d0", 
-//                     margin: 0,
-//                     paddingLeft: "20px",
-//                     listStyleType: "none",
-//                     fontSize: "13px",
-//                     lineHeight: "1.7"
-//                   }}>
-//                     {data.changes.map((c, i) => (
-//                       <li key={i} style={{ 
-//                         marginBottom: "8px",
-//                         position: "relative",
-//                         paddingLeft: "8px"
-//                       }}>
-//                         <span style={{
-//                           position: "absolute",
-//                           left: "-12px",
-//                           color: "#ffb86c"
-//                         }}>•</span>
-//                         {c}
-//                       </li>
-//                     ))}
-//                   </ul>
-//                 </div>
-//               )}
-//             </div>
-//           </div>
-//         );
-//       })}
-//     </div>
-//   );
-// };
-
+      {/* VERDICT */}
+      <div style={{ 
+        background: "#2a2a2a", 
+        borderRadius: "8px", 
+        padding: "24px", 
+        border: "1px solid #3a3a3a" 
+      }}>
+        <h4 style={{
+          margin: "0 0 20px 0",
+          fontSize: "1rem",
+          fontWeight: "600",
+          color: "#ffffff",
+          letterSpacing: "0.5px",
+          paddingBottom: "12px",
+          borderBottom: "2px solid #3a3a3a"
+        }}>💡 Final Verdict</h4>
+        <p style={{
+          margin: "0",
+          fontSize: "0.88rem",
+          color: "#d4d4d4",
+          lineHeight: "1.7"
+        }}>{json.verdict}</p>
+      </div>
+    </div>
+  );
+};
 
 const formatValue = (value) => {
   if (Array.isArray(value)) {
+    // Check if it's an array of project objects
+    if (value.length > 0 && typeof value[0] === 'object' && value[0].name) {
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {value.map((project, i) => (
+            <div key={i} style={{
+              background: "#252525",
+              padding: "16px",
+              borderRadius: "6px",
+              border: "1px solid #333"
+            }}>
+              <div style={{ 
+                color: "#fbbf24", 
+                fontWeight: "600", 
+                marginBottom: "8px",
+                fontSize: "0.95rem"
+              }}>
+                {project.name}
+              </div>
+              {project.duration && (
+                <div style={{ 
+                  color: "#999", 
+                  fontSize: "0.8rem",
+                  marginBottom: "8px"
+                }}>
+                  {project.duration}
+                </div>
+              )}
+              {project.technologies && (
+                <div style={{ 
+                  color: "#888", 
+                  fontSize: "0.8rem",
+                  marginBottom: "10px"
+                }}>
+                  {project.technologies}
+                </div>
+              )}
+              {project.description && Array.isArray(project.description) && (
+                <ul style={{ 
+                  margin: 0, 
+                  paddingLeft: "20px",
+                  color: "#d4d4d4",
+                  fontSize: "0.85rem"
+                }}>
+                  {project.description.map((desc, j) => (
+                    <li key={j} style={{ marginBottom: "4px", lineHeight: "1.7" }}>
+                      {desc}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {project.link && (
+                <div style={{ marginTop: "10px" }}>
+                  <a 
+                    href={project.link} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    style={{ 
+                      color: "#fbbf24", 
+                      fontSize: "0.8rem",
+                      textDecoration: "none"
+                    }}
+                  >
+                    🔗 {project.link}
+                  </a>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    }
+    
+    // Regular array (like skills)
     return (
       <ul style={{ 
         margin: 0, 
@@ -683,16 +677,18 @@ const formatValue = (value) => {
         color: "#d4d4d4"
       }}>
         {value.map((item, i) => (
-          <li key={i} style={{ marginBottom: "6px", lineHeight: "1.6" }}>
+          <li key={i} style={{ marginBottom: "6px", lineHeight: "1.7" }}>
             {typeof item === 'object' ? JSON.stringify(item) : item}
           </li>
         ))}
       </ul>
     );
   }
+  
   if (typeof value === 'object' && value !== null) {
     return <pre style={{ margin: 0, color: "#d4d4d4", fontSize: "0.88rem" }}>{JSON.stringify(value, null, 2)}</pre>;
   }
+  
   return <span style={{ color: "#d4d4d4" }}>{String(value)}</span>;
 };
 
@@ -758,7 +754,8 @@ const formatComparisonReport = (report) => {
               </div>
               <div style={{ 
                 fontSize: "0.88rem",
-                lineHeight: "1.7"
+                lineHeight: "1.7",
+                color: "#d4d4d4"
               }}>
                 {formatValue(data.old)}
               </div>
@@ -784,7 +781,8 @@ const formatComparisonReport = (report) => {
               </div>
               <div style={{ 
                 fontSize: "0.88rem",
-                lineHeight: "1.7"
+                lineHeight: "1.7",
+                color: "#d4d4d4"
               }}>
                 {formatValue(data.new)}
               </div>
@@ -803,7 +801,7 @@ const formatComparisonReport = (report) => {
                   fontWeight: "700",
                   textTransform: "uppercase",
                   letterSpacing: "1px",
-                  color: "#b8945f",
+                  color: "#fbbf24",
                   marginBottom: "12px"
                 }}>
                   Changes Detected
@@ -818,7 +816,7 @@ const formatComparisonReport = (report) => {
                       fontSize: "0.88rem" 
                     }}>
                       <span style={{ 
-                        color: "#b8945f", 
+                        color: "#fbbf24", 
                         fontWeight: "bold", 
                         fontSize: "1.1rem", 
                         marginTop: "2px" 
@@ -852,12 +850,9 @@ const formatComparisonReport = (report) => {
 
 
 
-
-
-
-
-
 const analyzeQuick = () => {
+  console.log("analyze quick was clicked");
+  
   if (!jobDescription.trim()) return;
   setIsAnalyzing(true);
   setIsAIAnalysis(false);
@@ -905,7 +900,7 @@ const analyzeQuick = () => {
             fontWeight: '600',
             color: '#fff'
           }}>
-            📊 Quick Analysis
+            Result of Quick Analysis
           </h2>
           <p style={{
             margin: '0',
@@ -1307,244 +1302,6 @@ const analyzeQuick = () => {
 
 
 
-// ==================== AI ANALYSIS FUNCTION ====================
-
-// const analyzeWithAI = async () => {
-//   if (!jobDescription.trim()) {
-//     alert("Paste job description first");
-//     return;
-//   }
-
-//   setIsAIAnalysis(true);
-//   setJobDescriptionInsights(<LoadingState />);
-
-//   try {
-//     const payload = {
-//       jobDescription,
-//       resume: buildResumeString()
-//     };
-//     const res = await fetch(`http://localhost:8080/analyze`, {
-//       method: "POST",
-//       headers: { "Content-Type": "application/json" },
-//       body: JSON.stringify(payload),
-//     });
-
-//     if (!res.ok) throw new Error(`Status ${res.status}`);
-
-//     const data = await res.json();
-    
-//     if (data.error) {
-//       setJobDescriptionInsights(
-//         <ErrorState
-//           title="AI Analysis Failed"
-//           message={data.error}
-//         />
-//       );
-//     } else {
-//       const aiResult = data.result;
-      
-//       setJobDescriptionInsights(
-//         <div style={STYLES.container}>
-//           {/* AI Analysis Header */}
-//           <div style={STYLES.header}>
-//             <h2 style={STYLES.headerTitle}>
-//               🤖 AI Detailed Analysis
-//             </h2>
-//             <p style={STYLES.headerSubtitle}>
-//               Powered by Advanced AI • Generated just now
-//             </p>
-//           </div>
-
-//           {/* AI Response Content */}
-//           <div>
-//             {formatAIResponse(aiResult)}
-//           </div>
-
-//           {/* Action Footer */}
-//           <div style={STYLES.cardLight}>
-//             <h4 style={{
-//               margin: '0 0 12px 0',
-//               fontSize: '1rem',
-//               fontWeight: '700',
-//               color: COLORS.primary,
-//               letterSpacing: '1px',
-//               textTransform: 'uppercase'
-//             }}>
-//               💡 Next Steps
-//             </h4>
-//             <p style={{
-//               margin: '0',
-//               fontSize: '0.85rem',
-//               color: COLORS.primary,
-//               lineHeight: '1.8'
-//             }}>
-//               Review the AI suggestions above and update your resume accordingly. 
-//               For a quick overview, try <strong>Quick Analysis</strong> to see keyword matches and skill breakdowns.
-//             </p>
-//           </div>
-//         </div>
-//       );
-//     }
-//   } catch (err) {
-//     setJobDescriptionInsights(
-//       <ErrorState
-//         title="Connection Error"
-//         message={"Perhaps no tokens left.."}
-//         subtitle="Make sure your backend server is running on http://localhost:8080"
-//       />
-//     );
-//   } finally {
-//     setIsAIAnalysis(false);
-//   }
-// };
-
-const formatAIResponse = (json) => {
-  if (!json) return null;
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-      
-      {/* SUMMARY SECTION */}
-      <div style={{ 
-        background: "#2a2a2a", 
-        borderRadius: "8px", 
-        border: "1px solid #3a3a3a",
-        padding: "24px" 
-      }}>
-        <h4 style={{
-          margin: "0 0 20px 0",
-          fontSize: "1rem",
-          fontWeight: "600",
-          color: "#ffffff",
-          letterSpacing: "0.5px",
-          paddingBottom: "12px",
-          borderBottom: "2px solid #3a3a3a"
-        }}>📋 {json.summary.title}</h4>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-          {json.summary.points.map((p, i) => (
-            <div key={i} style={{ 
-              display: "flex", 
-              gap: "12px", 
-              lineHeight: "1.7", 
-              color: "#d4d4d4", 
-              fontSize: "0.9rem" 
-            }}>
-              <span style={{ 
-                color: "#fbbf24", 
-                fontWeight: "bold", 
-                fontSize: "1.1rem", 
-                marginTop: "2px" 
-              }}>•</span>
-              <span>{p}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* STRENGTHS */}
-      <div style={{ 
-        background: "#2a2a2a", 
-        borderRadius: "8px", 
-        border: "1px solid #3a3a3a",
-        padding: "24px" 
-      }}>
-        <h4 style={{
-          margin: "0 0 20px 0",
-          fontSize: "1rem",
-          fontWeight: "600",
-          color: "#ffffff",
-          letterSpacing: "0.5px",
-          paddingBottom: "12px",
-          borderBottom: "2px solid #3a3a3a"
-        }}>💼 Strengths</h4>
-
-        {json.strengths.map((item, i) => (
-          <div key={i} style={{
-            background: "#1e1e1e",
-            padding: "18px",
-            borderRadius: "6px",
-            marginBottom: "14px",
-            borderLeft: "3px solid #fbbf24",
-            display: "flex",
-            flexDirection: "column",
-            gap: "10px",
-            fontSize: "0.88rem",
-            color: "#e5e5e5"
-          }}>
-            <div><strong>Area:</strong> {item.area}</div>
-            <div><strong>Strong:</strong> {item.strong}</div>
-            <div><strong>Why It Matters:</strong> {item.why}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* IMPROVEMENTS */}
-      <div style={{ 
-        background: "#2a2a2a", 
-        borderRadius: "8px", 
-        border: "1px solid #3a3a3a",
-        padding: "24px" 
-      }}>
-        <h4 style={{
-          margin: "0 0 20px 0",
-          fontSize: "1rem",
-          fontWeight: "600",
-          color: "#ffffff",
-          letterSpacing: "0.5px",
-          paddingBottom: "12px",
-          borderBottom: "2px solid #3a3a3a"
-        }}>⚠️ Improvements</h4>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-          {json.improvements.map((item, i) => (
-            <div key={i} style={{ 
-              display: "flex", 
-              gap: "12px", 
-              lineHeight: "1.7", 
-              color: "#d4d4d4", 
-              fontSize: "0.9rem" 
-            }}>
-              <span style={{ 
-                color: "#fbbf24", 
-                fontWeight: "bold", 
-                fontSize: "1.1rem", 
-                marginTop: "2px" 
-              }}>•</span>
-              <span>
-                <strong>{item.issue}:</strong> {item.suggestion}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* VERDICT */}
-      <div style={{ 
-        background: "#252525", 
-        borderRadius: "8px", 
-        padding: "24px", 
-        border: "1px solid #3a3a3a" 
-      }}>
-        <h4 style={{
-          margin: "0 0 20px 0",
-          fontSize: "1rem",
-          fontWeight: "600",
-          color: "#ffffff",
-          letterSpacing: "0.5px",
-          paddingBottom: "12px",
-          borderBottom: "2px solid #3a3a3a"
-        }}>💡 Final Verdict</h4>
-        <p style={{
-          margin: "0",
-          fontSize: "0.9rem",
-          color: "#d4d4d4",
-          lineHeight: "1.7"
-        }}>{json.verdict}</p>
-      </div>
-    </div>
-  );
-};
 
 
 const analyzeWithAI = async () => {
@@ -1813,298 +1570,85 @@ const createReport = async () => {
 
 
   return (
-    <div className="section-manager job-description-section">
-      <h3>AI Analysis Section</h3>
-      {/* <textarea
-      
-        className="job-description-textarea"
-        placeholder="Paste job description or Ask questions Reguarding your resume, Press AI Analysis for AI review and Questions"
-        value={jobDescription}
-        onChange={e => setJobDescription(e.target.value)}
-        rows={8}
-       
-      /> */
+    
+<div className="ai-analysis-container">
+      <h3 className="ai-analysis-title">🔗AI Analysis Section</h3>
 
       <textarea
-  className="job-description-textarea"
-  placeholder="Paste job description or Ask questions Regarding your resume, Press AI Analysis for AI review and Questions"
-  value={jobDescription}
-  onChange={e => setJobDescription(e.target.value)}
-  rows={8}
-  style={{
-    backgroundColor: '#1f1f1f',
-    color: '#e0e0e0',
-    border: '1px solid #3a3a3a',
-    borderRadius: '8px',
-    padding: '1rem',
-    fontSize: '14px',
-    lineHeight: '1.6',
-    transition: 'all 0.2s ease'
-  }}
-  onFocus={(e) => {
-    e.target.style.backgroundColor = '#252525';
-    e.target.style.borderColor = '#4a4a4a';
-    e.target.style.boxShadow = '0 0 0 3px rgba(255, 255, 255, 0.05)';
-  }}
-  onBlur={(e) => {
-    e.target.style.backgroundColor = '#1f1f1f';
-    e.target.style.borderColor = '#3a3a3a';
-    e.target.style.boxShadow = 'none';
-  }}
-/>}
+        className="job-description-textarea"
+        placeholder={`Type “Analyze” for general resume feedback.
+Paste a Job Description for Quick Analysis or AI Analysis.
+Press “Enhance Resume” to improve your resume.
+Generate a Report to compare original vs enhanced resume.`}
+        value={jobDescription}
+        onChange={(e) => setJobDescription(e.target.value)}
+      />
 
+      <div className="ai-buttons-container">
+        <button
+          className={`ai-button quick-analysis ${disableQuick ? "disabled" : ""}`}
+          onClick={analyzeQuick}
+        >
+          {isAnalyzing ? "Analyzing..." : "Quick Analysis"}
+        </button>
 
-    <div style={{ 
-  display: "flex", 
-  flexWrap: "wrap",
-  gap: "10px", 
-  marginTop: "10px",
-  width: "100%"
-}}>
+        <button
+          className={`ai-button detailed-analysis ${disableAIDetailed ? "disabled" : ""}`}
+          onClick={analyzeWithAI}
+        >
+          {isAIAnalysis ? "Analyzing..." : "AI Detailed Review"}
+        </button>
 
-  {/* Quick Analysis Button */}
-  <button 
-    onClick={analyzeQuick} 
-    disabled={isAnalyzing || isAIAnalysis || isEnhancing}
-    style={{
-      cursor: isAnalyzing || isAIAnalysis || isEnhancing ? 'not-allowed' : 'pointer',
-      border: 'none',
-      fontWeight: '600',
-      borderRadius: '8px',
-      fontSize: '14px',
-      padding: '12px 28px',
-      transition: 'all 0.2s ease',
-      textTransform: 'uppercase',
-      letterSpacing: '1px',
-      background: '#2a2a2a',
-      color: '#ffffff',
-      opacity: isAnalyzing || isAIAnalysis || isEnhancing ? 0.3 : 1,
-      flex: '1 1 auto',
-      minWidth: '180px'
-    }}
-    onMouseEnter={(e) => {
-      if (!isAnalyzing && !isAIAnalysis && !isEnhancing) {
-        e.target.style.background = '#333';
-        e.target.style.transform = 'translateY(-2px)';
-        e.target.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.3)';
-      }
-    }}
-    onMouseLeave={(e) => {
-      e.target.style.background = '#2a2a2a';
-      e.target.style.transform = 'translateY(0)';
-      e.target.style.boxShadow = 'none';
-    }}
-    onMouseDown={(e) => {
-      if (!isAnalyzing && !isAIAnalysis && !isEnhancing) {
-        e.target.style.transform = 'translateY(0)';
-      }
-    }}
-  >
-    {isAnalyzing ? "Analyzing..." : "Quick Analysis"}
-  </button>
+        <button
+          className={`ai-button enhance-resume ${
+            isAnalyzing || isAIAnalysis || isEnhancing ? "disabled" : ""
+          }`}
+          onClick={improveATSContent}
+        >
+          {isEnhancing ? "Enhancing..." : "Enhance Your Resume"}
+        </button>
 
-  {/* AI Detailed Review Button */}
-  <button 
-    onClick={analyzeWithAI} 
-    disabled={isAnalyzing || isAIAnalysis || isEnhancing}
-    style={{
-      cursor: isAnalyzing || isAIAnalysis || isEnhancing ? 'not-allowed' : 'pointer',
-      border: 'none',
-      fontWeight: '600',
-      borderRadius: '8px',
-      fontSize: '14px',
-      padding: '12px 28px',
-      transition: 'all 0.2s ease',
-      textTransform: 'uppercase',
-      letterSpacing: '1px',
-      background: '#2a2a2a',
-      color: '#ffffff',
-      opacity: isAnalyzing || isAIAnalysis || isEnhancing ? 0.3 : 1,
-      flex: '1 1 auto',
-      minWidth: '180px'
-    }}
-    onMouseEnter={(e) => {
-      if (!isAnalyzing && !isAIAnalysis && !isEnhancing) {
-        e.target.style.background = '#333';
-        e.target.style.transform = 'translateY(-2px)';
-        e.target.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.3)';
-      }
-    }}
-    onMouseLeave={(e) => {
-      e.target.style.background = '#2a2a2a';
-      e.target.style.transform = 'translateY(0)';
-      e.target.style.boxShadow = 'none';
-    }}
-    onMouseDown={(e) => {
-      if (!isAnalyzing && !isAIAnalysis && !isEnhancing) {
-        e.target.style.transform = 'translateY(0)';
-      }
-    }}
-  >
-    {isAIAnalysis ? "Analyzing..." : "AI Detailed Review"}
-  </button>
+        <button
+          className={`ai-button generate-report ${isDisabled ? "disabled" : ""}`}
+          onClick={createReport}
+        >
+          {canGenerateReport ? "Generating..." : "Generate Report"}
+        </button>
 
-  {/* Enhance Your Resume Button */}
-  <button 
-    onClick={improveATSContent} 
-    disabled={isAnalyzing || isAIAnalysis || isEnhancing}
-    style={{
-      cursor: isAnalyzing || isAIAnalysis || isEnhancing ? 'not-allowed' : 'pointer',
-      border: 'none',
-      fontWeight: '600',
-      borderRadius: '8px',
-      fontSize: '14px',
-      padding: '12px 28px',
-      transition: 'all 0.2s ease',
-      textTransform: 'uppercase',
-      letterSpacing: '1px',
-      background: '#2a2a2a',
-      color: '#ffffff',
-      opacity: isAnalyzing || isAIAnalysis || isEnhancing ? 0.3 : 1,
-      flex: '1 1 auto',
-      minWidth: '180px'
-    }}
-    onMouseEnter={(e) => {
-      if (!isAnalyzing && !isAIAnalysis && !isEnhancing) {
-        e.target.style.background = '#333';
-        e.target.style.transform = 'translateY(-2px)';
-        e.target.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.3)';
-      }
-    }}
-    onMouseLeave={(e) => {
-      e.target.style.background = '#2a2a2a';
-      e.target.style.transform = 'translateY(0)';
-      e.target.style.boxShadow = 'none';
-    }}
-    onMouseDown={(e) => {
-      if (!isAnalyzing && !isAIAnalysis && !isEnhancing) {
-        e.target.style.transform = 'translateY(0)';
-      }
-    }}
-  >
-    {isEnhancing ? "Enhancing..." : "Enhance Your Resume"}
-  </button>
-
-  {/* Generate Report Button */}
-  <button 
-    onClick={createReport} 
-    disabled={createComparisonReport}
-    style={{
-      cursor: createComparisonReport ? 'not-allowed' : 'pointer',
-      border: 'none',
-      fontWeight: '600',
-      borderRadius: '8px',
-      fontSize: '14px',
-      padding: '12px 28px',
-      transition: 'all 0.2s ease',
-      textTransform: 'uppercase',
-      letterSpacing: '1px',
-      background: '#2a2a2a',
-      color: '#ffffff',
-      opacity: createComparisonReport ? 0.3 : 1,
-      flex: '1 1 auto',
-      minWidth: '180px'
-    }}
-    onMouseEnter={(e) => {
-      if (!createComparisonReport) {
-        e.target.style.background = '#333';
-        e.target.style.transform = 'translateY(-2px)';
-        e.target.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.3)';
-      }
-    }}
-    onMouseLeave={(e) => {
-      e.target.style.background = '#2a2a2a';
-      e.target.style.transform = 'translateY(0)';
-      e.target.style.boxShadow = 'none';
-    }}
-    onMouseDown={(e) => {
-      if (!createComparisonReport) {
-        e.target.style.transform = 'translateY(0)';
-      }
-    }}
-  >
-    {createComparisonReport ? "Generating..." : "Generate Report"}
-  </button>
-
-  
-
-  {/* Clear Button */}
-  <button
-    onClick={() => {
-      setJobDescription("");
-      setJobDescriptionInsights("");
-      setFoundSkills([]);
-      setFoundVerbs([]);
-    }}
-    disabled={!jobDescription.trim()}
-    style={{
-      cursor: !jobDescription.trim() ? 'not-allowed' : 'pointer',
-      border: 'none',
-      fontWeight: '600',
-      borderRadius: '8px',
-      fontSize: '14px',
-      padding: '12px 28px',
-      transition: 'all 0.2s ease',
-      textTransform: 'uppercase',
-      letterSpacing: '1px',
-      background: '#2a2a2a',
-      color: '#ffffff',
-      opacity: !jobDescription.trim() ? 0.3 : 1,
-      flex: '1 1 auto',
-      minWidth: '180px'
-    }}
-    onMouseEnter={(e) => {
-      if (jobDescription.trim()) {
-        e.target.style.background = '#dc2626';
-        e.target.style.transform = 'translateY(-2px)';
-        e.target.style.boxShadow = '0 6px 20px rgba(220, 38, 38, 0.3)';
-      }
-    }}
-    onMouseLeave={(e) => {
-      e.target.style.background = '#2a2a2a';
-      e.target.style.transform = 'translateY(0)';
-      e.target.style.boxShadow = 'none';
-    }}
-    onMouseDown={(e) => {
-      if (jobDescription.trim()) {
-        e.target.style.transform = 'translateY(0)';
-      }
-    }}
-  >
-    Clear
-  </button>
-</div>
-
-{jobDescriptionInsights && (
-  <div style={{ marginTop: "20px" }}>
-    <h4>{isAIAnalysis ? "🤖 AI Analysis" : "📊 Quick Analysis"}</h4>
-    {jobDescriptionInsights}
-  </div>
-)}
-
-{reportOutput && (
-  <div style={{ marginTop: "20px" }}>
-    <h4>{createComparisonReport ? "⏳ Generating Report..." : "📊 Resume Comparison"}</h4>
-    {reportOutput}
-  </div>
-)}
-
-      
+        <button
+          className={`ai-button clear-button ${!jobDescription.trim() ? "disabled" : ""}`}
+          onClick={() => {
+            setJobDescription("");
+            setJobDescriptionInsights("");
+            setFoundSkills([]);
+            setFoundVerbs([]);
+          }}
+        >
+          Clear
+        </button>
+      </div>
 
       {jobDescriptionInsights && (
-        <div style={{ marginTop: "20px" }}>
-          <h4>{isAIAnalysis ? "🤖 AI Analysis" : "📊 Quick Analysis"}</h4>
+        <div className="ai-analysis-output">
+          <h4 className="ai-output-title">
+            {isAIAnalysis ? "🤖 AI Analysis" : "📊 Quick Analysis"}
+          </h4>
           {jobDescriptionInsights}
         </div>
       )}
 
       {reportOutput && (
-      <div style={{ marginTop: "20px" }}>
-     <h4>{createComparisonReport ? "⏳ Generating Report..." : "📊 Resume Comparison"}</h4>
-      {reportOutput}
-     </div>
-)}
-
+        <div className="ai-analysis-output">
+          <h4 className="ai-output-title">
+            {createComparisonReport ? "⏳ Generating Report..." : "📊 Resume Comparison"}
+          </h4>
+          {reportOutput}
+        </div>
+      )}
     </div>
-  );
-}
+
+
+
+        );
+      }
+      

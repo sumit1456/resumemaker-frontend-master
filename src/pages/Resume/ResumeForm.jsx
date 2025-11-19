@@ -10,6 +10,12 @@ import CreativeBold from './Template7';
 import "./css-files/ResumeEditor.css";
 import NewTemplate from './Template8.jsx';
 import ErrorBoundary from "../../ErrorBoundry.jsx";
+import ResumeAnalyzer from "./ResumeAnalyzer.jsx";
+import { AlignRight } from "lucide-react";
+
+import { useDispatch, useSelector } from 'react-redux';
+import { setCurrentResume, setEnhancedResume } from "../../redux/store.js";
+
 
 
 const API_BASE_URL2 = 'http://localhost:8080';
@@ -157,23 +163,332 @@ const PDFViewer = ({ pdfBlob }) => {
   }
 
   return (
-    <div ref={containerRef} style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ padding: '0.75rem', borderBottom: '1px solid #ddd', display: 'flex', alignItems: 'center', gap: '0.75rem', backgroundColor: '#f8f9fa', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <button onClick={goToPrevious} disabled={currentPage <= 1} style={{ padding: '0.375rem 0.75rem', fontSize: '0.875rem', backgroundColor: currentPage <= 1 ? '#e9ecef' : '#007bff', color: currentPage <= 1 ? '#6c757d' : 'white', border: 'none', borderRadius: '4px', cursor: currentPage <= 1 ? 'not-allowed' : 'pointer' }}>‹ Prev</button>
-          <span style={{ fontSize: '0.875rem', fontWeight: '500', minWidth: '4rem', textAlign: 'center' }}>{currentPage} of {totalPages}</span>
-          <button onClick={goToNext} disabled={currentPage >= totalPages} style={{ padding: '0.375rem 0.75rem', fontSize: '0.875rem', backgroundColor: currentPage >= totalPages ? '#e9ecef' : '#007bff', color: currentPage >= totalPages ? '#6c757d' : 'white', border: 'none', borderRadius: '4px', cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer' }}>Next ›</button>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: 'auto' }}>
-          <button onClick={zoomOut} style={{ padding: '0.375rem 0.5rem', fontSize: '0.875rem', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', minWidth: '32px' }}>−</button>
-          <span style={{ fontSize: '0.875rem', minWidth: '4rem', textAlign: 'center', fontWeight: '500' }}>{Math.round(scale * 100)}%</span>
-          <button onClick={zoomIn} style={{ padding: '0.375rem 0.5rem', fontSize: '0.875rem', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', minWidth: '32px' }}>+</button>
-          <button onClick={fitToWidth} style={{ padding: '0.375rem 0.75rem', fontSize: '0.875rem', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginLeft: '0.5rem' }}>Fit Width</button>
-        </div>
-      </div>
-      <div style={{ flex: 1, overflow: 'auto', backgroundColor: '#525659', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '2rem 1rem' }}>
-        <canvas ref={canvasRef} style={{ maxWidth: '100%', height: 'auto', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)', backgroundColor: 'white', borderRadius: '4px' }} />
-      </div>
+
+    //preview page inside
+    // <div ref={containerRef} style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+    //   <div style={{ padding: '0.75rem', borderBottom: '1px solid #ddd', display: 'flex', alignItems: 'center', gap: '0.75rem', backgroundColor: '#f8f9fa', flexWrap: 'wrap' }}>
+    //     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+    //       <button onClick={goToPrevious} disabled={currentPage <= 1} style={{ padding: '0.375rem 0.75rem', fontSize: '0.875rem', backgroundColor: currentPage <= 1 ? '#e9ecef' : '#007bff', color: currentPage <= 1 ? '#6c757d' : 'white', border: 'none', borderRadius: '4px', cursor: currentPage <= 1 ? 'not-allowed' : 'pointer' }}>‹ Prev</button>
+    //       <span style={{ fontSize: '0.875rem', fontWeight: '500', minWidth: '4rem', textAlign: 'center' }}>{currentPage} of {totalPages}</span>
+    //       <button onClick={goToNext} disabled={currentPage >= totalPages} style={{ padding: '0.375rem 0.75rem', fontSize: '0.875rem', backgroundColor: currentPage >= totalPages ? '#e9ecef' : '#007bff', color: currentPage >= totalPages ? '#6c757d' : 'white', border: 'none', borderRadius: '4px', cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer' }}>Next ›</button>
+    //     </div>
+    //     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: 'auto' }}>
+    //       <button onClick={zoomOut} style={{ padding: '0.375rem 0.5rem', fontSize: '0.875rem', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', minWidth: '32px' }}>−</button>
+    //       <span style={{ fontSize: '0.875rem', minWidth: '4rem', textAlign: 'center', fontWeight: '500' }}>{Math.round(scale * 100)}%</span>
+    //       <button onClick={zoomIn} style={{ padding: '0.375rem 0.5rem', fontSize: '0.875rem', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', minWidth: '32px' }}>+</button>
+    //       <button onClick={fitToWidth} style={{ padding: '0.375rem 0.75rem', fontSize: '0.875rem', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginLeft: '0.5rem' }}>Fit Width</button>
+    //     </div>
+    //   </div>
+    //   <div style={{ flex: 1, overflow: 'auto', backgroundColor: '#525659', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '2rem 1rem' }}>
+    //     <canvas ref={canvasRef} style={{ maxWidth: '100%', height: 'auto', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)', backgroundColor: 'white', borderRadius: '4px' }} />
+    //   </div>
+    // </div>
+
+    <div>
+
+
+      <div ref={containerRef} style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#0a0a0a' }}>
+  <div style={{ padding: '1rem', borderBottom: '1px solid #2a2a2a', display: 'flex', alignItems: 'center', gap: '1rem', backgroundColor: '#151515', flexWrap: 'wrap', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem', backgroundColor: '#1f1f1f', borderRadius: '8px', border: '1px solid #2a2a2a' }}>
+      <button 
+        onClick={goToPrevious} 
+        disabled={currentPage <= 1} 
+        style={{ 
+          padding: '0.5rem 1rem', 
+          fontSize: '0.875rem', 
+          backgroundColor: 'transparent', 
+          color: currentPage <= 1 ? '#555' : '#ccc', 
+          border: 'none', 
+          borderRadius: '4px', 
+          cursor: currentPage <= 1 ? 'not-allowed' : 'pointer',
+          fontWeight: '500',
+          transition: 'all 0.2s ease',
+          opacity: currentPage <= 1 ? 0.4 : 1
+        }}
+        onMouseEnter={(e) => {
+          if (currentPage > 1) {
+            e.target.style.color = '#ffffff';
+            e.target.style.background = '#252525';
+          }
+        }}
+        onMouseLeave={(e) => {
+          e.target.style.background = 'transparent';
+          e.target.style.color = '#ccc';
+        }}
+      >‹ Previous</button>
+      <span style={{ fontSize: '0.875rem', fontWeight: '600', padding: '0.5rem 1rem', textAlign: 'center', color: '#ffffff', backgroundColor: '#252525', borderRadius: '4px', minWidth: '5rem' }}>
+        Page {currentPage} / {totalPages}
+      </span>
+      <button 
+        onClick={goToNext} 
+        disabled={currentPage >= totalPages} 
+        style={{ 
+          padding: '0.5rem 1rem', 
+          fontSize: '0.875rem', 
+          backgroundColor: 'transparent', 
+          color: currentPage >= totalPages ? '#555' : '#ccc', 
+          border: 'none', 
+          borderRadius: '4px', 
+          cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
+          fontWeight: '500',
+          transition: 'all 0.2s ease',
+          opacity: currentPage >= totalPages ? 0.4 : 1
+        }}
+        onMouseEnter={(e) => {
+          if (currentPage < totalPages) {
+            e.target.style.color = '#ffffff';
+            e.target.style.background = '#252525';
+          }
+        }}
+        onMouseLeave={(e) => {
+          e.target.style.background = 'transparent';
+          e.target.style.color = '#ccc';
+        }}
+      >Next ›</button>
+    </div>
+    
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: 'auto', padding: '0.5rem', backgroundColor: '#1f1f1f', borderRadius: '8px', border: '1px solid #2a2a2a' }}>
+      <button 
+        onClick={zoomOut} 
+        style={{ 
+          padding: '0.5rem', 
+          fontSize: '1rem', 
+          backgroundColor: 'transparent', 
+          color: '#ccc', 
+          border: 'none', 
+          borderRadius: '4px', 
+          cursor: 'pointer', 
+          minWidth: '36px',
+          height: '36px',
+          fontWeight: '600',
+          transition: 'all 0.2s ease',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}
+        onMouseEnter={(e) => {
+          e.target.style.background = '#252525';
+          e.target.style.color = '#ffffff';
+        }}
+        onMouseLeave={(e) => {
+          e.target.style.background = 'transparent';
+          e.target.style.color = '#ccc';
+        }}
+      >−</button>
+      <span style={{ fontSize: '0.875rem', minWidth: '4rem', textAlign: 'center', fontWeight: '600', color: '#ffffff', padding: '0.5rem 0.75rem', backgroundColor: '#252525', borderRadius: '4px' }}>
+        {Math.round(scale * 100)}%
+      </span>
+      <button 
+        onClick={zoomIn} 
+        style={{ 
+          padding: '0.5rem', 
+          fontSize: '1rem', 
+          backgroundColor: 'transparent', 
+          color: '#ccc', 
+          border: 'none', 
+          borderRadius: '4px', 
+          cursor: 'pointer', 
+          minWidth: '36px',
+          height: '36px',
+          fontWeight: '600',
+          transition: 'all 0.2s ease',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}
+        onMouseEnter={(e) => {
+          e.target.style.background = '#252525';
+          e.target.style.color = '#ffffff';
+        }}
+        onMouseLeave={(e) => {
+          e.target.style.background = 'transparent';
+          e.target.style.color = '#ccc';
+        }}
+      >+</button>
+      <div style={{ width: '1px', height: '24px', backgroundColor: '#2a2a2a', margin: '0 0.25rem' }}></div>
+      <button 
+        onClick={fitToWidth} 
+        style={{ 
+          padding: '0.5rem 1rem', 
+          fontSize: '0.875rem', 
+          backgroundColor: 'transparent', 
+          color: '#ccc', 
+          border: 'none', 
+          borderRadius: '4px', 
+          cursor: 'pointer',
+          fontWeight: '500',
+          transition: 'all 0.2s ease',
+          whiteSpace: 'nowrap'
+        }}
+        onMouseEnter={(e) => {
+          e.target.style.background = '#252525';
+          e.target.style.color = '#ffffff';
+        }}
+        onMouseLeave={(e) => {
+          e.target.style.background = 'transparent';
+          e.target.style.color = '#ccc';
+        }}
+      >Fit to Width</button>
+    </div>
+  </div>
+  
+  <div style={{ flex: 1, overflow: 'auto', backgroundColor: '#0d0d0d', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '2rem 1rem' }}>
+    <canvas ref={canvasRef} style={{ maxWidth: '100%', height: 'auto', boxShadow: '0 12px 40px rgba(0, 0, 0, 0.6)', backgroundColor: 'white', borderRadius: '2px', border: '1px solid #1a1a1a' }} />
+  </div>
+</div>
+
+      {/* <div ref={containerRef} style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+  <div style={{ padding: '0.75rem', borderBottom: '1px solid #2a2a2a', display: 'flex', alignItems: 'center', gap: '0.75rem', backgroundColor: '#1a1a1a', flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <button 
+        onClick={goToPrevious} 
+        disabled={currentPage <= 1} 
+        style={{ 
+          padding: '0.375rem 0.75rem', 
+          fontSize: '0.875rem', 
+          backgroundColor: currentPage <= 1 ? '#252525' : '#2a2a2a', 
+          color: currentPage <= 1 ? '#666' : '#ffffff', 
+          border: `1px solid ${currentPage <= 1 ? '#2a2a2a' : '#3a3a3a'}`, 
+          borderRadius: '6px', 
+          cursor: currentPage <= 1 ? 'not-allowed' : 'pointer',
+          fontWeight: '600',
+          transition: 'all 0.2s ease',
+          textTransform: 'uppercase',
+          letterSpacing: '0.5px',
+          opacity: currentPage <= 1 ? 0.3 : 1
+        }}
+        onMouseEnter={(e) => {
+          if (currentPage > 1) {
+            e.target.style.background = '#333';
+            e.target.style.transform = 'translateY(-1px)';
+            e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          e.target.style.background = '#2a2a2a';
+          e.target.style.transform = 'translateY(0)';
+          e.target.style.boxShadow = 'none';
+        }}
+      >‹ Prev</button>
+      <span style={{ fontSize: '0.875rem', fontWeight: '600', minWidth: '4rem', textAlign: 'center', color: '#ffffff' }}>{currentPage} of {totalPages}</span>
+      <button 
+        onClick={goToNext} 
+        disabled={currentPage >= totalPages} 
+        style={{ 
+          padding: '0.375rem 0.75rem', 
+          fontSize: '0.875rem', 
+          backgroundColor: currentPage >= totalPages ? '#252525' : '#2a2a2a', 
+          color: currentPage >= totalPages ? '#666' : '#ffffff', 
+          border: `1px solid ${currentPage >= totalPages ? '#2a2a2a' : '#3a3a3a'}`, 
+          borderRadius: '6px', 
+          cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
+          fontWeight: '600',
+          transition: 'all 0.2s ease',
+          textTransform: 'uppercase',
+          letterSpacing: '0.5px',
+          opacity: currentPage >= totalPages ? 0.3 : 1
+        }}
+        onMouseEnter={(e) => {
+          if (currentPage < totalPages) {
+            e.target.style.background = '#333';
+            e.target.style.transform = 'translateY(-1px)';
+            e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          e.target.style.background = '#2a2a2a';
+          e.target.style.transform = 'translateY(0)';
+          e.target.style.boxShadow = 'none';
+        }}
+      >Next ›</button>
+    </div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: 'auto' }}>
+      <button 
+        onClick={zoomOut} 
+        style={{ 
+          padding: '0.375rem 0.5rem', 
+          fontSize: '0.875rem', 
+          backgroundColor: '#2a2a2a', 
+          color: '#ffffff', 
+          border: '1px solid #3a3a3a', 
+          borderRadius: '6px', 
+          cursor: 'pointer', 
+          minWidth: '32px',
+          fontWeight: '600',
+          transition: 'all 0.2s ease'
+        }}
+        onMouseEnter={(e) => {
+          e.target.style.background = '#333';
+          e.target.style.transform = 'translateY(-1px)';
+          e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
+        }}
+        onMouseLeave={(e) => {
+          e.target.style.background = '#2a2a2a';
+          e.target.style.transform = 'translateY(0)';
+          e.target.style.boxShadow = 'none';
+        }}
+      >−</button>
+      <span style={{ fontSize: '0.875rem', minWidth: '4rem', textAlign: 'center', fontWeight: '600', color: '#ffffff' }}>{Math.round(scale * 100)}%</span>
+      <button 
+        onClick={zoomIn} 
+        style={{ 
+          padding: '0.375rem 0.5rem', 
+          fontSize: '0.875rem', 
+          backgroundColor: '#2a2a2a', 
+          color: '#ffffff', 
+          border: '1px solid #3a3a3a', 
+          borderRadius: '6px', 
+          cursor: 'pointer', 
+          minWidth: '32px',
+          fontWeight: '600',
+          transition: 'all 0.2s ease'
+        }}
+        onMouseEnter={(e) => {
+          e.target.style.background = '#333';
+          e.target.style.transform = 'translateY(-1px)';
+          e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
+        }}
+        onMouseLeave={(e) => {
+          e.target.style.background = '#2a2a2a';
+          e.target.style.transform = 'translateY(0)';
+          e.target.style.boxShadow = 'none';
+        }}
+      >+</button>
+      <button 
+        onClick={fitToWidth} 
+        style={{ 
+          padding: '0.375rem 0.75rem', 
+          fontSize: '0.875rem', 
+          backgroundColor: '#2a2a2a', 
+          color: '#ffffff', 
+          border: '1px solid #3a3a3a', 
+          borderRadius: '6px', 
+          cursor: 'pointer', 
+          marginLeft: '0.5rem',
+          fontWeight: '600',
+          transition: 'all 0.2s ease',
+          textTransform: 'uppercase',
+          letterSpacing: '0.5px'
+        }}
+        onMouseEnter={(e) => {
+          e.target.style.background = '#333';
+          e.target.style.transform = 'translateY(-1px)';
+          e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
+        }}
+        onMouseLeave={(e) => {
+          e.target.style.background = '#2a2a2a';
+          e.target.style.transform = 'translateY(0)';
+          e.target.style.boxShadow = 'none';
+        }}
+      >Fit Width</button>
+    </div>
+  </div>
+  <div style={{ flex: 1, overflow: 'auto', backgroundColor: '#0a0a0a', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '2rem 1rem' }}>
+    <canvas ref={canvasRef} style={{ maxWidth: '100%', height: 'auto', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)', backgroundColor: 'white', borderRadius: '8px' }} />
+  </div>
+</div> */}
+
+
     </div>
   );
 };
@@ -190,7 +505,7 @@ function useDebounce(value, delay) {
 
 
 
-export default function ResumeEditor({ resume: propsResume, userId }) {
+export default function ResumeEditor({ resume: propsResume}) {
   const { resumeId } = useParams();
   const resumeRef = useRef();
   const [jobDescription, setJobDescription] = useState('');
@@ -198,6 +513,12 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isAnalyzingAI, setIsAnalyzingAI] = useState(false);
   const [isAIAnalysis, setIsAIAnalysis] = useState(false);
+  const id = useSelector((s)=>s.auth.userId);
+  const [userId, setUserId] = useState(id);
+
+  console.log("From the state the user id is"+ userId);
+  
+
 
 
   const [isLoadingResume, setIsLoadingResume] = useState(false);
@@ -212,6 +533,43 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
   const [showCertifications, setShowCertifications] = useState(true);
 
   const [customSections, setCustomSections] = useState([]);
+
+  const enhancedResume = useSelector((state)=>state.resume.enhancedResume);
+
+ 
+  useEffect(() => {
+  if (!enhancedResume) return;
+
+  console.log("Printing the enhanced resume");
+  console.log(enhancedResume);
+
+  setSkills(enhancedResume?.skills?.map(s => s.name) ?? []);
+
+  setExperiences(enhancedResume?.experiences ?? []);
+
+
+  setProjects(enhancedResume?.projects ?? []);
+
+  setResumeDetails(prev => ({
+    ...prev,
+    ...enhancedResume?.details, 
+
+    contact: enhancedResume?.details?.contact 
+      ? enhancedResume.details.contact 
+      : prev.contact,
+
+    summary: enhancedResume?.details?.summary 
+      ?? prev.summary,
+  }));
+
+}, [enhancedResume]);
+
+
+  
+  
+
+
+  
   
     const [resumeDetails, setResumeDetails] = useState({
     name: "SUMIT HATEKAR",
@@ -324,6 +682,10 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
   const [isTemplateLoading, setIsTemplateLoading] = useState(false);
   const [pdfBlob, setPdfBlob] = useState(null);
   const [generatingPreview, setGeneratingPreview] = useState(false);
+
+
+  
+
 
 
 
@@ -602,6 +964,9 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
     }
   }, [generatePreview, isLoadingResume]);
 
+
+  // handling the enhanced resume
+
   const handleTemplateChange = useCallback((newTemplate) => {
     setIsTemplateLoading(true);
     setSelectedTemplate(newTemplate);
@@ -808,6 +1173,9 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
     }
   };
 
+
+ 
+  
  const handleSaveAll = async () => {
   setSaving(true);
   setSaveError("");
@@ -831,7 +1199,7 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
     const payload = {
       title,
       templateId: Number(selectedTemplate),
-      userId,
+      userId : 1 ,
       details: {
         name: resumeDetails.name,
         title: resumeDetails.title,
@@ -852,8 +1220,16 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
       customSections,
       sectionTitles
     };
+
+    console.log(payload);
+    if(userId==null){
+      alert("Apparently user id is null");
+      return;
+    }
     
-    console.log("Sending payload:", JSON.stringify(payload, null, 2));
+    
+   
+   
     
     const endpoint = resumeId 
       ? `${baseUrl}/update/${resumeId}`
@@ -911,6 +1287,7 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
     alert("Resume has been saved successfully");
   }
 };
+
 
   if (isLoadingResume) {
     return (
@@ -1126,91 +1503,31 @@ export default function ResumeEditor({ resume: propsResume, userId }) {
 
 
 
-            <div className="section-manager job-description-section">
-  <h3 style={{ marginBottom: '0.75rem', fontSize: '1.1rem' }}>Job Description</h3>
-  <div className="job-description-container">
-    <textarea
-      id="job-description"
-      className="job-description-textarea"
-      placeholder="Paste the job description here... (This will help tailor your resume)"
-      value={jobDescription}
-      onChange={(e) => setJobDescription(e.target.value)}
-      rows={8}
-    />
-
-    <div className="job-description-actions">
-      {/* Quick Analysis Button */}
-      <button
-        type="button"
-        className="analyze-btn"
-        onClick={analyzeQuick}
-        disabled={!jobDescription.trim() || isAnalyzing || isAnalyzingAI}
-      >
-        {isAnalyzing ? (
-          <>
-            <div className="spinner"></div>
-            Analyzing...
-          </>
-        ) : (
-          <>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.35-4.35" />
-            </svg>
-            Quick Analysis
-          </>
-        )}
-      </button>
-
-      {/* AI Detailed Review Button */}
-      <button
-        type="button"
-        className="ai-analyze-btn"
-        onClick={analyzeWithAI}
-        disabled={!jobDescription.trim() || isAnalyzingAI || isAnalyzing}
-      >
-        <>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M12 2L2 7l10 5 10-5-10-5z" />
-            <path d="M2 17l10 5 10-5" />
-            <path d="M2 12l10 5 10-5" />
-          </svg>
-          AI Detailed Review
-        </>
-      </button>
-
-      {/* Clear Button */}
-      <button
-        type="button"
-        className="clear-btn"
-        onClick={() => {
-          setJobDescription('');
-          setJobDescriptionInsights('');
-          setFoundSkills([]);
-          setFoundVerbs([]);
-        }}
-        disabled={!jobDescription.trim()}
-      >
-        Clear
-      </button>
+                <div>
+      {/* Job Description Editor */}
+      <ResumeAnalyzer
+        jobDescription={jobDescription}
+        resumeDetails={resumeDetails}
+        skills={skills}
+        experiences={experiences}
+        projects={projects}
+        educationList={educationList}
+        certifications={certifications}
+        customSections={customSections}
+        showSummary={true}
+        showSkills={true}
+        showExperience={true}
+        showProjects={true}
+        showEducation={true}
+        showCertifications={true}
+      />
     </div>
 
-    {/* Insights Output */}
-    {jobDescriptionInsights && (
-      <div className="job-insights">
-        <div className="insights-header">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M12 2L2 7l10 5 10-5-10-5z" />
-            <path d="M2 17l10 5 10-5" />
-            <path d="M2 12l10 5 10-5" />
-          </svg>
-          <span>{isAIAnalysis ? 'AI-Powered Analysis' : 'Quick Analysis'}</span>
-        </div>
-        <div className="insights-content" dangerouslySetInnerHTML={{ __html: jobDescriptionInsights }} />
-      </div>
-    )}
-  </div>
-</div>
+              
+
+
+
+          
 
               
               <div className="section-manager">

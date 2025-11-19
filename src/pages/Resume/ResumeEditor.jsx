@@ -12,6 +12,7 @@ import NewTemplate from './Template8.jsx';
 import ErrorBoundary from "../../ErrorBoundry.jsx";
 import ResumeAnalyzer from "./ResumeAnalyzer.jsx";
 import { AlignRight } from "lucide-react";
+import "./css-files/analyze.css"
 
 import { useDispatch, useSelector } from 'react-redux';
 import { setCurrentResume, setEnhancedResume } from "../../redux/store.js";
@@ -1458,80 +1459,47 @@ export default function ResumeEditor({ resume: propsResume}) {
       
       <div className="resume-editor-container">
         <div className="template-selector-header">
-          <div className="template-selector-content">
-            <h2 className="template-selector-title">
+           <div className="template-selector-content">
+
+            
+             <h2 className="template-selector-title">
               {resumeId ? `Edit Resume: ${resumeTitle || 'Untitled'}` : 'Create New Resume'}
             </h2>
-            <div className="template-selector-controls">
-              <label className="template-label">Choose Template:</label>
-              <select value={selectedTemplate} onChange={(e) => handleTemplateChange(e.target.value)} className="template-select">
-                <option value="1">Classic Template</option>
-                <option value="2">Modern Template</option>
-                <option value="3">ATS-Friendly Template</option>
-                <option value="4">Executive Elite</option>
-                <option value="5">Tech Innovator</option>
-                <option value="6">Academic Scholar</option>
-                <option value="7">New ATS-Friendly Template</option>
-                <option value="8">Creative Bold</option>
-              </select>
-              {(isTemplateLoading || generatingPreview) && (
-                <span className="template-loading">
-                  {isTemplateLoading ? "Loading template..." : "Generating preview..."}
-                </span>
-              )}
-            </div>
-          </div>
+
+            
+
+
+           </div>
+
+           
         </div>
 
-        <div className="resume-editor-main">
-          <div className="editor-panel">
-            <div className="ats-resume" ref={resumeRef}>
-              
-              {successMessage && (
-                <div className="success-message">
-                  <span>✓</span>
-                  <span>{successMessage}</span>
-                </div>
-              )}
+        <div className="editor-page-container">
 
-              {saveError && (
-                <div className="error-message">
-                  <span>⚠</span>
-                  <span>{saveError}</span>
-                </div>
-              )}
+            <div className="analyze-container">
 
+                    <ResumeAnalyzer
+                jobDescription={jobDescription}
+                resumeDetails={resumeDetails}
+                skills={skills}
+                experiences={experiences}
+                projects={projects}
+                educationList={educationList}
+                certifications={certifications}
+                customSections={customSections}
+                showSummary={true}
+                showSkills={true}
+                showExperience={true}
+                showProjects={true}
+                showEducation={true}
+                showCertifications={true}
+              />
 
-
-                <div>
-      {/* Job Description Editor */}
-      <ResumeAnalyzer
-        jobDescription={jobDescription}
-        resumeDetails={resumeDetails}
-        skills={skills}
-        experiences={experiences}
-        projects={projects}
-        educationList={educationList}
-        certifications={certifications}
-        customSections={customSections}
-        showSummary={true}
-        showSkills={true}
-        showExperience={true}
-        showProjects={true}
-        showEducation={true}
-        showCertifications={true}
-      />
-    </div>
-
-              
+           </div>  
 
 
-
-          
-
-              
-              <div className="section-manager">
-                <h3 style={{ marginBottom: '0.75rem', fontSize: '1.1rem' }}>Manage Sections</h3>
+             <div className="sec-manager">
+                <h3>Manage Sections</h3>
                 <div className="section-toggle-grid">
                   <div className="section-toggle-item">
                     <input type="checkbox" id="toggle-summary" checked={showSummary} onChange={(e) => setShowSummary(e.target.checked)} />
@@ -1563,139 +1531,167 @@ export default function ResumeEditor({ resume: propsResume}) {
                 </button>
               </div>
 
-              <header className="header">
-                <input className="name" value={resumeDetails.name} onChange={(e) => handleResumeDetailChange("name", e.target.value)} placeholder="Full Name" />
-                <input className="title" value={resumeDetails.title} onChange={(e) => handleResumeDetailChange("title", e.target.value)} placeholder="Professional Title" />
-                <div className="contact">
-                  <input value={resumeDetails.contact.phone} onChange={(e) => handleResumeDetailChange("phone", e.target.value)} placeholder="Phone" />
-                  <span className="separator">|</span>
-                  <input value={resumeDetails.contact.email} onChange={(e) => handleResumeDetailChange("email", e.target.value)} placeholder="Email" />
-                  <span className="separator">|</span>
-                  <input value={resumeDetails.contact.linkedin} onChange={(e) => handleResumeDetailChange("linkedin", e.target.value)} placeholder="LinkedIn" />
-                  <span className="separator">|</span>
-                  <input value={resumeDetails.contact.github} onChange={(e) => handleResumeDetailChange("github", e.target.value)} placeholder="GitHub" />
-                  <span className="separator">|</span>
-                  <input value={resumeDetails.contact.location} onChange={(e) => handleResumeDetailChange("location", e.target.value)} placeholder="Location" />
-                </div>
-              </header>
 
-              {showSummary && (
-                <section className="section">  
-                  <div className="section-title">
-                    <input className="sec-inputs" type="text" value={sectionTitles.summary} onChange={(e) => {
-                      setSectionTitles({...sectionTitles, summary: e.target.value})
-                    }} />
-                  </div>
-                  <textarea className="summary" value={resumeDetails.summary} onChange={(e) => handleResumeDetailChange("summary", e.target.value)} />
-                </section>
-              )}
 
-              {showSkills && (
-                <section className="section">
-                  <div className="section-title">
-                    <input type="text" className="sec-inputs" value={sectionTitles.skills} onChange={(e) => {
-                      setSectionTitles({...sectionTitles, skills: e.target.value})
-                    }} />
-                  </div>
-                  {Array.isArray(skills) && skills.map((skill, i) => (
-                    <div className="skill" key={`skill-${i}`}>
-                      <span className="bullet">•</span>
-                      <input className="skill-text" value={skill || ""} onChange={(e) => handleSkillChange(i, e.target.value)} placeholder="Skill name" />
-                      <button type="button" className="remove-small-btn" onClick={(e) => { e.preventDefault(); removeSkill(i); }}>×</button>
+            
+
+            <div className="editor-preview-wrapper">
+
+
+              <div className="editor-panel">
+               <div className="ats-resume" ref={resumeRef}>
+              
+                  {successMessage && (
+                    <div className="success-message">
+                      <span>✓</span>
+                      <span>{successMessage}</span>
                     </div>
-                  ))}
-                  <button type="button" className="add-btn" onClick={addSkill}>Add Skill</button>
-                </section>
-              )}
+                  )}
+    
+                  {saveError && (
+                    <div className="error-message">
+                      <span>⚠</span>
+                      <span>{saveError}</span>
+                    </div>
+                  )}
+              
+                  <header className="header">
+                    <input className="name" value={resumeDetails.name} onChange={(e) => handleResumeDetailChange("name", e.target.value)} placeholder="Full Name" />
+                    <input className="title" value={resumeDetails.title} onChange={(e) => handleResumeDetailChange("title", e.target.value)} placeholder="Professional Title" />
+                    <div className="contact">
+                      <input value={resumeDetails.contact.phone} onChange={(e) => handleResumeDetailChange("phone", e.target.value)} placeholder="Phone" />
+                      <span className="separator">|</span>
+                      <input value={resumeDetails.contact.email} onChange={(e) => handleResumeDetailChange("email", e.target.value)} placeholder="Email" />
+                      <span className="separator">|</span>
+                      <input value={resumeDetails.contact.linkedin} onChange={(e) => handleResumeDetailChange("linkedin", e.target.value)} placeholder="LinkedIn" />
+                      <span className="separator">|</span>
+                      <input value={resumeDetails.contact.github} onChange={(e) => handleResumeDetailChange("github", e.target.value)} placeholder="GitHub" />
+                      <span className="separator">|</span>
+                      <input value={resumeDetails.contact.location} onChange={(e) => handleResumeDetailChange("location", e.target.value)} placeholder="Location" />
+                    </div>
+                  </header>
 
-              {showExperience && (
-                <section className="section"> 
-                  <div className="section-title">
-                    <input type="text" value={sectionTitles.experience} className="sec-inputs"
-                    onChange={(e) => {
-                     setSectionTitles({...sectionTitles, experience: e.target.value})
-                    }} />
-                  </div>
-                  {Array.isArray(experiences) && experiences.map((exp, i) => (
-                    <div className="experience" key={`exp-${i}`}>
-                      <div className="exp-header">
-                        <input className="position" value={exp?.position || ""} onChange={(e) => handleExperienceChange(i, "position", e.target.value)} placeholder="Position" />
-                        <input className="company" value={exp?.company || ""} onChange={(e) => handleExperienceChange(i, "company", e.target.value)} placeholder="Company" />
-                        <input className="duration" value={exp?.duration || ""} onChange={(e) => handleExperienceChange(i, "duration", e.target.value)} placeholder="Duration" />
-                        <button type="button" className="remove-small-btn" onClick={(e) => { e.preventDefault(); removeExperience(i); }}>Remove</button>
+              
+    
+                  
+    
+                  {showSummary && (
+                    <section className="section">  
+                      <div className="section-title">
+                        <input className="sec-inputs" type="text" value={sectionTitles.summary} onChange={(e) => {
+                          setSectionTitles({...sectionTitles, summary: e.target.value})
+                        }} />
                       </div>
-                      <input className="location" value={exp?.location || ""} onChange={(e) => handleExperienceChange(i, "location", e.target.value)} placeholder="Location" />
-                      {Array.isArray(exp?.achievements) && exp.achievements.map((ach, j) => (
-                        <div className="achievement" key={`ach-${i}-${j}`}>
+                      <textarea className="summary" value={resumeDetails.summary} onChange={(e) => handleResumeDetailChange("summary", e.target.value)} />
+                    </section>
+                  )}
+    
+                  {showSkills && (
+                    <section className="section">
+                      <div className="section-title">
+                        <input type="text" className="sec-inputs" value={sectionTitles.skills} onChange={(e) => {
+                          setSectionTitles({...sectionTitles, skills: e.target.value})
+                        }} />
+                      </div>
+                      {Array.isArray(skills) && skills.map((skill, i) => (
+                        <div className="skill" key={`skill-${i}`}>
                           <span className="bullet">•</span>
-                          <input className="achievement-text" value={ach || ""} onChange={(e) => handleExperienceChange(i, "achievements", e.target.value, j)} placeholder="Achievement description" />
-                          <button type="button" className="remove-small-btn" onClick={(e) => { e.preventDefault(); removeAchievement(i, j); }}>×</button>
+                          <input className="skill-text" value={skill || ""} onChange={(e) => handleSkillChange(i, e.target.value)} placeholder="Skill name" />
+                          <button type="button" className="remove-small-btn" onClick={(e) => { e.preventDefault(); removeSkill(i); }}>×</button>
                         </div>
                       ))}
-                      <button type="button" className="add-small-btn" onClick={(e) => { e.preventDefault(); addAchievement(i); }}>Add Achievement</button>
-                    </div>
-                  ))}
-                  <button type="button" className="add-btn" onClick={addExperience}>Add Experience</button>
-                </section>
-              )}
-
-              {showProjects && (
-                <section className="section">
-                  <div className="section-title">
-                    <input className="sec-inputs" type="text" value={sectionTitles.projects} onChange={(e) => {
-                        setSectionTitles({...sectionTitles, projects: e.target.value})
-                      }
-                    } />
-                  </div>
-                  {Array.isArray(projects) && projects.map((proj, i) => (
-                    <div className="project" key={`proj-${i}`}>
-                      <div className="project-header">
-                        <input className="project-name" value={proj?.name || ""} onChange={(e) => handleProjectChange(i, "name", e.target.value)} placeholder="Project Name" />
-                        <input className="project-duration" value={proj?.duration || ""} onChange={(e) => handleProjectChange(i, "duration", e.target.value)} placeholder="Duration" />
-                        <button type="button" className="remove-small-btn" onClick={(e) => { e.preventDefault(); removeProject(i); }}>Remove</button>
+                      <button type="button" className="add-btn" onClick={addSkill}>Add Skill</button>
+                    </section>
+                  )}
+    
+                  {showExperience && (
+                    <section className="section"> 
+                      <div className="section-title">
+                        <input type="text" value={sectionTitles.experience} className="sec-inputs"
+                        onChange={(e) => {
+                         setSectionTitles({...sectionTitles, experience: e.target.value})
+                        }} />
                       </div>
-                      <input className="technologies" value={proj?.technologies || ""} onChange={(e) => handleProjectChange(i, "technologies", e.target.value)} placeholder="Technologies used" />
-                      <input className="project-link" value={proj?.link || ""} onChange={(e) => handleProjectChange(i, "link", e.target.value)} placeholder="Project Link (optional)" />
-                      {Array.isArray(proj?.description) && proj.description.map((desc, j) => (
-                        <div className="description" key={`desc-${i}-${j}`}>
-                          <span className="bullet">•</span>
-                          <input className="description-text" value={desc || ""} onChange={(e) => handleProjectChange(i, "description", e.target.value, j)} placeholder="Project description point" />
-                          <button type="button" className="remove-small-btn" onClick={(e) => { e.preventDefault(); removeProjectPoint(i, j); }}>×</button>
+                      {Array.isArray(experiences) && experiences.map((exp, i) => (
+                        <div className="experience" key={`exp-${i}`}>
+                          <div className="exp-header">
+                            <input className="position" value={exp?.position || ""} onChange={(e) => handleExperienceChange(i, "position", e.target.value)} placeholder="Position" />
+                            <input className="company" value={exp?.company || ""} onChange={(e) => handleExperienceChange(i, "company", e.target.value)} placeholder="Company" />
+                            <input className="duration" value={exp?.duration || ""} onChange={(e) => handleExperienceChange(i, "duration", e.target.value)} placeholder="Duration" />
+                            <button type="button" className="remove-small-btn" onClick={(e) => { e.preventDefault(); removeExperience(i); }}>Remove</button>
+                          </div>
+                          <input className="location" value={exp?.location || ""} onChange={(e) => handleExperienceChange(i, "location", e.target.value)} placeholder="Location" />
+                          {Array.isArray(exp?.achievements) && exp.achievements.map((ach, j) => (
+                            <div className="achievement" key={`ach-${i}-${j}`}>
+                              <span className="bullet">•</span>
+                              <input className="achievement-text" value={ach || ""} onChange={(e) => handleExperienceChange(i, "achievements", e.target.value, j)} placeholder="Achievement description" />
+                              <button type="button" className="remove-small-btn" onClick={(e) => { e.preventDefault(); removeAchievement(i, j); }}>×</button>
+                            </div>
+                          ))}
+                          <button type="button" className="add-small-btn" onClick={(e) => { e.preventDefault(); addAchievement(i); }}>Add Achievement</button>
                         </div>
                       ))}
-                      <button type="button" className="add-small-btn" onClick={(e) => { e.preventDefault(); addProjectPoint(i); }}>Add Description Point</button>
+                      <button type="button" className="add-btn" onClick={addExperience}>Add Experience</button>
+                    </section>
+                  )}
+    
+                  {showProjects && (
+                    <section className="section">
+                      <div className="section-title">
+                        <input className="sec-inputs" type="text" value={sectionTitles.projects} onChange={(e) => {
+                            setSectionTitles({...sectionTitles, projects: e.target.value})
+                          }
+                        } />
+                      </div>
+                      {Array.isArray(projects) && projects.map((proj, i) => (
+                        <div className="project" key={`proj-${i}`}>
+                          <div className="project-header">
+                            <input className="project-name" value={proj?.name || ""} onChange={(e) => handleProjectChange(i, "name", e.target.value)} placeholder="Project Name" />
+                            <input className="project-duration" value={proj?.duration || ""} onChange={(e) => handleProjectChange(i, "duration", e.target.value)} placeholder="Duration" />
+                            <button type="button" className="remove-small-btn" onClick={(e) => { e.preventDefault(); removeProject(i); }}>Remove</button>
+                          </div>
+                          <input className="technologies" value={proj?.technologies || ""} onChange={(e) => handleProjectChange(i, "technologies", e.target.value)} placeholder="Technologies used" />
+                          <input className="project-link" value={proj?.link || ""} onChange={(e) => handleProjectChange(i, "link", e.target.value)} placeholder="Project Link (optional)" />
+                          {Array.isArray(proj?.description) && proj.description.map((desc, j) => (
+                            <div className="description" key={`desc-${i}-${j}`}>
+                              <span className="bullet">•</span>
+                              <input className="description-text" value={desc || ""} onChange={(e) => handleProjectChange(i, "description", e.target.value, j)} placeholder="Project description point" />
+                              <button type="button" className="remove-small-btn" onClick={(e) => { e.preventDefault(); removeProjectPoint(i, j); }}>×</button>
+                            </div>
+                          ))}
+                          <button type="button" className="add-small-btn" onClick={(e) => { e.preventDefault(); addProjectPoint(i); }}>Add Description Point</button>
+                        </div>
+                      ))}
+                      <button type="button" className="add-btn" onClick={addProject}>Add Project</button>
+                    </section>
+                  )}
+
+                           {showEducation && (
+                <section className="section">
+                  <div className="section-title">
+                    <input type="text" className="sec-inputs" value={sectionTitles.education} onChange={(e) => {
+                      setSectionTitles({...sectionTitles, education: e.target.value})
+                    }} />
+                  </div>
+                  {Array.isArray(educationList) && educationList.map((edu, i) => (
+                    <div className="education" key={`edu-${i}`}>
+                      <div className="edu-header">
+                        <div className="edu-fields-wrapper">
+                          <div className="edu-fields-row">
+                            <input className="degree" value={edu?.degree || ""} onChange={(e) => handleEducationChange(i, "degree", e.target.value)} placeholder="Degree" />
+                            <input className="year" value={edu?.year || ""} onChange={(e) => handleEducationChange(i, "year", e.target.value)} placeholder="Year" />
+                          </div>
+                          <input className="institution" value={edu?.institution || ""} onChange={(e) => handleEducationChange(i, "institution", e.target.value)} placeholder="Institution" />
+                          <input className="edu-location" value={edu?.location || ""} onChange={(e) => handleEducationChange(i, "location", e.target.value)} placeholder="Location" />
+                          <input className="gpa" value={edu?.gpa || ""} onChange={(e) => handleEducationChange(i, "gpa", e.target.value)} placeholder="GPA/Score (optional)" />
+                        </div>
+                        <button type="button" className="remove-btn" onClick={(e) => { e.preventDefault(); removeEducation(i); }}>Remove</button>
+                      </div>
                     </div>
                   ))}
-                  <button type="button" className="add-btn" onClick={addProject}>Add Project</button>
+                  <button type="button" className="add-btn" onClick={addEducation}>Add Education</button>
                 </section>
-              )}
-
-             {showEducation && (
-  <section className="section">
-    <div className="section-title">
-      <input type="text" className="sec-inputs" value={sectionTitles.education} onChange={(e) => {
-        setSectionTitles({...sectionTitles, education: e.target.value})
-      }} />
-    </div>
-    {Array.isArray(educationList) && educationList.map((edu, i) => (
-      <div className="education" key={`edu-${i}`}>
-        <div className="edu-header">
-          <div className="edu-fields-wrapper">
-            <div className="edu-fields-row">
-              <input className="degree" value={edu?.degree || ""} onChange={(e) => handleEducationChange(i, "degree", e.target.value)} placeholder="Degree" />
-              <input className="year" value={edu?.year || ""} onChange={(e) => handleEducationChange(i, "year", e.target.value)} placeholder="Year" />
-            </div>
-            <input className="institution" value={edu?.institution || ""} onChange={(e) => handleEducationChange(i, "institution", e.target.value)} placeholder="Institution" />
-            <input className="edu-location" value={edu?.location || ""} onChange={(e) => handleEducationChange(i, "location", e.target.value)} placeholder="Location" />
-            <input className="gpa" value={edu?.gpa || ""} onChange={(e) => handleEducationChange(i, "gpa", e.target.value)} placeholder="GPA/Score (optional)" />
-          </div>
-          <button type="button" className="remove-btn" onClick={(e) => { e.preventDefault(); removeEducation(i); }}>Remove</button>
-        </div>
-      </div>
-    ))}
-    <button type="button" className="add-btn" onClick={addEducation}>Add Education</button>
-  </section>
-)}
+                )}
 
               {showCertifications && (
                 <section className="section">
@@ -1742,17 +1738,73 @@ export default function ResumeEditor({ resume: propsResume}) {
             </div>
           </div>
 
-          <div className="preview-panel" style={{ height: "1100px"}}>
+
+
+
+
+
+
+          
+          <div className="preview-panel">
+
             <div className="preview-header">
               <h3>Live Preview</h3>
+              <div className="template-selector-controls">
+              <label className="template-label">Choose Template:</label>
+              <select value={selectedTemplate} onChange={(e) => handleTemplateChange(e.target.value)} className="template-select">
+                <option value="1">Classic Template</option>
+                <option value="2">Modern Template</option>
+                <option value="3">ATS-Friendly Template</option>
+                <option value="4">Executive Elite</option>
+                <option value="5">Tech Innovator</option>
+                <option value="6">Academic Scholar</option>
+                <option value="7">New ATS-Friendly Template</option>
+                <option value="8">Creative Bold</option>
+              </select>
+              {(isTemplateLoading || generatingPreview) && (
+                <span className="template-loading">
+                  {isTemplateLoading ? "Loading template..." : "Generating preview..."}
+                </span>
+              )}
             </div>
-            <div className="preview-content" style={{ height: "calc(100% - 60px)" }}>
+            </div>
+
+            
+            <div className="preview-content">
               <ErrorBoundary>
                 <PDFViewer pdfBlob={pdfBlob} />
               </ErrorBoundary>
             </div>
           </div>
+
+
+
+              
+            </div>
+
+
+              
+
+
+
+      </div>
+
+        
+       
+        
+
+        
+
+
+        <div className="resume-editor-main">
+          
+          
+          
+
         </div>
+
+
+        
       </div>
     </>
   );
