@@ -4,8 +4,8 @@ import { setCurrentResume, setEnhancedResume } from "../../redux/store";
 import "./css-files/analyze.css";
 // import "./css-files/analysis-output.css"; // Import the new CSS file
 
-const API_BASE_URL = 'http://localhost:8080';
-const API_BASE_URL2 = 'https://resumemaker-1.onrender.com';
+const API_BASE_URL2 = 'http://localhost:8080';
+const API_BASE_URL = 'https://resumemaker-1.onrender.com';
 
 const techSkills = [
   "javascript","python","java","react","angular","vue","node",
@@ -775,11 +775,11 @@ Generate a Report to compare original vs enhanced resume.`}
           {canGenerateReport ? "Generating..." : "Generate Report"}
         </button>
 
-        <button>
+        <button className="ai-button">
           Upload Resume
         </button>
 
-        <button>
+        <button className="ai-button">
           Text Resume
         </button>
 
