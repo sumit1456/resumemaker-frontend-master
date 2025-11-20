@@ -537,6 +537,61 @@ export default function ResumeEditor({ resume: propsResume}) {
 
   const enhancedResume = useSelector((state)=>state.resume.enhancedResume);
 
+  const currentResume = useSelector((state)=>state.resume.currentResume);
+
+
+  useEffect(() => {
+  if (!currentResume) return;
+
+  // Map experiences
+  if (currentResume.experiences) {
+    setExperiences(
+      currentResume.experiences.map(exp => ({
+        position: exp.title || "",
+        company: exp.company || "",
+        location: exp.location || "",
+        duration: exp.startDate && exp.endDate ? `${exp.startDate} - ${exp.endDate}` : "",
+        achievements: exp.description || []
+      }))
+    );
+  }
+
+  // Map skills (already grouped strings)
+  if (currentResume.skills) {
+    setSkills(currentResume.skills);
+  }
+
+  // Map certifications
+  if (currentResume.certifications) {
+    setCertifications(
+      currentResume.certifications.map(c => (typeof c === "string" ? c : c.title || ""))
+    );
+  }
+
+  // Map summary
+  if (currentResume.resumeDetails) {
+    setResumeDetails({
+      ...resumeDetails,
+      name: currentResume.resumeDetails.name || "",
+      title: currentResume.resumeDetails.title || "",
+      contact: currentResume.resumeDetails.contact || {},
+      summary: currentResume.resumeDetails.summary || ""
+    });
+  }
+
+  // Map projects
+  if (currentResume.projects) {
+    setProjects(currentResume.projects);
+  }
+
+  // Map education
+  if (currentResume.educationList) {
+    setEducationList(currentResume.educationList);
+  }
+
+}, [currentResume]);
+
+
  
   useEffect(() => {
   if (!enhancedResume) return;
@@ -915,6 +970,7 @@ export default function ResumeEditor({ resume: propsResume}) {
   );
   
   const debouncedData = useDebounce(combinedData, 1500);
+
 
   const generatePreview = useCallback(async () => {
     if (isTemplateLoading) return;

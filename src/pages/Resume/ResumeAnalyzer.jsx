@@ -730,6 +730,34 @@ export default function ResumeAnalyzer({
     }
   };
 
+    const importResume = async (e) => {
+      alert("uoloading ur file")
+       const file = e.target.files[0]; // get the first uploaded file
+       if (!file) return;
+     
+       // Example: check if it's a PDF
+       if (file.type !== "application/pdf") {
+         alert("Please upload a PDF file");
+         return;
+       }
+     
+       // If you want to send it to backend
+       const formData = new FormData();
+       formData.append("file", file);
+     
+       try {
+         const response = await fetch(`${API_BASE_URL2}/uploadResume`, {
+           method: "POST",
+           body: formData,
+         });
+         const data = await response.json();
+         dispatch(setCurrentResume(data));
+         console.log("Upload successful:", data);
+       } catch (error) {
+         console.error("Upload failed:", error);
+       }
+    };
+
   return (
     <div className="ai-analysis-container">
       <h3 className="ai-analysis-title">🔗AI Analysis Section</h3>
@@ -774,14 +802,19 @@ Generate a Report to compare original vs enhanced resume.`}
         >
           {canGenerateReport ? "Generating..." : "Generate Report"}
         </button>
+        
+         
+         <label className="ai-button">
+            Import PDF Resume
+            <input
+              type="file"
+              accept=".pdf"
+              style={{ display: "none" }}
+              onChange={importResume} 
+            />
+         </label>
 
-        <button className="ai-button">
-          Upload Resume
-        </button>
-
-        <button className="ai-button">
-          Text Resume
-        </button>
+       
 
         <button
           className={`ai-button clear-button ${!jobDescription.trim() ? "disabled" : ""}`}
@@ -790,6 +823,7 @@ Generate a Report to compare original vs enhanced resume.`}
             setJobDescriptionInsights("");
             setFoundSkills([]);
             setFoundVerbs([]);
+            setCreateComparisonReport([]);
           }}
         >
           Clear
