@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from 'react-redux';
-import { setCurrentResume, setEnhancedResume } from "../../redux/store";
+import { setCurrentResume, setEnhancedResume, setImportedResume } from "../../redux/store";
 import "./css-files/analyze.css";
+import LoadingAnimation from "../../components/PopUp/LoadingAnimation";
 // import "./css-files/analysis-output.css"; // Import the new CSS file
 
 const API_BASE_URL2 = 'http://localhost:8080';
-const API_BASE_URL = 'https://resumemaker-1.onrender.com';
+// const API_BASE_URL = 'https://resumemaker-1.onrender.com';
+const API_BASE_URL = 'http://localhost:8080';
 
 const techSkills = [
   "javascript","python","java","react","angular","vue","node",
@@ -42,11 +44,20 @@ export default function ResumeAnalyzer({
   const [foundVerbs, setFoundVerbs] = useState([]);
   const [jobDescriptionInsights, setJobDescriptionInsights] = useState("");
   const [createComparisonReport, setCreateComparisonReport] = useState("false");
-  const currentResume = useSelector((state)=> state.currentResume);
-  const enhancedResume = useSelector((state)=> state.enhancedResume);
+  const importedResume = useSelector((state) => state.resume.importedResume);
+  const enhancedResume = useSelector((state) => state.resume.enhancedResume);
+  const currentResume = useSelector((state) => state.resume.currentResume);
+
+
+
+  
+
   const [currentLocalResume, setCurrentLocalResume] = useState(null);
   const [newLocalResume, setNewLocalResume] = useState(null);
   const [reportOutput, setReportOutput] = useState(null);
+
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
 
   const dispatch = useDispatch();
 
@@ -283,6 +294,7 @@ export default function ResumeAnalyzer({
   };
 
   const formatComparisonReport = (report) => {
+   
     if (!report?.differences) return <p>No comparison found.</p>;
 
     return (
@@ -334,6 +346,8 @@ export default function ResumeAnalyzer({
   };
 
   const analyzeQuick = () => {
+    setLoading(true);
+    setMessage('Analyzing Resume...')
     if (!jobDescription.trim()) return;
     setIsAnalyzing(true);
     setIsAIAnalysis(false);
@@ -540,11 +554,14 @@ export default function ResumeAnalyzer({
       );
 
       setIsAnalyzing(false);
+      setLoading(false);
     }, 250);
   };
 
   const analyzeWithAI = async () => {
     setIsAIAnalysis(true);
+    setLoading(true);
+    setMessage('AI Analysis...')
     setJobDescriptionInsights(<LoadingState />);
 
     try {
@@ -606,6 +623,7 @@ export default function ResumeAnalyzer({
       );
     } finally {
       setIsAIAnalysis(false);
+      setLoading(false);
     }
   };
 
@@ -646,6 +664,8 @@ export default function ResumeAnalyzer({
     try {
       setCreateComparisonReport(true);
       setReportOutput(<LoadingState />);
+      setLoading(true);
+      setMessage('Creating Report...')
 
       const payload = {
         oldResume: currentLocalResume,
@@ -696,12 +716,15 @@ export default function ResumeAnalyzer({
       setReportOutput(<ErrorState title="Connection Error" message="Cannot reach backend. Make sure the server is running." />);
     } finally {
       setCreateComparisonReport(false);
+      setLoading(false);
     }
   };
 
   const improveATSContent = async () => {
     try {
       setIsEnhancing(true);
+      setLoading(true);
+      setMessage('Enhancing your Resume...')
       const payload = buildATSPayload();
       
       setCurrentLocalResume(payload);
@@ -721,45 +744,87 @@ export default function ResumeAnalyzer({
       const data = await res.json();
       dispatch(setEnhancedResume(data));
       setNewLocalResume(data);
-      createReport();
-
     } catch (err) {
       console.error("❌ Error calling enhanceResume:", err);
     } finally {
       setIsEnhancing(false);
+      setLoading(false);
     }
   };
 
-    const importResume = async (e) => {
-      alert("uoloading ur file")
-       const file = e.target.files[0]; // get the first uploaded file
-       if (!file) return;
-     
-       // Example: check if it's a PDF
-       if (file.type !== "application/pdf") {
-         alert("Please upload a PDF file");
-         return;
-       }
-     
-       // If you want to send it to backend
-       const formData = new FormData();
-       formData.append("file", file);
-     
-       try {
-         const response = await fetch(`${API_BASE_URL2}/uploadResume`, {
-           method: "POST",
-           body: formData,
-         });
-         const data = await response.json();
-         dispatch(setCurrentResume(data));
-         console.log("Upload successful:", data);
-       } catch (error) {
-         console.error("Upload failed:", error);
-       }
-    };
+   const importResume = async (e) => {
+   setLoading(true);
+   setMessage('Importing...')
+  const file = e.target.files[0];
+  if (!file) return;
+
+  if (file.type !== "application/pdf") {
+    alert("Please upload a PDF file");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    const response = await fetch(`${API_BASE_URL2}/uploadResume`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Server error: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+
+    // Extract the JSON string from AI content
+    const resumeJsonString = data.choices?.[0]?.message?.content?.trim();
+
+    if (resumeJsonString) {
+      try {
+        const resumeData = JSON.parse(resumeJsonString);
+        dispatch(setImportedResume(resumeData));
+      } catch (err) {
+        console.error("Failed to parse AI resume JSON:", err, resumeJsonString);
+  
+      }
+    } else {
+      console.error("No content found in AI response", data);
+      
+    }
+
+    console.log("Upload successful:", data);
+
+  } catch (error) {
+    console.error("Upload failed:", error);
+   
+  }
+
+  finally{
+    setLoading(false);
+  }
+};
+
+
+    function downloadResponse(response) {
+  const dataStr = JSON.stringify(response, null, 2); // pretty print
+  const blob = new Blob([dataStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "ai_response.json";
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
+
 
   return (
     <div className="ai-analysis-container">
+      <LoadingAnimation message={message} show={loading}/>
       <h3 className="ai-analysis-title">🔗AI Analysis Section</h3>
 
       <textarea

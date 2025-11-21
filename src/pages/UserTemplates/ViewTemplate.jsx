@@ -251,78 +251,183 @@ const ViewResume = () => {
   const [pdfBlob, setPdfBlob] = useState(null);
   const [generatingPDF, setGeneratingPDF] = useState(false);
 
+
+
   useEffect(() => {
-    const fetchResume = async () => {
-      if (!resumeId) return;
+  const fetchResume = async () => {
+    if (!resumeId) return;
 
-      try {
-        setLoading(true);
-        console.log(`Fetching resume with ID: ${resumeId}`);
+    try {
+      setLoading(true);
+      console.log(`Fetching resume with ID: ${resumeId}`);
 
+      const isDevelopment = window.location.hostname === 'localhost';
+      const baseUrl = isDevelopment ? API_BASE_URL2 : API_BASE_URL;
 
-        // Determine which API to use based on environment
-        const isDevelopment = window.location.hostname === 'localhost';
-        const baseUrl = isDevelopment ? API_BASE_URL2 : API_BASE_URL;
+      console.log(`Using URL ${baseUrl} for fetching resumes`);
+      console.log(`${resumeId} is the resumeId for the request`);
 
-        console.log(`using url ${API_BASE_URL} for fetching resumes in view template`);
-        console.log(` ${resumeId} is the resumeId for the request`);
-        
-        
+      const response = await fetch(`${baseUrl}/my-resumes/getresume/${resumeId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        credentials: 'include', // Include credentials if needed
+      });
 
-        const response = await fetch(`${API_BASE_URL}/my-resumes/getresume/${resumeId}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          credentials: 'include', // Include credentials if needed
-        });
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
 
-        console.log('Response status:', response.status);
-        console.log('Response headers:', response.headers);
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('Error response:', errorText);
-          throw new Error(`Failed to fetch resume. Status: ${response.status} - ${errorText}`);
-        }
-        
-        const data = await response.json();
-        console.log('Fetched resume data:', data);
-        setResume(data);
-      } catch (err) {
-        console.error('Error fetching resume:', err);
-        setError(err.message);
-        
-        // If production API fails, try localhost as fallback
-        if (!window.location.hostname.includes('localhost')) {
-          console.log('Attempting localhost fallback...');
-          try {
-            const response = await fetch(`${API_BASE_URL}/my-resumes/getresume/${resumeId}`, {
-              method: 'GET',
-              headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-              },
-            });
-            
-            if (response.ok) {
-              const data = await response.json();
-              setResume(data);
-              setError(null);
-              console.log('Successfully fetched from localhost fallback');
-            }
-          } catch (fallbackErr) {
-            console.error('Localhost fallback also failed:', fallbackErr);
-          }
-        }
-      } finally {
-        setLoading(false);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+        throw new Error(`Failed to fetch resume. Status: ${response.status} - ${errorText}`);
       }
-    };
 
-    fetchResume();
-  }, [resumeId]);
+      const data = await response.json();
+      console.log("+================================-============================");
+      
+      console.log('Fetched resume data:', data);
+
+      console.log("]]][][[[[[[[[[[[[[][][[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[][][][]");
+      
+
+      // Fix experiences so achievements is always an array
+      if (data.experiences && Array.isArray(data.experiences)) {
+        data.experiences = data.experiences.map(exp => ({
+          ...exp,
+          achievements: Array.isArray(exp.achievements)
+            ? exp.achievements
+            : exp.achievements
+            ? [exp.achievements] // wrap string in array
+            : []
+        }));
+      }
+
+      setResume(data);
+    } catch (err) {
+      console.error('Error fetching resume:', err);
+      setError(err.message);
+
+      // If production API fails, try localhost as fallback
+      if (!window.location.hostname.includes('localhost')) {
+        console.log('Attempting localhost fallback...');
+        try {
+          const response = await fetch(`${API_BASE_URL}/my-resumes/getresume/${resumeId}`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+
+            // Fix experiences for fallback as well
+            if (data.experiences && Array.isArray(data.experiences)) {
+              data.experiences = data.experiences.map(exp => ({
+                ...exp,
+                achievements: Array.isArray(exp.achievements)
+                  ? exp.achievements
+                  : exp.achievements
+                  ? [exp.achievements]
+                  : []
+              }));
+            }
+
+            setResume(data);
+            setError(null);
+            console.log('Successfully fetched from localhost fallback');
+          }
+        } catch (fallbackErr) {
+          console.error('Localhost fallback also failed:', fallbackErr);
+        }
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchResume();
+}, [resumeId]);
+
+
+  
+
+  // useEffect(() => {
+  //   const fetchResume = async () => {
+  //     if (!resumeId) return;
+
+  //     try {
+  //       setLoading(true);
+  //       console.log(`Fetching resume with ID: ${resumeId}`);
+
+
+  //       // Determine which API to use based on environment
+  //       const isDevelopment = window.location.hostname === 'localhost';
+  //       const baseUrl = isDevelopment ? API_BASE_URL2 : API_BASE_URL;
+
+  //       console.log(`using url ${API_BASE_URL} for fetching resumes in view template`);
+  //       console.log(` ${resumeId} is the resumeId for the request`);
+        
+        
+
+  //       const response = await fetch(`${API_BASE_URL}/my-resumes/getresume/${resumeId}`, {
+  //         method: 'GET',
+  //         headers: {
+  //           'Content-Type': 'application/json',
+  //           'Accept': 'application/json',
+  //         },
+  //         credentials: 'include', // Include credentials if needed
+  //       });
+
+  //       console.log('Response status:', response.status);
+  //       console.log('Response headers:', response.headers);
+
+  //       if (!response.ok) {
+  //         const errorText = await response.text();
+  //         console.error('Error response:', errorText);
+  //         throw new Error(`Failed to fetch resume. Status: ${response.status} - ${errorText}`);
+  //       }
+        
+  //       const data = await response.json();
+  //       console.log('Fetched resume data:', data);
+  //       setResume(data);
+  //     } catch (err) {
+  //       console.error('Error fetching resume:', err);
+  //       setError(err.message);
+        
+  //       // If production API fails, try localhost as fallback
+  //       if (!window.location.hostname.includes('localhost')) {
+  //         console.log('Attempting localhost fallback...');
+  //         try {
+  //           const response = await fetch(`${API_BASE_URL}/my-resumes/getresume/${resumeId}`, {
+  //             method: 'GET',
+  //             headers: {
+  //               'Content-Type': 'application/json',
+  //               'Accept': 'application/json',
+  //             },
+  //           });
+            
+  //           if (response.ok) {
+  //             const data = await response.json();
+  //             setResume(data);
+  //             setError(null);
+  //             console.log('Successfully fetched from localhost fallback');
+  //           }
+  //         } catch (fallbackErr) {
+  //           console.error('Localhost fallback also failed:', fallbackErr);
+  //         }
+  //       }
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
+
+  //   fetchResume();
+  // }, [resumeId]);
 
   useEffect(() => {
     const generatePDF = async () => {

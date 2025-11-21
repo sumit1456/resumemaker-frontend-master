@@ -23,10 +23,14 @@ const authSlice = createSlice({
 const resumeSlice = createSlice({
   name: 'resume',
   initialState: {
-    currentResume: null,      // raw resume before enhancement
+    importedResume: null,     // 🆕 raw extracted text (before mapping)
+    currentResume: null,      // mapped + structured resume being edited
     enhancedResume: null,     // payload returned from ATS-enhancement
   },
   reducers: {
+    setImportedResume: (state, action) => {
+      state.importedResume = action.payload;
+    },
     setCurrentResume: (state, action) => {
       state.currentResume = action.payload;
     },
@@ -34,6 +38,7 @@ const resumeSlice = createSlice({
       state.enhancedResume = action.payload;
     },
     clearResume: (state) => {
+      state.importedResume = null;
       state.currentResume = null;
       state.enhancedResume = null;
     },
@@ -41,14 +46,23 @@ const resumeSlice = createSlice({
 });
 
 // ---------------- EXPORT ACTIONS ----------------
-export const { logInUser, logOutUser } = authSlice.actions;
-export const { setCurrentResume, setEnhancedResume, clearResume } = resumeSlice.actions;
+export const { 
+  logInUser, 
+  logOutUser 
+} = authSlice.actions;
+
+export const { 
+  setImportedResume,
+  setCurrentResume, 
+  setEnhancedResume, 
+  clearResume 
+} = resumeSlice.actions;
 
 // ---------------- CREATE STORE ----------------
 const store = configureStore({
   reducer: {
     auth: authSlice.reducer,
-    resume: resumeSlice.reducer,  // ✅ add resume slice
+    resume: resumeSlice.reducer,
   },
 });
 

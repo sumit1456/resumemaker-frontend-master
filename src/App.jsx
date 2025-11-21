@@ -37,9 +37,10 @@ export default function App() {
 
   return (
     <div className="app-container">
+      
       {/* Pass login status and user ID to the NavBar */}
       <NavBar isLogged={isLogged} userId={userId} setIsLogged={setIsLogged} />
-      <BackendWakePopup/>
+     
 
       <Routes>
         <Route

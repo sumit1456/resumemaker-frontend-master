@@ -19,8 +19,8 @@ import { setCurrentResume, setEnhancedResume } from "../../redux/store.js";
 
 
 
-const API_BASE_URL2 = 'http://localhost:8080';
-const API_BASE_URL = 'https://resumemaker-1.onrender.com';
+const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL2 = 'https://resumemaker-1.onrender.com';
 
 // PDF.js Viewer Component
 const PDFViewer = ({ pdfBlob }) => {
@@ -536,60 +536,147 @@ export default function ResumeEditor({ resume: propsResume}) {
   const [customSections, setCustomSections] = useState([]);
 
   const enhancedResume = useSelector((state)=>state.resume.enhancedResume);
+  const importedResume = useSelector(state => state.resume.importedResume);
+  const currentResume = useSelector(state => state.resume.currentResume);
 
-  const currentResume = useSelector((state)=>state.resume.currentResume);
-
-
+  
   useEffect(() => {
-  if (!currentResume) return;
+  if (!importedResume) return;
 
-  // Map experiences
-  if (currentResume.experiences) {
-    setExperiences(
-      currentResume.experiences.map(exp => ({
-        position: exp.title || "",
-        company: exp.company || "",
-        location: exp.location || "",
-        duration: exp.startDate && exp.endDate ? `${exp.startDate} - ${exp.endDate}` : "",
-        achievements: exp.description || []
-      }))
-    );
-  }
+  console.log("Imported Resume →", importedResume);
+  
+  
 
-  // Map skills (already grouped strings)
-  if (currentResume.skills) {
-    setSkills(currentResume.skills);
-  }
 
-  // Map certifications
-  if (currentResume.certifications) {
-    setCertifications(
-      currentResume.certifications.map(c => (typeof c === "string" ? c : c.title || ""))
-    );
-  }
+  // SKILLS: map to strings or empty array
+  setSkills(
+    Array.isArray(importedResume?.skills)
+      ? importedResume.skills.map(s => (typeof s === "string" ? s : s?.name ?? "")).filter(Boolean)
+      : []
+  );
 
-  // Map summary
-  if (currentResume.resumeDetails) {
-    setResumeDetails({
-      ...resumeDetails,
-      name: currentResume.resumeDetails.name || "",
-      title: currentResume.resumeDetails.title || "",
-      contact: currentResume.resumeDetails.contact || {},
-      summary: currentResume.resumeDetails.summary || ""
-    });
-  }
+  // EXPERIENCES: use import array or empty
+  setExperiences(
+    Array.isArray(importedResume?.experiences)
+      ? importedResume.experiences.map(exp => ({
+          position: exp?.title ?? exp?.position ?? "",
+          company: exp?.company ?? "",
+          location: exp?.location ?? "",
+          startDate: exp?.startDate ?? "",
+          endDate: exp?.endDate ?? "",
+          duration:
+            exp?.startDate || exp?.endDate
+              ? `${exp?.startDate ?? ""} - ${exp?.endDate ?? ""}`
+              : "",
+          achievements: Array.isArray(exp?.description) ? [...exp.description] : (Array.isArray(exp?.achievements) ? [...exp.achievements] : [])
+        }))
+      : []
+  );
 
-  // Map projects
-  if (currentResume.projects) {
-    setProjects(currentResume.projects);
-  }
+  // PROJECTS: prefer name, fallback to title; description -> array
+  setProjects(
+    Array.isArray(importedResume?.projects)
+      ? importedResume.projects.map(p => ({
+          name: p?.name ?? p?.title ?? "",
+          description: Array.isArray(p?.description) ? [...p.description] : (p?.description ? [p.description] : []),
+          technologies: p?.technologies ?? "",
+          duration: p?.duration ?? "",
+          link: p?.link ?? ""
+        }))
+      : []
+  );
 
-  // Map education
-  if (currentResume.educationList) {
-    setEducationList(currentResume.educationList);
-  }
+  // EDUCATION
+  setEducationList(
+    Array.isArray(importedResume?.educationList)
+      ? importedResume.educationList.map(e => ({
+          degree: e?.degree ?? "",
+          cgpa: e?.cgpa ?? e?.grade ?? "",
+          university: e?.university ?? e?.institution ?? "",
+          startDate: e?.startDate ?? e?.from ?? "",
+          endDate: e?.endDate ?? e?.to ?? ""
+        }))
+      : []
+  );
 
-}, [currentResume]);
+  // CERTIFICATIONS: normalize to simple objects (or strings if you prefer)
+  setCertifications(
+    Array.isArray(importedResume?.certifications)
+      ? importedResume.certifications.map(c => (typeof c === "string" ? c : c?.title ?? ""))
+      : []
+  );
+
+  // RESUME DETAILS (overwrite but keep structure)
+  setResumeDetails({
+    name: importedResume?.resumeDetails?.name ?? importedResume?.resumeDetails?.fullName ?? importedResume?.name ?? "",
+    title: importedResume?.resumeDetails?.title ?? importedResume?.title ?? "",
+    summary: importedResume?.resumeDetails?.summary ?? importedResume?.summary ?? "",
+    contact: {
+      phone: importedResume?.resumeDetails?.contact?.phone ?? importedResume?.contact?.phone ?? "",
+      email: importedResume?.resumeDetails?.contact?.email ?? importedResume?.contact?.email ?? "",
+      linkedin: importedResume?.resumeDetails?.contact?.linkedin ?? importedResume?.contact?.linkedin ?? "",
+      github: importedResume?.resumeDetails?.contact?.github ?? importedResume?.contact?.github ?? "",
+      location: importedResume?.resumeDetails?.contact?.location ?? importedResume?.contact?.location ?? ""
+    }
+  });
+
+}, [importedResume]);
+
+
+
+  
+
+
+//   useEffect(() => {
+//   if (!currentResume) return;
+
+//   // Map experiences
+//   if (currentResume.experiences) {
+//     setExperiences(
+//       currentResume.experiences.map(exp => ({
+//         position: exp.title || "",
+//         company: exp.company || "",
+//         location: exp.location || "",
+//         duration: exp.startDate && exp.endDate ? `${exp.startDate} - ${exp.endDate}` : "",
+//         achievements: exp.description || []
+//       }))
+//     );
+//   }
+
+//   // Map skills (already grouped strings)
+//   if (currentResume.skills) {
+//     setSkills(currentResume.skills);
+//   }
+
+//   // Map certifications
+//   if (currentResume.certifications) {
+//     setCertifications(
+//       currentResume.certifications.map(c => (typeof c === "string" ? c : c.title || ""))
+//     );
+//   }
+
+//   // Map summary
+//   if (currentResume.resumeDetails) {
+//     setResumeDetails({
+//       ...resumeDetails,
+//       name: currentResume.resumeDetails.name || "",
+//       title: currentResume.resumeDetails.title || "",
+//       contact: currentResume.resumeDetails.contact || {},
+//       summary: currentResume.resumeDetails.summary || ""
+//     });
+//   }
+
+//   // Map projects
+//   if (currentResume.projects) {
+//     setProjects(currentResume.projects);
+//   }
+
+//   // Map education
+//   if (currentResume.educationList) {
+//     setEducationList(currentResume.educationList);
+//   }
+
+// }, [currentResume]);
 
 
  
@@ -599,7 +686,7 @@ export default function ResumeEditor({ resume: propsResume}) {
   console.log("Printing the enhanced resume");
   console.log(enhancedResume);
 
-  setSkills(enhancedResume?.skills?.map(s => s.name) ?? []);
+  setSkills(enhancedResume?.skills?? []);
 
   setExperiences(enhancedResume?.experiences ?? []);
 
@@ -619,6 +706,9 @@ export default function ResumeEditor({ resume: propsResume}) {
   }));
 
 }, [enhancedResume]);
+
+
+
 
 
   
@@ -741,7 +831,18 @@ export default function ResumeEditor({ resume: propsResume}) {
 
 
   
+ function downloadResponse(response) {
+  const dataStr = JSON.stringify(response, null, 2); // pretty print
+  const blob = new Blob([dataStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
 
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "ai_response.json";
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
 
 
 
@@ -761,149 +862,320 @@ export default function ResumeEditor({ resume: propsResume}) {
     }
   }, [saveError]);
 
-  useEffect(() => {
-    const fetchResume = async () => {
-      if (!resumeId) return;
+
+
+//   useEffect(() => {
+//     const fetchResume = async () => {
+//       if (!resumeId) return;
       
-      setIsLoadingResume(true);
-      setFetchError("");
-      try {
-        const isDevelopment = window.location.hostname === 'localhost';
-        const baseUrl = isDevelopment ? API_BASE_URL2 : API_BASE_URL;
+//       setIsLoadingResume(true);
+//       setFetchError("");
+//       try {
+//         const isDevelopment = window.location.hostname === 'localhost';
+//         const baseUrl = isDevelopment ? API_BASE_URL2 : API_BASE_URL;
         
-        const response = await fetch(`${baseUrl}/my-resumes/getresume/${resumeId}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-        });
+//         const response = await fetch(`${baseUrl}/my-resumes/getresume/${resumeId}`, {
+//           method: 'GET',
+//           headers: {
+//             'Content-Type': 'application/json',
+//             'Accept': 'application/json',
+//           },
+//         });
         
-        if (response.status === 404) {
-          setFetchError("Resume not found. It may have been deleted.");
-          setIsLoadingResume(false);
-          return;
-        }
+//         if (response.status === 404) {
+//           setFetchError("Resume not found. It may have been deleted.");
+//           setIsLoadingResume(false);
+//           return;
+//         }
         
-        if (!response.ok) {
-          throw new Error(`Server error: ${response.status}`);
-        }
+//         if (!response.ok) {
+//           throw new Error(`Server error: ${response.status}`);
+//         }
         
-        const data = await response.json();
-        console.log("Fetched resume data:", data);
+//         const data = await response.json();
+//         console.log("***************************************************************************************");
         
-        setResumeTitle(data.title || "");
-        setSelectedTemplate(data.templateId ? String(data.templateId) : "1");
+//         console.log(data.experiences);
         
-        setResumeDetails({
-          name: data.details?.name || "",
-          title: data.details?.title || "",
-          summary: data.details?.summary || "",
-          contact: {
-            phone: data.contact?.phone || "",
-            email: data.contact?.email || "",
-            linkedin: data.contact?.linkedin || "",
-            github: data.contact?.github || "",
-            location: data.contact?.location || ""
-          }
-        });
+//         downloadResponse(data);
+      
         
-        if (data.skills) {
-          let skillsArray = [];
-          if (Array.isArray(data.skills)) {
-            skillsArray = data.skills.map(s => {
-              if (typeof s === 'string') return s;
-              if (s && s.name) return s.name;
-              return '';
-            }).filter(s => s !== '');
-          } else if (typeof data.skills === 'string') {
-            skillsArray = [data.skills];
-          }
-          setSkills(skillsArray.length > 0 ? skillsArray : [""]);
-        }
+//         setResumeTitle(data.title || "");
+//         setSelectedTemplate(data.templateId ? String(data.templateId) : "1");
         
-        if (data.experiences && Array.isArray(data.experiences)) {
-          const mappedExperiences = data.experiences.map(exp => ({
-            position: exp.position || "",
-            company: exp.company || "",
-            location: exp.location || "",
-            duration: exp.duration || "",
-            achievements: Array.isArray(exp.achievements) && exp.achievements.length > 0 ? exp.achievements : [""]
-          }));
-          setExperiences(mappedExperiences);
-        }
+//         setResumeDetails({
+//           name: data.details?.name || "",
+//           title: data.details?.title || "",
+//           summary: data.details?.summary || "",
+//           contact: {
+//             phone: data.contact?.phone || "",
+//             email: data.contact?.email || "",
+//             linkedin: data.contact?.linkedin || "",
+//             github: data.contact?.github || "",
+//             location: data.contact?.location || ""
+//           }
+//         });
         
-        if (data.projects && Array.isArray(data.projects)) {
-          const mappedProjects = data.projects.map(proj => ({
-            name: proj.name || "",
-            duration: proj.duration || "",
-            technologies: proj.technologies || "",
-            description: Array.isArray(proj.description) && proj.description.length > 0 ? proj.description : [""],
-            link: proj.link || ""
-          }));
-          setProjects(mappedProjects);
-        }
+//         if (data.skills) {
+//           let skillsArray = [];
+//           if (Array.isArray(data.skills)) {
+//             skillsArray = data.skills.map(s => {
+//               if (typeof s === 'string') return s;
+//               if (s && s.name) return s.name;
+//               return '';
+//             }).filter(s => s !== '');
+//           } else if (typeof data.skills === 'string') {
+//             skillsArray = [data.skills];
+//           }
+//           setSkills(skillsArray.length > 0 ? skillsArray : [""]);
+//         }
         
-        if (data.educationList && Array.isArray(data.educationList)) {
-          const mappedEducation = data.educationList.map(edu => ({
-            degree: edu.degree || "",
-            institution: edu.institution || "",
-            location: edu.location || "",
-            year: edu.year || "",
-            gpa: edu.gpa || ""
-          }));
-          setEducationList(mappedEducation);
-        }
+// //         if (data.experiences && Array.isArray(data.experiences)) {
+// //   const mappedExperiences = data.experiences.map(exp => ({
+// //     position: exp.position || "",
+// //     company: exp.company || "",
+// //     location: exp.location || "",
+// //     duration: exp.duration || "",
+// //     achievements: typeof exp.achievements === 'string' 
+// //                   ? exp.achievements.split(/\r?\n/) 
+// //                   : Array.isArray(exp.achievements) 
+// //                     ? exp.achievements 
+// //                     : []
+// //   }));
+// //   setExperiences(mappedExperiences);
+// // }
+
+//         if (data.experiences && Array.isArray(data.experiences)) {
+//   const mappedExperiences = data.experiences.map(exp => ({
+//     position: exp.position || "",
+//     company: exp.company || "",
+//     location: exp.location || "",
+//     duration: exp.duration || "",
+//     // ensure achievements is always an array
+//     achievements: Array.isArray(exp.achievements)
+//       ? exp.achievements
+//       : exp.achievements
+//       ? [exp.achievements] // wrap string in array
+//       : []
+//   }));
+//   setExperiences(mappedExperiences);
+// }
+
+
         
-        if (data.certifications) {
-          let certsArray = [];
-          if (Array.isArray(data.certifications)) {
-            certsArray = data.certifications.map(c => {
-              if (typeof c === 'string') return c;
-              if (c && c.name) return c.name;
-              return '';
-            }).filter(c => c !== '');
-          } else if (typeof data.certifications === 'string') {
-            certsArray = [data.certifications];
-          }
-          setCertifications(certsArray.length > 0 ? certsArray : [""]);
-        }
+//         if (data.projects && Array.isArray(data.projects)) {
+//           const mappedProjects = data.projects.map(proj => ({
+//             name: proj.name || "",
+//             duration: proj.duration || "",
+//             technologies: proj.technologies || "",
+//             description: Array.isArray(proj.description) && proj.description.length > 0 ? proj.description : [""],
+//             link: proj.link || ""
+//           }));
+//           setProjects(mappedProjects);
+//         }
         
-        setShowSummary(data.showSummary !== undefined ? data.showSummary : true);
-        setShowSkills(data.showSkills !== undefined ? data.showSkills : true);
-        setShowExperience(data.showExperience !== undefined ? data.showExperience : true);
-        setShowProjects(data.showProjects !== undefined ? data.showProjects : true);
-        setShowEducation(data.showEducation !== undefined ? data.showEducation : true);
-        setShowCertifications(data.showCertifications !== undefined ? data.showCertifications : true);
+//         if (data.educationList && Array.isArray(data.educationList)) {
+//           const mappedEducation = data.educationList.map(edu => ({
+//             degree: edu.degree || "",
+//             institution: edu.institution || "",
+//             location: edu.location || "",
+//             year: edu.year || "",
+//             gpa: edu.gpa || ""
+//           }));
+//           setEducationList(mappedEducation);
+//         }
         
-        if (data.customSections && Array.isArray(data.customSections)) {
-          setCustomSections(data.customSections);
-        }
+//         if (data.certifications) {
+//           let certsArray = [];
+//           if (Array.isArray(data.certifications)) {
+//             certsArray = data.certifications.map(c => {
+//               if (typeof c === 'string') return c;
+//               if (c && c.name) return c.name;
+//               return '';
+//             }).filter(c => c !== '');
+//           } else if (typeof data.certifications === 'string') {
+//             certsArray = [data.certifications];
+//           }
+//           setCertifications(certsArray.length > 0 ? certsArray : [""]);
+//         }
         
-        if (data.sectionTitles) {
-          setSectionTitles({
-            summary: data.sectionTitles.summary || "Summary",
-            skills: data.sectionTitles.skills || "Skills",
-            experience: data.sectionTitles.experience || "Experience",
-            projects: data.sectionTitles.projects || "Projects",
-            education: data.sectionTitles.education || "Education",
-            certifications: data.sectionTitles.certifications || "Certifications"
-          });
-        }
+//         setShowSummary(data.showSummary !== undefined ? data.showSummary : true);
+//         setShowSkills(data.showSkills !== undefined ? data.showSkills : true);
+//         setShowExperience(data.showExperience !== undefined ? data.showExperience : true);
+//         setShowProjects(data.showProjects !== undefined ? data.showProjects : true);
+//         setShowEducation(data.showEducation !== undefined ? data.showEducation : true);
+//         setShowCertifications(data.showCertifications !== undefined ? data.showCertifications : true);
         
-        setFetchError("");
+//         if (data.customSections && Array.isArray(data.customSections)) {
+//           setCustomSections(data.customSections);
+//         }
         
-      } catch (err) {
-        console.error("Error fetching resume:", err);
-        setFetchError(`Failed to load resume: ${err.message}`);
-      } finally {
+//         if (data.sectionTitles) {
+//           setSectionTitles({
+//             summary: data.sectionTitles.summary || "Summary",
+//             skills: data.sectionTitles.skills || "Skills",
+//             experience: data.sectionTitles.experience || "Experience",
+//             projects: data.sectionTitles.projects || "Projects",
+//             education: data.sectionTitles.education || "Education",
+//             certifications: data.sectionTitles.certifications || "Certifications"
+//           });
+//         }
+        
+//         setFetchError("");
+        
+//       } catch (err) {
+//         console.error("Error fetching resume:", err);
+//         setFetchError(`Failed to load resume: ${err.message}`);
+//       } finally {
+//         setIsLoadingResume(false);
+//       }
+//     };
+
+//     fetchResume();
+//   }, [resumeId]);
+
+useEffect(() => {
+  const fetchResume = async () => {
+    if (!resumeId) return;
+
+    setIsLoadingResume(true);
+    setFetchError("");
+
+    try {
+      // Always use main API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/my-resumes/getresume/${resumeId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      });
+
+      if (response.status === 404) {
+        setFetchError("Resume not found. It may have been deleted.");
         setIsLoadingResume(false);
+        return;
       }
-    };
 
-    fetchResume();
-  }, [resumeId]);
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
+      }
 
+      const data = await response.json();
+      console.log("Fetched resume data:", data);
+
+      downloadResponse(data);
+
+      setResumeTitle(data.title || "");
+      setSelectedTemplate(data.templateId ? String(data.templateId) : "1");
+
+      setResumeDetails({
+        name: data.details?.name || "",
+        title: data.details?.title || "",
+        summary: data.details?.summary || "",
+        contact: {
+          phone: data.contact?.phone || "",
+          email: data.contact?.email || "",
+          linkedin: data.contact?.linkedin || "",
+          github: data.contact?.github || "",
+          location: data.contact?.location || ""
+        }
+      });
+
+      if (data.skills) {
+        let skillsArray = [];
+        if (Array.isArray(data.skills)) {
+          skillsArray = data.skills.map(s => (typeof s === 'string' ? s : s?.name || '')).filter(s => s !== '');
+        } else if (typeof data.skills === 'string') {
+          skillsArray = [data.skills];
+        }
+        setSkills(skillsArray.length > 0 ? skillsArray : [""]);
+      }
+
+      // === FIXED EXPERIENCE MAPPING ===
+      if (data.experiences && Array.isArray(data.experiences)) {
+        const mappedExperiences = data.experiences.map(exp => ({
+          position: exp.position || "",
+          company: exp.company || "",
+          location: exp.location || "",
+          duration: exp.duration || "",
+          achievements: Array.isArray(exp.achievements)
+            ? exp.achievements
+            : exp.achievements
+            ? [exp.achievements] // wrap string in array
+            : [] // ensure not null
+        }));
+        setExperiences(mappedExperiences);
+      }
+
+      if (data.projects && Array.isArray(data.projects)) {
+        const mappedProjects = data.projects.map(proj => ({
+          name: proj.name || "",
+          duration: proj.duration || "",
+          technologies: proj.technologies || "",
+          description: Array.isArray(proj.description) && proj.description.length > 0 ? proj.description : [""],
+          link: proj.link || ""
+        }));
+        setProjects(mappedProjects);
+      }
+
+      if (data.educationList && Array.isArray(data.educationList)) {
+        const mappedEducation = data.educationList.map(edu => ({
+          degree: edu.degree || "",
+          institution: edu.institution || "",
+          location: edu.location || "",
+          year: edu.year || "",
+          gpa: edu.gpa || ""
+        }));
+        setEducationList(mappedEducation);
+      }
+
+      if (data.certifications) {
+        let certsArray = [];
+        if (Array.isArray(data.certifications)) {
+          certsArray = data.certifications.map(c => (typeof c === 'string' ? c : c?.name || '')).filter(c => c !== '');
+        } else if (typeof data.certifications === 'string') {
+          certsArray = [data.certifications];
+        }
+        setCertifications(certsArray.length > 0 ? certsArray : [""]);
+      }
+
+      setShowSummary(data.showSummary !== undefined ? data.showSummary : true);
+      setShowSkills(data.showSkills !== undefined ? data.showSkills : true);
+      setShowExperience(data.showExperience !== undefined ? data.showExperience : true);
+      setShowProjects(data.showProjects !== undefined ? data.showProjects : true);
+      setShowEducation(data.showEducation !== undefined ? data.showEducation : true);
+      setShowCertifications(data.showCertifications !== undefined ? data.showCertifications : true);
+
+      if (data.customSections && Array.isArray(data.customSections)) {
+        setCustomSections(data.customSections);
+      }
+
+      if (data.sectionTitles) {
+        setSectionTitles({
+          summary: data.sectionTitles.summary || "Summary",
+          skills: data.sectionTitles.skills || "Skills",
+          experience: data.sectionTitles.experience || "Experience",
+          projects: data.sectionTitles.projects || "Projects",
+          education: data.sectionTitles.education || "Education",
+          certifications: data.sectionTitles.certifications || "Certifications"
+        });
+      }
+
+      setFetchError("");
+    } catch (err) {
+      console.error("Error fetching resume:", err);
+      setFetchError(`Failed to load resume: ${err.message}`);
+    } finally {
+      setIsLoadingResume(false);
+    }
+  };
+
+  fetchResume();
+}, [resumeId]);
+
+
+  
   const addCustomSection = useCallback(() => {
     setCustomSections(prev => [...prev, {
       id: Date.now(),
@@ -1278,7 +1550,12 @@ export default function ResumeEditor({ resume: propsResume}) {
       sectionTitles
     };
 
+
+    console.log("=========================================================================");
+    
     console.log(payload);
+
+     console.log("=========================================================================");
     if(userId==null){
       alert("Apparently user id is null");
       return;

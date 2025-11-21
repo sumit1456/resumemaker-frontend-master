@@ -1,3 +1,6 @@
+
+
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import './MyResumes.css';
@@ -46,7 +49,7 @@ const MyResumes = () => {
   const handleDelete = async (resumeId) => {
     try {
       setDeleting(resumeId);
-      const response = await fetch(`${API_BASE_URL}/my-resumes/${resumeId}`, {
+      const response = await fetch(`${API_BASE_URL}/my-resumes/delete-resume/${resumeId}`, {
         method: 'DELETE',
       });
       

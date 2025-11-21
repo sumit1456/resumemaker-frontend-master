@@ -4,6 +4,10 @@ import "./NavBar.css";
 import { useSelector, useDispatch } from "react-redux";
 import { logInUser, logOutUser } from "../../redux/store.js";
 import { useNavigate } from "react-router-dom";
+import { clearResume } from "../../redux/store.js";
+
+
+
 
 
 export default function NavBar() {
@@ -11,10 +15,12 @@ export default function NavBar() {
   const dispatch = useDispatch();
   const isLoggedIn = useSelector( (state) => state.auth.isLoggedIn);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
+  const enhancedResume = useSelector((state)=> state.resume.enhancedResume);
+ 
 
   const handleLogout = () => {
     dispatch(logOutUser());
+    dispatch(clearResume());
     naviaate("/");
    
   };
