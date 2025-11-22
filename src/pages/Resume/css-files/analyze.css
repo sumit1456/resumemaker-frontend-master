@@ -11,13 +11,14 @@
   z-index: 1000;
  
  
+ 
   
 }
 
 /* Section Title */
 .ai-analysis-title {
   font-family: 'Space Grotesk', sans-serif;
-  font-size: 1.2rem;
+  font-size: 1.3rem;
   font-weight: 700;
   letter-spacing: 1.5px;
   text-transform: uppercase;
@@ -55,7 +56,7 @@
   border: 1px solid #3a3a3a;
   border-radius: 8px;
   padding: 14px;
-  font-size: 13px;
+  font-size: 0.80rem;
   font-family: 'Inter', sans-serif;
   line-height: 1.6;
   letter-spacing: 0.2px;
@@ -83,6 +84,7 @@
   gap: 10px;
   margin-top: 14px;
   width: 100%;
+  padding: 0.3rem;
 }
 /* Common button style */
 .ai-button {
@@ -90,8 +92,8 @@
   border: none;
   font-weight: 800;
   border-radius: 6px;
-  font-size: 15px;
-  padding: 10px 20px;
+  font-size: 0.86rem;
+  padding: 7px 14px;
   transition: all 0.2s ease;
   text-transform: uppercase;
   letter-spacing: 0.8px;
@@ -152,6 +154,7 @@
   font-size: 0.85rem;
   line-height: 1.8;
   color: #d0d0d0;
+  
 }
 
 /* ==================== ANALYSIS OUTPUT WRAPPER ==================== */
@@ -171,6 +174,7 @@
   min-height: 400px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   font-family: 'Inter', sans-serif;
+
   
   
  
@@ -434,61 +438,201 @@
 }
 
 /* AI Response Formatting */
+
+
+/* ======================================================================================= */
+
 .ai-response-container {
   display: flex;
   flex-direction: column;
   gap: 20px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  animation: fadeIn 0.6s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .ai-response-header {
   text-align: center;
-  padding: 28px 20px;
-  background: #1a1a1a;
-  border-radius: 8px;
+  padding: 32px 24px;
+  background: linear-gradient(135deg, #1a1a1a 0%, #141414 100%);
+  border-radius: 12px;
   color: white;
   border: 1px solid #2a2a2a;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  animation: slideDown 0.7s ease-out;
+  position: relative;
+  overflow: hidden;
+}
+
+.ai-response-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #ffffff, transparent);
+  animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .ai-response-header-title {
-  margin: 0 0 6px 0;
-  font-size: 1.6rem;
-  font-weight: 600;
+  margin: 0 0 8px 0;
+  font-size: 1.75rem;
+  font-weight: 700;
   letter-spacing: -0.5px;
+  background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .ai-response-header-subtitle {
   margin: 0;
-  font-size: 0.8rem;
-  opacity: 0.7;
+  font-size: 0.85rem;
+  opacity: 0.65;
   font-weight: 400;
+  letter-spacing: 0.3px;
 }
 
 /* AI Section Cards */
 .ai-section-card {
-  background: #2a2a2a;
-  border-radius: 8px;
-  border: 1px solid #3a3a3a;
-  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid #2a2a2a;
+  padding: 24px;
+  background: linear-gradient(135deg, #1a1a1a 0%, #141414 100%);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+  animation: fadeInUp 0.6s ease-out backwards;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.ai-section-card:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.ai-section-card:nth-child(3) {
+  animation-delay: 0.2s;
+}
+
+.ai-section-card:nth-child(4) {
+  animation-delay: 0.3s;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ai-section-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  border-color: #3a3a3a;
 }
 
 .ai-section-title {
-  margin: 0 0 16px 0;
-  font-size: 0.95rem;
-  font-weight: 600;
+  margin: 0 0 20px 0;
+  font-size: 1rem;
+  font-weight: 700;
   color: #ffffff;
   letter-spacing: 0.5px;
-  padding-bottom: 10px;
+  padding-bottom: 12px;
   border-bottom: 2px solid #3a3a3a;
+  position: relative;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+}
+
+.ai-section-title::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 60px;
+  height: 2px;
+  background: linear-gradient(90deg, #ffffff, transparent);
+  animation: expandWidth 1s ease-out;
+}
+
+@keyframes expandWidth {
+  from {
+    width: 0;
+  }
+  to {
+    width: 60px;
+  }
 }
 
 .ai-point-item {
   display: flex;
-  gap: 10px;
-  line-height: 1.7;
+  gap: 12px;
+  line-height: 1.75;
   color: #d4d4d4;
-  font-size: 0.85rem;
-  margin-bottom: 8px;
+  font-size: 0.9rem;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #0f0f0f 0%, #0a0a0a 100%);
+  border-radius: 8px;
+  border-left: 3px solid #2a2a2a;
+  animation: fadeInLeft 0.5s ease-out backwards;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ai-point-item:nth-child(1) { animation-delay: 0.1s; }
+.ai-point-item:nth-child(2) { animation-delay: 0.15s; }
+.ai-point-item:nth-child(3) { animation-delay: 0.2s; }
+.ai-point-item:nth-child(4) { animation-delay: 0.25s; }
+.ai-point-item:nth-child(5) { animation-delay: 0.3s; }
+
+@keyframes fadeInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.ai-point-item:hover {
+  transform: translateX(6px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .ai-point-item:last-child {
@@ -498,24 +642,76 @@
 .ai-bullet {
   color: #fbbf24;
   font-weight: bold;
-  font-size: 1rem;
-  margin-top: 2px;
+  font-size: 1.2rem;
+  margin-top: 1px;
   flex-shrink: 0;
+  transition: transform 0.3s ease;
+}
+
+.ai-point-item:hover .ai-bullet {
+  transform: scale(1.2);
+}
+
+.ai-point-item .ai-detail-label {
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.9rem;
+  letter-spacing: 0.2px;
 }
 
 /* Strength/Improvement Items */
 .ai-detail-item {
-  background: #1e1e1e;
-  padding: 16px;
-  border-radius: 6px;
-  margin-bottom: 12px;
-  border-left: 3px solid #4a4a4a;
+  background: linear-gradient(135deg, #0f0f0f 0%, #0a0a0a 100%);
+  padding: 18px;
+  border-radius: 8px;
+  margin-bottom: 14px;
+  border-left: 3px solid #3a3a3a;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  font-size: 0.85rem;
+  gap: 10px;
+  font-size: 0.9rem;
   color: #d4d4d4;
-  line-height: 1.7;
+  line-height: 1.75;
+  animation: fadeInRight 0.6s ease-out backwards;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.ai-detail-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 3px;
+  height: 0;
+  background: linear-gradient(180deg, #ffffff, #b0b0b0);
+  transition: height 0.4s ease;
+}
+
+.ai-detail-item:hover::before {
+  height: 100%;
+}
+
+.ai-detail-item:nth-child(1) { animation-delay: 0.1s; }
+.ai-detail-item:nth-child(2) { animation-delay: 0.2s; }
+.ai-detail-item:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.ai-detail-item:hover {
+  transform: translateX(6px);
+  box-shadow: -4px 0 12px rgba(255, 255, 255, 0.05);
+  border-left-color: #ffffff;
 }
 
 .ai-detail-item:last-child {
@@ -524,8 +720,42 @@
 
 .ai-detail-label {
   color: #e5e5e5;
-  font-weight: bold;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: color 0.3s ease;
 }
+
+.ai-detail-item:hover .ai-detail-label {
+  color: #ffffff;
+}
+
+/* Smooth scroll behavior */
+.ai-response-container * {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .ai-response-header {
+    padding: 24px 18px;
+  }
+  
+  .ai-response-header-title {
+    font-size: 1.4rem;
+  }
+  
+  .ai-section-card {
+    padding: 18px;
+  }
+}
+
+
+
+
+
+/* ====================================================================================== */
 
 /* Comparison Report */
 .comparison-section {

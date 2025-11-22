@@ -517,6 +517,9 @@ export default function ResumeEditor({ resume: propsResume}) {
   const id = useSelector((s)=>s.auth.userId);
   const [userId, setUserId] = useState(id);
 
+  
+  const [localResume, setLocalResune] = useState(null);
+
   console.log("From the state the user id is"+ userId);
   
 
@@ -543,9 +546,8 @@ export default function ResumeEditor({ resume: propsResume}) {
   useEffect(() => {
   if (!importedResume) return;
 
-  console.log("Imported Resume →", importedResume);
-  
-  
+  downloadResponse(importedResume);
+
 
 
   // SKILLS: map to strings or empty array
@@ -680,32 +682,113 @@ export default function ResumeEditor({ resume: propsResume}) {
 
 
  
-  useEffect(() => {
-  if (!enhancedResume) return;
+//   useEffect(() => {
+//   if (!enhancedResume) return;
 
-  console.log("Printing the enhanced resume");
-  console.log(enhancedResume);
+//   downloadResponse(enhancedResume);
 
-  setSkills(enhancedResume?.skills?? []);
+//   console.log("Printing the enhanced resume");
+//   console.log(enhancedResume);
 
-  setExperiences(enhancedResume?.experiences ?? []);
+//   setSkills(enhancedResume?.skills ?? []);
+//   setExperiences(enhancedResume?.experiences ?? []);
+//   setProjects(enhancedResume?.projects ?? []);
 
+//   setResumeDetails(prev => ({
+//     ...prev,
+//     ...enhancedResume?.resumeDetails,
+//     contact: enhancedResume?.resumeDetails?.contact
+//       ? enhancedResume.resumeDetails.contact
+//       : prev.contact,
+//     summary: enhancedResume?.resumeDetails?.summary ?? prev.summary,
+//   }));
+// }, [enhancedResume]);
 
-  setProjects(enhancedResume?.projects ?? []);
+useEffect(() => {
 
-  setResumeDetails(prev => ({
-    ...prev,
-    ...enhancedResume?.details, 
-
-    contact: enhancedResume?.details?.contact 
-      ? enhancedResume.details.contact 
-      : prev.contact,
-
-    summary: enhancedResume?.details?.summary 
-      ?? prev.summary,
-  }));
+  if(!enhancedResume)return;
+  applyEnhancedResume(enhancedResume);
+ 
 
 }, [enhancedResume]);
+
+
+ 
+const applyEnhancedResume = (enhancedResume) => {
+  if (!enhancedResume) return;
+
+  downloadResponse(enhancedResume);
+
+  // ---------------- Resume Details ----------------
+  if (enhancedResume.resumeDetails) {
+    setResumeDetails(prev => ({
+      ...prev,
+      // Only override non-empty values
+      ...Object.fromEntries(
+        Object.entries(enhancedResume.resumeDetails)
+          .filter(([_, value]) => value !== "" && value !== null && value !== undefined)
+      ),
+      contact: {
+        ...prev.contact,
+        ...Object.fromEntries(
+          Object.entries(enhancedResume.resumeDetails.contact || {})
+            .filter(([_, value]) => value !== "" && value !== null && value !== undefined)
+        )
+      }
+    }));
+  }
+
+  // ---------------- Skills ----------------
+ setSkills(
+    Array.isArray(enhancedResume?.skills)
+      ? enhancedResume.skills.map(s => (typeof s === "string" ? s : s?.name ?? "")).filter(Boolean)
+      : []
+  );
+
+  // ---------------- Experiences ----------------
+ 
+  setExperiences(
+    Array.isArray(enhancedResume?.experiences)
+      ? enhancedResume.experiences.map(exp => ({
+          position: exp?.title ?? exp?.position ?? "",
+          company: exp?.company ?? "",
+          location: exp?.location ?? "",
+          startDate: exp?.startDate ?? "",
+          endDate: exp?.endDate ?? "",
+          duration:
+            exp?.startDate || exp?.endDate
+              ? `${exp?.startDate ?? ""} - ${exp?.endDate ?? ""}`
+              : "",
+          achievements: Array.isArray(exp?.description) ? [...exp.description] : (Array.isArray(exp?.achievements) ? [...exp.achievements] : [])
+        }))
+      : []
+  );
+
+
+  // ---------------- Projects ----------------
+  // Example for projects
+setProjects(prev =>
+  enhancedResume.projects.map((proj, i) => {
+    const prevProj = prev[i] || {};
+    return {
+      name: proj.name || prevProj.name || "",
+      duration: proj.duration || prevProj.duration || "",
+      technologies: proj.technologies || prevProj.technologies || "",
+      description: proj.description && proj.description.length > 0
+        ? [...proj.description]         // clone API array
+        : prevProj.description
+          ? [...prevProj.description]  // clone previous state array
+          : [""],
+      link: proj.link || prevProj.link || ""
+    };
+  })
+);
+
+  
+};
+
+
+
 
 
 
@@ -1064,7 +1147,7 @@ useEffect(() => {
       const data = await response.json();
       console.log("Fetched resume data:", data);
 
-      downloadResponse(data);
+      
 
       setResumeTitle(data.title || "");
       setSelectedTemplate(data.templateId ? String(data.templateId) : "1");
@@ -1161,6 +1244,7 @@ useEffect(() => {
           certifications: data.sectionTitles.certifications || "Certifications"
         });
       }
+      setLocalResune(data);
 
       setFetchError("");
     } catch (err) {

@@ -3,8 +3,8 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom"; // ✅ only useNavigate (not Navigate)
 import "./Signup.css";
 
-const API_BASE_URL2 = "https://resumemaker-1.onrender.com";
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URl = "https://resumemaker-1.onrender.com";
+const API_BASE_URL2 = 'http://localhost:8080';
 
 export default function Signup() {
   const [username, setUsername] = useState("");
@@ -12,6 +12,7 @@ export default function Signup() {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   const navigate = useNavigate(); // ✅ initialize the hook
 
@@ -33,12 +34,18 @@ export default function Signup() {
         password
       });
 
-      setMessage(`Please check your email for verification ${response.data.username}`);
+      console.log("printing the response from the backend in signup");
+    
+      const data = response.data;
+      setSuccess(data.success);
+      if (!success) {
+         throw new Error(res.data.message);
+      }
+      
 
-   
-      setTimeout(() => {
-        navigate("/login"); 
-      }, 1000);
+
+      setMessage(`Please check your email for verification`);
+
     } catch (error) {
       if (error.response) {
         setMessage(`Server error: ${error.response.data.message || error.response.status}`);
@@ -96,7 +103,7 @@ export default function Signup() {
           </button>
 
           {message && (
-            <p className={message.includes("successful") ? "success" : "error"}>
+            <p className={success ? "success" : "error"}>
               {message}
             </p>
           )}

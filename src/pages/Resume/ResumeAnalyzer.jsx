@@ -40,13 +40,11 @@ export default function ResumeAnalyzer({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isAIAnalysis, setIsAIAnalysis] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
-  const [foundSkills, setFoundSkills] = useState([]);
-  const [foundVerbs, setFoundVerbs] = useState([]);
   const [jobDescriptionInsights, setJobDescriptionInsights] = useState("");
   const [createComparisonReport, setCreateComparisonReport] = useState("false");
-  const importedResume = useSelector((state) => state.resume.importedResume);
   const enhancedResume = useSelector((state) => state.resume.enhancedResume);
   const currentResume = useSelector((state) => state.resume.currentResume);
+ 
 
 
 
@@ -61,7 +59,7 @@ export default function ResumeAnalyzer({
 
   const dispatch = useDispatch();
 
-  const canGenerateReport = currentLocalResume && newLocalResume;
+  const canGenerateReport = currentResume && enhancedResume;
   const isDisabled = !canGenerateReport || createComparisonReport;
   const isJDPresent = jobDescription.trim().length > 0;
   const disableQuick = !isJDPresent || isAnalyzing || isAIAnalysis || isEnhancing;
@@ -145,6 +143,26 @@ export default function ResumeAnalyzer({
 
     return r.trim();
   };
+
+
+
+
+  const buildResumePayload = () => {
+  return {
+    details: {
+      name: resumeDetails?.name || "",
+      title: resumeDetails?.title || "",
+      summary: resumeDetails?.summary || ""
+    },
+    skills: skills || [],
+    experiences: experiences || [],
+    projects: projects || [],
+    educationList: educationList || [],
+    certifications: certifications || [],
+  
+  };
+};
+
 
   // ==================== UTILITY COMPONENTS ====================
 
@@ -728,7 +746,8 @@ export default function ResumeAnalyzer({
       const payload = buildATSPayload();
       
       setCurrentLocalResume(payload);
-      dispatch(setCurrentResume(payload));
+      
+
 
       const res = await fetch(`${API_BASE_URL}/enhanceResume`, {
         method: "POST",
@@ -742,19 +761,22 @@ export default function ResumeAnalyzer({
       }
       
       const data = await res.json();
+      downloadResponse(data);
       dispatch(setEnhancedResume(data));
+     
       setNewLocalResume(data);
     } catch (err) {
       console.error("❌ Error calling enhanceResume:", err);
     } finally {
       setIsEnhancing(false);
       setLoading(false);
+      
     }
   };
 
-   const importResume = async (e) => {
-   setLoading(true);
-   setMessage('Importing...')
+  const importResume = async (e) => {
+  setLoading(true);
+  setMessage('Importing...');
   const file = e.target.files[0];
   if (!file) return;
 
@@ -779,7 +801,6 @@ export default function ResumeAnalyzer({
 
     const data = await response.json();
 
-    // Extract the JSON string from AI content
     const resumeJsonString = data.choices?.[0]?.message?.content?.trim();
 
     if (resumeJsonString) {
@@ -788,24 +809,21 @@ export default function ResumeAnalyzer({
         dispatch(setImportedResume(resumeData));
       } catch (err) {
         console.error("Failed to parse AI resume JSON:", err, resumeJsonString);
-  
       }
     } else {
       console.error("No content found in AI response", data);
-      
     }
 
     console.log("Upload successful:", data);
-
   } catch (error) {
     console.error("Upload failed:", error);
-   
-  }
-
-  finally{
+  } finally {
+    e.target.value = '';  // <-- reset input so same file can be uploaded again
     setLoading(false);
+    setMessage('');
   }
 };
+
 
 
     function downloadResponse(response) {
@@ -865,7 +883,7 @@ Generate a Report to compare original vs enhanced resume.`}
           className={`ai-button generate-report ${isDisabled ? "disabled" : ""}`}
           onClick={createReport}
         >
-          {canGenerateReport ? "Generating..." : "Generate Report"}
+          {canGenerateReport ? "Generate Report" : "Enhance Resume for Report"}
         </button>
         
          
@@ -889,6 +907,7 @@ Generate a Report to compare original vs enhanced resume.`}
             setFoundSkills([]);
             setFoundVerbs([]);
             setCreateComparisonReport([]);
+            setReportOutput([]);
           }}
         >
           Clear
