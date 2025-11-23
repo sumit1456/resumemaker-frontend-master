@@ -788,7 +788,7 @@ export default function ResumeAnalyzer({
   formData.append("file", file);
 
   try {
-    const response = await fetch(`${API_BASE_URL2}/uploadResume`, {
+    const response = await fetch(`${API_BASE_URL}/uploadResume`, {
       method: "POST",
       body: formData,
     });

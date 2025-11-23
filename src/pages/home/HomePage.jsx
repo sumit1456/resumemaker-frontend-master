@@ -87,7 +87,7 @@ export default function HomePage(
         
           <Route
           path="user-templates"
-          element={<MyResumes/>}
+          element={<MyResumes userId={userId}/>}
         />
 
         <Route

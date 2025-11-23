@@ -218,8 +218,6 @@ body {
 }
 
 
-
-
 .editor-panel {
   background: transparent;
   display: flex;
@@ -227,7 +225,7 @@ body {
   width: 100%;
   overflow: hidden;
   border: 2px solid rgb(56, 56, 56);
-  z-index: 1000000000000000;
+  z-index: 10;
 }
 
 .ats-resume {
@@ -241,13 +239,14 @@ body {
   text-align: center;
   margin-bottom: var(--space-8);
   padding-bottom: var(--space-6);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.15);
 }
 
 .name {
   width: 100%;
-  background: transparent;
-  border: none;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
   font-size: 32px;
   font-weight: 700;
   text-transform: uppercase;
@@ -256,16 +255,20 @@ body {
   color: #ffffff;
   text-align: center;
   padding: var(--space-3);
+  transition: all 0.2s ease;
 }
 
 .name:focus {
   outline: none;
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .title {
   width: 100%;
-  background: transparent;
-  border: none;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
   font-size: 15px;
   font-weight: 500;
   margin-bottom: var(--space-3);
@@ -273,10 +276,13 @@ body {
   text-align: center;
   padding: var(--space-2);
   letter-spacing: 1px;
+  transition: all 0.2s ease;
 }
 
 .title:focus {
   outline: none;
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .contact {
@@ -293,17 +299,21 @@ body {
 
 .contact input {
   width: auto;
-  border: none;
-  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
   text-align: center;
   margin: 0 2px;
   color: #999;
   font-size: 13px;
   padding: 6px 10px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
 }
 
 .contact input:focus {
   outline: none;
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .separator {
@@ -314,6 +324,9 @@ body {
 .section {
   margin-bottom: var(--space-8);
   padding: var(--space-6);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
 }
 
 .section-title,
@@ -326,7 +339,7 @@ h2.section-title,
   letter-spacing: 2px !important;
   margin-bottom: var(--space-5) !important;
   padding-bottom: var(--space-3) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.15) !important;
   color: #ffffff !important;
   opacity: 1 !important;
   background: transparent !important;
@@ -340,20 +353,22 @@ h2.section-title,
   width: 100%;
   font-size: 14px;
   color: #ccc;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   padding: var(--space-4);
   resize: vertical;
   line-height: 1.7;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.02);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   min-height: 100px;
-  border-radius: 4px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
 }
 
 .summary:focus,
 .skills-text:focus {
   outline: none;
   border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .experience,
@@ -363,6 +378,8 @@ h2.section-title,
   padding: var(--space-4);
   padding-bottom: var(--space-5);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.01);
+  border-radius: 6px;
 }
 
 .education {
@@ -371,6 +388,10 @@ h2.section-title,
 
 .education input:first-child {
   width: 100%;
+}
+
+.edu-fields-row{
+  display: flex;
 }
 
 .exp-header,
@@ -395,10 +416,12 @@ h2.section-title,
 .year,
 .project-link {
   font-size: 14px;
-  background: transparent;
-  border: none;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
   color: #ccc;
   padding: 8px 12px;
+  transition: all 0.2s ease;
 }
 
 .position,
@@ -407,6 +430,8 @@ h2.section-title,
   font-weight: 600;
   font-size: 15px;
   color: #ffffff;
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .duration,
@@ -424,10 +449,12 @@ h2.section-title,
   color: #888;
   font-style: italic;
   margin-bottom: var(--space-2);
-  background: transparent;
-  border: none;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
   width: 100%;
   padding: 6px 12px;
+  transition: all 0.2s ease;
 }
 
 .position:focus,
@@ -444,6 +471,8 @@ h2.section-title,
 .edu-location:focus,
 .gpa:focus {
   outline: none;
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .achievement,
@@ -467,18 +496,20 @@ h2.section-title,
   flex: 1;
   font-size: 14px;
   color: #ccc;
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 8px 0;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 8px 12px;
   line-height: 1.6;
   resize: none;
+  transition: all 0.2s ease;
 }
 
 .achievement-text:focus,
 .description-text:focus {
   outline: none;
-  border-bottom-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .certification {
@@ -492,15 +523,17 @@ h2.section-title,
   flex: 1;
   font-size: 14px;
   color: #ccc !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  background: rgba(255, 255, 255, 0.02) !important;
   padding: var(--space-3);
   border-radius: 4px;
+  transition: all 0.2s ease;
 }
 
 .cert-text:focus {
   outline: none;
   border-color: rgba(255, 255, 255, 0.3) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
 }
 
 .skill {
@@ -514,10 +547,11 @@ h2.section-title,
   flex: 1;
   font-size: 14px;
   color: #ccc !important;
-  border: none;
-  background: transparent;
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
 }
 
 .skill-text::placeholder {
@@ -526,7 +560,8 @@ h2.section-title,
 
 .skill-text:focus {
   outline: none;
-  border-bottom-color: rgba(255, 255, 255, 0.3) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
 }
 
 .add-btn,
@@ -554,6 +589,7 @@ h2.section-title,
 .add-btn:hover,
 .add-small-btn:hover {
   background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
 }
 
 .remove-btn,
@@ -567,6 +603,7 @@ h2.section-title,
 .remove-small-btn:hover {
   background: rgba(255, 255, 255, 0.05);
   color: #ffffff;
+  transform: translateY(-1px);
 }
 
 .action-buttons {
@@ -596,6 +633,7 @@ h2.section-title,
 
 .btn-primary:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
 }
 
 .btn-secondary {
@@ -607,6 +645,7 @@ h2.section-title,
 .btn-secondary:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.05);
   color: #ffffff;
+  transform: translateY(-1px);
 }
 
 .btn-primary:disabled,
@@ -614,12 +653,6 @@ h2.section-title,
   opacity: 0.3;
   cursor: not-allowed;
 }
-
-
-
-
-
-
 
 
 
@@ -1078,7 +1111,7 @@ grid---layout */
 @media screen and (max-width: 768px) {
   .editor-page-container {
     padding: 10px;
-    gap: 15px;
+    gap: 30px;
   }
 
   .preview-panel{
@@ -1805,11 +1838,7 @@ select {
 
 
 
-.experience,
-.project,
-.education{
-  background-color: rgb(17, 17, 17);
-}
+
 
 
 

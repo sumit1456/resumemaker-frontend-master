@@ -9,7 +9,7 @@ import { useSelector } from 'react-redux';
 const API_BASE_URL2 = 'http://localhost:8080';
 const API_BASE_URL = 'https://resumemaker-1.onrender.com';
 
-const MyResumes = () => {
+const MyResumes = ({userId}) => {
   const navigate = useNavigate();
   const [resumes, setResumes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -35,6 +35,8 @@ const MyResumes = () => {
       }
       
       const data = await response.json();
+      console.log("This is data recieved from backend");
+      
       console.log(data);
       
       setResumes(data);
