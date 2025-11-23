@@ -5,9 +5,8 @@ import "./css-files/analyze.css";
 import LoadingAnimation from "../../components/PopUp/LoadingAnimation";
 // import "./css-files/analysis-output.css"; // Import the new CSS file
 
+const API_BASE_URL = 'https://resumemaker-1.onrender.com';
 const API_BASE_URL2 = 'http://localhost:8080';
-// const API_BASE_URL = 'https://resumemaker-1.onrender.com';
-const API_BASE_URL = 'http://localhost:8080';
 
 const techSkills = [
   "javascript","python","java","react","angular","vue","node",

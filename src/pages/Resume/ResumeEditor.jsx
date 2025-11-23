@@ -19,8 +19,8 @@ import { setCurrentResume, setEnhancedResume } from "../../redux/store.js";
 
 
 
-const API_BASE_URL = 'http://localhost:8080';
-const API_BASE_URL2 = 'https://resumemaker-1.onrender.com';
+const API_BASE_URL1 = 'http://localhost:8080';
+const API_BASE_URL = 'https://resumemaker-1.onrender.com';
 
 // PDF.js Viewer Component
 const PDFViewer = ({ pdfBlob }) => {
@@ -1746,133 +1746,7 @@ useEffect(() => {
 
   return (
     <>
-      <style>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        .section-manager {
-          padding: 1rem;
-          margin-bottom: 1rem;
-          border-radius: 8px;
-          border: 1px solid #dee2e6;
-        }
-        .section-toggle-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-          gap: 0.75rem;
-          margin-bottom: 1rem;
-        }
-        .section-toggle-item {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          padding: 0.5rem;
-          background: white;
-          border-radius: 4px;
-          border: 1px solid #dee2e6;
-        }
-        .section-toggle-item input[type="checkbox"] {
-          width: 18px;
-          height: 18px;
-          cursor: pointer;
-        }
-        .section-toggle-item label {
-          cursor: pointer;
-          font-size: 0.9rem;
-          flex: 1;
-        }
-        .custom-section-container {
-          background: white;
-          padding: 1rem;
-          margin-top: 1rem;
-          border-radius: 4px;
-          border: 1px solid #dee2e6;
-        }
-        .custom-section-header {
-          display: flex;
-          gap: 0.5rem;
-          margin-bottom: 0.75rem;
-          align-items: center;
-        }
-        .custom-section-title-input {
-          flex: 1;
-          padding: 0.5rem;
-          border: 1px solid #ced4da;
-          border-radius: 4px;
-          font-weight: bold;
-        }
-        .sec-inputs {
-          background: transparent;
-          border: none;
-          border-bottom: 1px solid #000;
-          font-size: 18px;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-          padding: 0.25rem 0;
-          width: auto;
-          min-width: 150px;
-        }
-        .sec-inputs:focus {
-          outline: none;
-          border-bottom: 2px solid #000;
-        }
-        .skill {
-          display: flex;
-          align-items: flex-start;
-          gap: 0.5rem;
-          margin-bottom: 0.5rem;
-        }
-        .skill-text {
-          flex: 1;
-          font-size: 14px;
-          color: #262626;
-          background: transparent;
-          border: none;
-          border-bottom: 1px solid #e5e5e5;
-          padding: 0.25rem 0;
-          line-height: 1.4;
-        }
-        .skill-text:focus {
-          outline: none;
-          border-bottom-color: #000;
-        }
-        .success-message {
-          background-color: #d4edda;
-          border: 1px solid #c3e6cb;
-          color: #155724;
-          padding: 12px 20px;
-          border-radius: 4px;
-          margin-bottom: 1rem;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          animation: slideIn 0.3s ease-out;
-        }
-        .error-message {
-          background-color: #f8d7da;
-          border: 1px solid #f5c6cb;
-          color: #721c24;
-          padding: 12px 20px;
-          border-radius: 4px;
-          margin-bottom: 1rem;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          animation: slideIn 0.3s ease-out;
-        }
-        @keyframes slideIn {
-          from {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
+     
       
       <div className="resume-editor-container">
         <div className="template-selector-header">
