@@ -19,8 +19,8 @@ import { setCurrentResume, setEnhancedResume } from "../../redux/store.js";
 
 
 
-const API_BASE_URL = 'http://localhost:8080';
-const API_BASE_URL2 = 'https://resumemaker-1.onrender.com';
+const API_BASE_URL2 = 'http://localhost:8080';
+const API_BASE_URL = 'https://resumemaker-1.onrender.com';
 
 // PDF.js Viewer Component
 const PDFViewer = ({ pdfBlob }) => {
