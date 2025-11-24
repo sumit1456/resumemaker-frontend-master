@@ -6,6 +6,10 @@ const authSlice = createSlice({
   initialState: { 
     isLoggedIn: false,
     userId: null,
+    resumeId: null,
+    API_BASE_URL : "https://resumemaker-1.onrender.com",
+    API_BASE_URL2 : 'http://localhost:8080',
+
   },
   reducers: {
     logInUser: (state, action) => {
@@ -15,6 +19,9 @@ const authSlice = createSlice({
     logOutUser: (state) => {
       state.isLoggedIn = false;
       state.userId = null;
+    },
+    setCurrentResumeId: (state, action) => {
+      state.currentResumeId = action.payload;
     },
   },
 });
@@ -48,7 +55,8 @@ const resumeSlice = createSlice({
 // ---------------- EXPORT ACTIONS ----------------
 export const { 
   logInUser, 
-  logOutUser 
+  logOutUser,
+  setCurrentResumeId 
 } = authSlice.actions;
 
 export const { 

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Routes, Route, Link } from "react-router-dom";
 import Login from "../../features/auth/Login.jsx";
 import Signup from "../../features/auth/Signup.jsx";
@@ -26,6 +26,9 @@ export default function HomePage(
   console.log(isLoggedIn);
   console.log(id);
   console.log(store.getState());
+
+  
+     
   
   
   

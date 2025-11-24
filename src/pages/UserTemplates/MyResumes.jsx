@@ -54,9 +54,12 @@ const MyResumes = ({userId}) => {
       const response = await fetch(`${API_BASE_URL}/my-resumes/delete-resume/${resumeId}`, {
         method: 'DELETE',
       });
+      console.log(response.status);
       
-      if (!response.ok) {
-        throw new Error('Failed to delete resume');
+      
+      if (!response.ok || response.status !== 200) {
+        const text = await response.text(); // get backend response
+        throw new Error(`Failed to delete resume. Status: ${response.status}, Response: ${text}`);
       }
       
       // Remove the deleted resume from state

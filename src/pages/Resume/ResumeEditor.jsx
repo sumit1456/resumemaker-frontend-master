@@ -13,9 +13,14 @@ import ErrorBoundary from "../../ErrorBoundry.jsx";
 import ResumeAnalyzer from "./ResumeAnalyzer.jsx";
 import { AlignRight } from "lucide-react";
 import "./css-files/analyze.css"
+import LoadingAnimation from "../../components/PopUp/LoadingAnimation.jsx";
 
 import { useDispatch, useSelector } from 'react-redux';
 import { setCurrentResume, setEnhancedResume } from "../../redux/store.js";
+import { setCurrentResumeId } from "../../redux/store.js";
+
+
+
 
 
 
@@ -516,6 +521,9 @@ export default function ResumeEditor({ resume: propsResume}) {
   const [isAIAnalysis, setIsAIAnalysis] = useState(false);
   const id = useSelector((s)=>s.auth.userId);
   const [userId, setUserId] = useState(id);
+  const currentResumeId = useSelector((state)=>state.resume.resumeId);
+  const dispatch = useDispatch();
+
 
   
   const [localResume, setLocalResune] = useState(null);
@@ -541,6 +549,7 @@ export default function ResumeEditor({ resume: propsResume}) {
   const enhancedResume = useSelector((state)=>state.resume.enhancedResume);
   const importedResume = useSelector(state => state.resume.importedResume);
   const currentResume = useSelector(state => state.resume.currentResume);
+  const [localResumeId, setLocalResuneId] = useState(null);
 
   
   useEffect(() => {
@@ -912,6 +921,10 @@ setProjects(prev =>
   const [pdfBlob, setPdfBlob] = useState(null);
   const [generatingPreview, setGeneratingPreview] = useState(false);
 
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("Loading...");
+
+
 
   
  function downloadResponse(response) {
@@ -946,176 +959,6 @@ setProjects(prev =>
   }, [saveError]);
 
 
-
-//   useEffect(() => {
-//     const fetchResume = async () => {
-//       if (!resumeId) return;
-      
-//       setIsLoadingResume(true);
-//       setFetchError("");
-//       try {
-//         const isDevelopment = window.location.hostname === 'localhost';
-//         const baseUrl = isDevelopment ? API_BASE_URL2 : API_BASE_URL;
-        
-//         const response = await fetch(`${baseUrl}/my-resumes/getresume/${resumeId}`, {
-//           method: 'GET',
-//           headers: {
-//             'Content-Type': 'application/json',
-//             'Accept': 'application/json',
-//           },
-//         });
-        
-//         if (response.status === 404) {
-//           setFetchError("Resume not found. It may have been deleted.");
-//           setIsLoadingResume(false);
-//           return;
-//         }
-        
-//         if (!response.ok) {
-//           throw new Error(`Server error: ${response.status}`);
-//         }
-        
-//         const data = await response.json();
-//         console.log("***************************************************************************************");
-        
-//         console.log(data.experiences);
-        
-//         downloadResponse(data);
-      
-        
-//         setResumeTitle(data.title || "");
-//         setSelectedTemplate(data.templateId ? String(data.templateId) : "1");
-        
-//         setResumeDetails({
-//           name: data.details?.name || "",
-//           title: data.details?.title || "",
-//           summary: data.details?.summary || "",
-//           contact: {
-//             phone: data.contact?.phone || "",
-//             email: data.contact?.email || "",
-//             linkedin: data.contact?.linkedin || "",
-//             github: data.contact?.github || "",
-//             location: data.contact?.location || ""
-//           }
-//         });
-        
-//         if (data.skills) {
-//           let skillsArray = [];
-//           if (Array.isArray(data.skills)) {
-//             skillsArray = data.skills.map(s => {
-//               if (typeof s === 'string') return s;
-//               if (s && s.name) return s.name;
-//               return '';
-//             }).filter(s => s !== '');
-//           } else if (typeof data.skills === 'string') {
-//             skillsArray = [data.skills];
-//           }
-//           setSkills(skillsArray.length > 0 ? skillsArray : [""]);
-//         }
-        
-// //         if (data.experiences && Array.isArray(data.experiences)) {
-// //   const mappedExperiences = data.experiences.map(exp => ({
-// //     position: exp.position || "",
-// //     company: exp.company || "",
-// //     location: exp.location || "",
-// //     duration: exp.duration || "",
-// //     achievements: typeof exp.achievements === 'string' 
-// //                   ? exp.achievements.split(/\r?\n/) 
-// //                   : Array.isArray(exp.achievements) 
-// //                     ? exp.achievements 
-// //                     : []
-// //   }));
-// //   setExperiences(mappedExperiences);
-// // }
-
-//         if (data.experiences && Array.isArray(data.experiences)) {
-//   const mappedExperiences = data.experiences.map(exp => ({
-//     position: exp.position || "",
-//     company: exp.company || "",
-//     location: exp.location || "",
-//     duration: exp.duration || "",
-//     // ensure achievements is always an array
-//     achievements: Array.isArray(exp.achievements)
-//       ? exp.achievements
-//       : exp.achievements
-//       ? [exp.achievements] // wrap string in array
-//       : []
-//   }));
-//   setExperiences(mappedExperiences);
-// }
-
-
-        
-//         if (data.projects && Array.isArray(data.projects)) {
-//           const mappedProjects = data.projects.map(proj => ({
-//             name: proj.name || "",
-//             duration: proj.duration || "",
-//             technologies: proj.technologies || "",
-//             description: Array.isArray(proj.description) && proj.description.length > 0 ? proj.description : [""],
-//             link: proj.link || ""
-//           }));
-//           setProjects(mappedProjects);
-//         }
-        
-//         if (data.educationList && Array.isArray(data.educationList)) {
-//           const mappedEducation = data.educationList.map(edu => ({
-//             degree: edu.degree || "",
-//             institution: edu.institution || "",
-//             location: edu.location || "",
-//             year: edu.year || "",
-//             gpa: edu.gpa || ""
-//           }));
-//           setEducationList(mappedEducation);
-//         }
-        
-//         if (data.certifications) {
-//           let certsArray = [];
-//           if (Array.isArray(data.certifications)) {
-//             certsArray = data.certifications.map(c => {
-//               if (typeof c === 'string') return c;
-//               if (c && c.name) return c.name;
-//               return '';
-//             }).filter(c => c !== '');
-//           } else if (typeof data.certifications === 'string') {
-//             certsArray = [data.certifications];
-//           }
-//           setCertifications(certsArray.length > 0 ? certsArray : [""]);
-//         }
-        
-//         setShowSummary(data.showSummary !== undefined ? data.showSummary : true);
-//         setShowSkills(data.showSkills !== undefined ? data.showSkills : true);
-//         setShowExperience(data.showExperience !== undefined ? data.showExperience : true);
-//         setShowProjects(data.showProjects !== undefined ? data.showProjects : true);
-//         setShowEducation(data.showEducation !== undefined ? data.showEducation : true);
-//         setShowCertifications(data.showCertifications !== undefined ? data.showCertifications : true);
-        
-//         if (data.customSections && Array.isArray(data.customSections)) {
-//           setCustomSections(data.customSections);
-//         }
-        
-//         if (data.sectionTitles) {
-//           setSectionTitles({
-//             summary: data.sectionTitles.summary || "Summary",
-//             skills: data.sectionTitles.skills || "Skills",
-//             experience: data.sectionTitles.experience || "Experience",
-//             projects: data.sectionTitles.projects || "Projects",
-//             education: data.sectionTitles.education || "Education",
-//             certifications: data.sectionTitles.certifications || "Certifications"
-//           });
-//         }
-        
-//         setFetchError("");
-        
-//       } catch (err) {
-//         console.error("Error fetching resume:", err);
-//         setFetchError(`Failed to load resume: ${err.message}`);
-//       } finally {
-//         setIsLoadingResume(false);
-//       }
-//     };
-
-//     fetchResume();
-//   }, [resumeId]);
 
 useEffect(() => {
   const fetchResume = async () => {
@@ -1587,17 +1430,27 @@ useEffect(() => {
   };
 
 
+
+
  
   
  const handleSaveAll = async () => {
+
+  if(userId==null){
+     window.showMessage('Please Login First.', 'warning');
+     return;
+  }
   setSaving(true);
+  setMessage("Saving...");
+  setLoading(true);
   setSaveError("");
   setSuccessMessage("");
   try {
     const transformedSkills = skills.map(skill => ({ name: skill.trim() })).filter(skill => skill.name !== "");
     const transformedCertifications = certifications.map(cert => ({ name: cert.trim() })).filter(cert => cert.name !== "");
     
-    let title = resumeTitle;
+    let title = resumeDetails.title;
+    
     
     if (!resumeId && !title) {
       title = prompt("Enter the title for the resume");
@@ -1607,7 +1460,7 @@ useEffect(() => {
       }
     }
     
-    const baseUrl = API_BASE_URL;
+    
     
     const payload = {
       title,
@@ -1639,19 +1492,14 @@ useEffect(() => {
     
     console.log(payload);
 
-     console.log("=========================================================================");
-    if(userId==null){
-      alert("Apparently user id is null");
-      return;
-    }
+    
     
     
    
-   
     
-    const endpoint = resumeId 
-      ? `${baseUrl}/update/${resumeId}`
-      : `${baseUrl}/saveall`;
+    const endpoint = currentResumeId 
+      ? `${API_BASE_URL}/update/${resumeId}`
+      : `${API_BASE_URL}/saveall`;
 
     console.log(`The endpoint was ${endpoint}`);
       
@@ -1669,40 +1517,57 @@ useEffect(() => {
       body: JSON.stringify(payload),
     });
     
-    console.log("Response status:", res.status);
-    console.log("Response headers:", res.headers);
+    console.log(res);
     
-    // Check content type before parsing
-    const contentType = res.headers.get("content-type");
-    if (!contentType || !contentType.includes("application/json")) {
-      const textResponse = await res.text();
-      console.error("Non-JSON response received:", textResponse);
-      throw new Error(`Server returned non-JSON response. Status: ${res.status}`);
-    }
     
-    if (!res.ok) {
-      const errorData = await res.json().catch(() => null);
-      const errorMessage = errorData?.message || `Save failed with status ${res.status}`;
-      throw new Error(errorMessage);
-    }
-    
-    const data = await res.text();
-    console.log("Response data:", data);
-    
-    const message = resumeId ? "Resume updated successfully!" : "Resume saved successfully!";
+
+    const message = localResumeId ? "Resume updated successfully!" : "Resume saved successfully!";
     setSuccessMessage(message);
     
-    if (!resumeId && data.id) {
-      setTimeout(() => {
-        window.location.href = `/dashboard/resume-editor/${data.id}`;
-      }, 1500);
+    // if (!resumeId && data.id) {
+    //   setTimeout(() => {
+    //     window.location.href = `/dashboard/resume-editor/${data.id}`;
+    //   }, 1500);
+    // }
+
+             // Check if the response is JSON
+   const contentType = res.headers.get("content-type");
+   if (!contentType || !contentType.includes("application/json")) {
+     const textResponse = await res.text();
+     console.error("Non-JSON response received:", textResponse);
+     throw new Error(`Server returned non-JSON response. Status: ${res.status}`);
+   }
+   
+   // If response not OK, throw an error
+   if (!res.ok) {
+     const errorData = await res.json().catch(() => null);
+     const errorMessage = errorData?.message || `Save failed with status ${res.status}`;
+     throw new Error(errorMessage);
+   }
+   
+   // Parse JSON
+   const data = await res.json(); // { message, resumeId }
+   console.log("Response data:", data);
+   
+   // If this is the first save, store the resumeId in Redux or state
+   if (!currentResumeId && data.resumeId) {
+     dispatch(setCurrentResumeId(data.resumeId));
+     setLocalResuneId(data.resumeId);
     }
+
+    window.showMessage(message, 'success');
+
+    
+
+
+    
   } catch (err) {
     console.error("Save error:", err);
     setSaveError(`Failed to save resume: ${err.message}`);
   } finally {
     setSaving(false);
-    alert("Resume has been saved successfully");
+    setLoading(false);
+    setMessage("Loading...");
   }
 };
 
@@ -1766,6 +1631,7 @@ useEffect(() => {
         </div>
 
         <div className="editor-page-container">
+            <LoadingAnimation message={message} show={loading}/>
 
             <div className="analyze-container">
 
@@ -2020,7 +1886,7 @@ useEffect(() => {
 
               <div className="action-buttons">
                 <button className="btn-primary" onClick={handleSaveAll} disabled={saving}>
-                  {saving ? "Saving..." : resumeId ? "Update Resume" : "Save Resume"}
+                  {saving ? "Saving..." : localResumeId ? "Update Resume" : "Save Resume"}
                 </button>
                 <button className="btn-secondary" onClick={downloadPDF} disabled={downloading}>
                   {downloading ? "Generating..." : "Download PDF"}

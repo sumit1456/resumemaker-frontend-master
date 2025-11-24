@@ -155,7 +155,7 @@ body {
 /* Welcome banner - sleek design */
 .welcome-banner {
   position: fixed;
-  top: calc(80px + var(--spacing-md));
+  top: calc(140px + var(--spacing-md));
   right: var(--spacing-md);
   z-index: 999;
   animation: slideInRight 0.8s cubic-bezier(0.23, 1, 0.32, 1);

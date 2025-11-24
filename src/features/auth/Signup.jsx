@@ -3,7 +3,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom"; // ✅ only useNavigate (not Navigate)
 import "./Signup.css";
 
-const API_BASE_URl = "https://resumemaker-1.onrender.com";
+const API_BASE_URL = "https://resumemaker-1.onrender.com";
 const API_BASE_URL2 = 'http://localhost:8080';
 
 export default function Signup() {
@@ -39,13 +39,13 @@ export default function Signup() {
       const data = response.data;
       setSuccess(data.success);
       if (!success) {
-         throw new Error(res.data.message);
+          window.showMessage(res.data.message, 'error');
+          throw new Error(res.data.message);
       }
       
 
 
-      setMessage(`Please check your email for verification`);
-
+      window.showMessage('Check your email for verification', 'success');
     } catch (error) {
       if (error.response) {
         setMessage(`Server error: ${error.response.data.message || error.response.status}`);
