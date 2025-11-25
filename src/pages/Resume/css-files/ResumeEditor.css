@@ -607,9 +607,11 @@ h2.section-title,
 }
 
 .action-buttons {
+  gap: 3%;
   display: flex;
   gap: var(--space-4);
   margin-top: var(--space-6);
+  padding: 20px 0px 0px 0px;
 }
 
 .btn-primary,
@@ -1075,7 +1077,12 @@ grid---layout */
     grid-column: 1;
     grid-row: 2;
     max-height: none;
+    padding: 20px 0px 20px 0px;
    
+  }
+
+  .sec-manager label, .sec-manager input, .section-toggle-grid, .sec-manager h3{
+    display: none;
   }
 
   .editor-preview-wrapper {
