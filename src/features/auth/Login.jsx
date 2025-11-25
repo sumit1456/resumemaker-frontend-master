@@ -112,7 +112,7 @@ export default function Login({ setUserId }) {
       
 
       dispatch(logInUser(response.data));
-      window.showMessage("Success", response.data.message, "success", 1500);
+      window.showMessage("Success", 'Login Successfull', "success", 1500);
       navigate("/");
     } catch(error) {
      let msg;
