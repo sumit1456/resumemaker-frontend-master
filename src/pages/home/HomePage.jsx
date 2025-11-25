@@ -3,7 +3,7 @@ import { Routes, Route, Link } from "react-router-dom";
 import Login from "../../features/auth/Login.jsx";
 import Signup from "../../features/auth/Signup.jsx";
 import ResumeDashboard from "../Dashboard/Dashboard.jsx";
-import "./css-files/HomePage.css";
+import "./css-files/HomePage2.css";
 import About from "../About/About.jsx";
 import TemplatesShowcase from "../Templates showcase/Templatesshowcase.jsx";
 import MyResumes from "../UserTemplates/MyResumes.jsx";

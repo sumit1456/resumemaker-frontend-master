@@ -26,6 +26,11 @@ const MyResumes = ({userId}) => {
   const fetchResumes = async () => {
    
     try {
+
+      if(!id || userId){
+        window.showMessage('Enable to Fetch resumes', 'Please login first', 'general', 2000);
+        return;
+      }
       setLoading(true);
       // const cleanId = String(id).trim();
       const response = await fetch(`${API_BASE_URL}/my-resumes/${id}`);
@@ -116,7 +121,7 @@ const MyResumes = ({userId}) => {
           <h2 className="error-title">Error Loading Resumes</h2>
           <p className="error-message">{error}</p>
           <button onClick={fetchResumes} className="retry-button">
-            Please Login First
+            Please Try again
           </button>
         </div>
       </div>

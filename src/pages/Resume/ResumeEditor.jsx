@@ -1555,7 +1555,7 @@ useEffect(() => {
      setLocalResuneId(data.resumeId);
     }
 
-    window.showMessage(message, 'success');
+    window.showMessage('Success', message, 'success', 1500);;
 
     
 
@@ -1564,6 +1564,7 @@ useEffect(() => {
   } catch (err) {
     console.error("Save error:", err);
     setSaveError(`Failed to save resume: ${err.message}`);
+    window.showMessage('Error', 'Unable to save your resume', 'error', 1500);
   } finally {
     setSaving(false);
     setLoading(false);

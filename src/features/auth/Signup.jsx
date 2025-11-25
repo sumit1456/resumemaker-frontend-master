@@ -42,15 +42,13 @@ export default function Signup() {
           window.showMessage(res.data.message, 'error');
           throw new Error(res.data.message);
       }
-      
-
 
       window.showMessage('Check your email for verification', 'success');
     } catch (error) {
       if (error.response) {
-        setMessage(`Server error: ${error.response.data.message || error.response.status}`);
+         window.showMessage(`${error.response.data.message}`, 'error');
       } else {
-        setMessage(`Request failed: ${error.message}`);
+        window.showMessage(`Request Method : ${error.message}`)
       }
     } finally {
       setLoading(false);
@@ -101,12 +99,6 @@ export default function Signup() {
           <button type="submit" disabled={loading}>
             {loading ? "Signing up…" : "Sign Up"}
           </button>
-
-          {message && (
-            <p className={success ? "success" : "error"}>
-              {message}
-            </p>
-          )}
         </form>
       </div>
 

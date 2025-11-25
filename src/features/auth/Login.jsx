@@ -19,44 +19,83 @@ export default function Login({ setUserId }) {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
   const navigate = useNavigate();
 
   // Regular email/password login
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!email || !password) {
-      setMessage("Email and password are required");
-      return;
-    }
+  e.preventDefault();
 
-    setLoading(true);
-    try {
-      const response = await axios.post(`${API_BASE_URL}/login`, { email, password });
-      console.log(`THis is the userId from the store ${id}`);
-      console.log(response.data + " this is the id from responce");
-      
+  if (!email || !password) {
+    setMessage("Email and password are required");
+    return;
+  }
 
-      if(response){
-          dispatch(logInUser(response.data));
-          setUserId(response.data);
-      }
-    
-     
-      
-      setMessage("Login successful!");
-      navigate("/");
-    } catch (error) {
-      if (error.response) {
-        setMessage(`Login failed: ${error.response.data}`);
-      } else {
-        setMessage(`Request error: ${error.message}`);
-      }
-    } finally {
-      setLoading(false);
-    }
+  setLoading(true);
+
+  try {
+       const response = await axios.post(`${API_BASE_URL}/login`, {
+         email,
+         password
+       });
+   
+       console.log("User ID from response:", response.data.userId);
+   
+       // SUCCESS MESSAGE
+       window.showMessage("Success", response.data.message, "success", 1500);
+   
+       // SAVE USER ID
+       setUserId(response.data.userId);
+       dispatch(logInUser(response.data.userId));
+   
+       // REDIRECT
+       navigate("/");
+   
+  }    catch (error) {
+   
+       // OFFLINE
+       if (!navigator.onLine) {
+         window.showMessage(
+           "Login Failed",
+           "You are offline. Please check your internet connection.",
+           "error"
+         );
+       }
+   
+       // SERVER RETURNED ERROR (403)
+       else if (error.response) {
+         window.showMessage(
+           "Login Failed",
+           error.response.data?.message || "Invalid credentials",
+           "error",1500
+         );
+       }
+   
+       // NO RESPONSE FROM SERVER (backend unreachable)
+       else if (error.request) {
+         window.showMessage(
+           "Login Failed",
+           "Cannot reach server. Please try again.",
+           "error"
+         );
+       }
+   
+       // ANY OTHER ERROR
+       else {
+         window.showMessage(
+           "Error",
+           "Something went wrong.",
+           "error"
+         );
+       }
+   
+     } finally {
+       setLoading(false);
+     }
   };
+
+
 
   // Google login
   const handleGoogleLoginSuccess = async (credentialResponse) => {
@@ -73,14 +112,24 @@ export default function Login({ setUserId }) {
       
 
       dispatch(logInUser(response.data));
-      
-      
-      setMessage("Google login successful!");
+      window.showMessage("Success", response.data.message, "success", 1500);
       navigate("/");
-    } catch (error) {
-      setMessage("Google login failed");
-      console.error(error);
-    } finally {
+    } catch(error) {
+     let msg;
+   
+     if (error.response) {
+       msg = error.response.data?.message || "Server error";
+     }
+     else if (error.request) {
+       msg = "Cannot connect to server. Check your internet connection.";
+     }
+     else {
+       msg = "Network Failure, Please check your connection";
+     }
+   
+     window.showMessage('Login Failed', msg, 'error');
+   }
+ finally {
       setLoading(false);
     }
   };
@@ -165,11 +214,6 @@ export default function Login({ setUserId }) {
           {/* Hidden GoogleLogin component */}
           
 
-          {message && (
-            <p className={message.includes("successful") ? "success" : "error"}>
-              {message}
-            </p>
-          )}
         </form>
       </div>
     </div>

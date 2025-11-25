@@ -5,8 +5,8 @@ import "./css-files/analyze.css";
 import LoadingAnimation from "../../components/PopUp/LoadingAnimation";
 // import "./css-files/analysis-output.css"; // Import the new CSS file
 
-const API_BASE_URL = 'https://resumemaker-1.onrender.com';
-const API_BASE_URL2 = 'http://localhost:8080';
+const API_BASE_URL2 = 'https://resumemaker-1.onrender.com';
+const API_BASE_URL = 'http://localhost:8080';
 
 const techSkills = [
   "javascript","python","java","react","angular","vue","node",
@@ -599,8 +599,10 @@ export default function ResumeAnalyzer({
 
       if (data.error) {
         setJobDescriptionInsights(
+          
           <ErrorState title="AI Analysis Failed" message={data.error} />
         );
+        window.showMessage("Error", 'AI Analysis Failed', "error", 1500);
         return;
       }
 
@@ -629,6 +631,10 @@ export default function ResumeAnalyzer({
           </div>
         </div>
       );
+
+      window.showMessage("Success", 'AI Analysis Completed', "success", 1500);
+
+      
 
     } catch (err) {
       setJobDescriptionInsights(
@@ -678,6 +684,11 @@ export default function ResumeAnalyzer({
   };
 
   const createReport = async () => {
+
+    if(!currentLocalResume && newLocalResume){
+      window.showMessage('For report Enhance your Resume first', 'info');
+      return;
+    }
     try {
       setCreateComparisonReport(true);
       setReportOutput(<LoadingState />);
@@ -728,9 +739,11 @@ export default function ResumeAnalyzer({
           </div>
         </div>
       );
+       window.showMessage("Success", 'Report has been generated', "general", 1500);
 
     } catch (err) {
-      setReportOutput(<ErrorState title="Connection Error" message="Cannot reach backend. Make sure the server is running." />);
+       window.showMessage("Error", 'Uable to generate report', "error", 1500);
+      // setReportOutput(<ErrorState title="Connection Error" message="Cannot reach backend. Make sure the server is running." />);
     } finally {
       setCreateComparisonReport(false);
       setLoading(false);
@@ -746,8 +759,6 @@ export default function ResumeAnalyzer({
       
       setCurrentLocalResume(payload);
       
-
-
       const res = await fetch(`${API_BASE_URL}/enhanceResume`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -762,10 +773,12 @@ export default function ResumeAnalyzer({
       const data = await res.json();
       downloadResponse(data);
       dispatch(setEnhancedResume(data));
+      window.showMessage('Sucess', 'Enhancement Completed', 'success', 1500);
      
       setNewLocalResume(data);
     } catch (err) {
       console.error("❌ Error calling enhanceResume:", err);
+      window.showMessage(`${error} enhancing failed`, 'error');
     } finally {
       setIsEnhancing(false);
       setLoading(false);
@@ -814,10 +827,12 @@ export default function ResumeAnalyzer({
     }
 
     console.log("Upload successful:", data);
+    window.showMessage("Success", 'Resume has been imported', "success", 1500);
   } catch (error) {
     console.error("Upload failed:", error);
+    window.showMessage("Error", 'Importing Failed', "error", 1500);
   } finally {
-    e.target.value = '';  // <-- reset input so same file can be uploaded again
+    e.target.value = ''; 
     setLoading(false);
     setMessage('');
   }
@@ -879,10 +894,10 @@ Generate a Report to compare original vs enhanced resume.`}
         </button>
 
         <button
-          className={`ai-button generate-report ${isDisabled ? "disabled" : ""}`}
+          className={`ai-button generate-report ${canGenerateReport ? "disabled" : ""} `}
           onClick={createReport}
         >
-          {canGenerateReport ? "Generate Report" : "Enhance Resume for Report"}
+          {canGenerateReport ? "Generate Report" : "Generate Report"}
         </button>
         
          
