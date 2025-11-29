@@ -8,6 +8,9 @@ import { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import EmailVerification from "./features/auth/Verification.jsx";
 import BackendWakePopup from "./components/PopUp/Backendpopup.jsx";
+import UIEditor from "./pages/UI-Edits/UIEditor.jsx"
+import EditorPage from "./pages/UI-Edits/EditorPage.jsx";
+
 
 
 
@@ -36,13 +39,13 @@ export default function App() {
   }, [])
 
   return (
-    <div className="app-container">
-      
-      {/* Pass login status and user ID to the NavBar */}
-      <NavBar isLogged={isLogged} userId={userId} setIsLogged={setIsLogged} />
-     
 
+
+    <div className="app-container">
+     <NavBar isLogged={isLogged} userId={userId} setIsLogged={setIsLogged} />
       <Routes>
+
+        <Route path="ui-editor" element={<EditorPage></EditorPage>}></Route>
         <Route
           path="/*"
           element={
@@ -60,9 +63,8 @@ export default function App() {
         />
 
         <Route path="/verify" element={<EmailVerification />} />
-
-        
       </Routes>
     </div>
+
   );
 }

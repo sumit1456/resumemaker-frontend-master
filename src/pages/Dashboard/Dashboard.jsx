@@ -2,6 +2,10 @@ import React, { useState } from "react";
 import { Routes, Route } from "react-router-dom";
 import DashboardMain from "./DashboardMain";
 import ResumeEditor from "../Resume/ResumeEditor";
+import { RoseIcon } from "lucide-react";
+import UIEditor from "../UI-Edits/UIEditor";
+
+
 
 export default function ResumeDashboard({ userId }) {
   const [resumeId, setResumeId] = useState(null);
@@ -11,6 +15,10 @@ export default function ResumeDashboard({ userId }) {
     <Routes>
       {/* Dashboard main page */}
       <Route index element={<DashboardMain userId={userId} />} />
+
+      
+
+    
 
       {/* Resume editor (blank / new resume) */}
       <Route
@@ -25,6 +33,8 @@ export default function ResumeDashboard({ userId }) {
           />
         }
       />
+
+   
 
       {/* Resume editor (edit existing resume) */}
       <Route

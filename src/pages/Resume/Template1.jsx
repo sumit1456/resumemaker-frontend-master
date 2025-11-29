@@ -1,4 +1,4 @@
-// Template4.jsx - ATS-Optimized with Clean Two-Column Layout
+// Template1.jsx - ATS-Optimized with Clean Two-Column Layout (Configurable)
 import React from "react";
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 
@@ -16,20 +16,62 @@ const Template1 = ({
   showEducation = true,
   showCertifications = true,
   sectionTitles = {},
-  customSections = []
+  customSections = [],
+  styleConfig = null // NEW: Optional style configuration
 }) => {
+  // Default style configuration
+  const defaultConfig = {
+    // Colors
+    primaryColor: '#000000',
+    textColor: '#000000',
+    accentColor: '#000000',
+    backgroundColor: '#FFFFFF',
+    
+    // Typography
+    nameFontSize: 24,
+    titleFontSize: 11,
+    headerFontSize: 11,
+    bodyFontSize: 10,
+    smallFontSize: 9,
+    lineHeight: 1.4,
+    letterSpacing: 0.5,
+    
+    // Layout
+    pageMargin: 40,
+    headerMarginBottom: 20,
+    columnGap: 15,
+    leftColumnWidth: '35%',
+    rightColumnWidth: '65%',
+    sectionMarginTop: 12,
+    sectionMarginBottom: 6,
+    itemMarginBottom: 8,
+    
+    // Borders
+    headerBorderWidth: 3,
+    sectionBorderWidth: 1.5,
+    columnBorderWidth: 2,
+    
+    // Style Options
+    fontFamily: 'Helvetica',
+    bulletStyle: '•',
+    textTransform: 'uppercase',
+  };
+
+  // Merge provided config with defaults
+  const config = { ...defaultConfig, ...styleConfig };
+
   const styles = StyleSheet.create({
     page: {
       flexDirection: 'column',
-      backgroundColor: '#FFFFFF',
-      padding: 40,
-      fontFamily: 'Helvetica',
-      fontSize: 10,
+      backgroundColor: config.backgroundColor,
+      padding: config.pageMargin,
+      fontFamily: config.fontFamily,
+      fontSize: config.bodyFontSize,
     },
     
     // Header - Clean & Professional
     header: {
-      marginBottom: 20,
+      marginBottom: config.headerMarginBottom,
     },
     nameSection: {
       flexDirection: 'row',
@@ -37,18 +79,18 @@ const Template1 = ({
       alignItems: 'baseline',
       marginBottom: 6,
       paddingBottom: 8,
-      borderBottomWidth: 3,
-      borderBottomColor: '#000000',
+      borderBottomWidth: config.headerBorderWidth,
+      borderBottomColor: config.primaryColor,
     },
     name: { 
-      fontSize: 24, 
+      fontSize: config.nameFontSize, 
       fontWeight: 'bold', 
-      color: '#000000',
-      letterSpacing: 0.5,
+      color: config.primaryColor,
+      letterSpacing: config.letterSpacing,
     },
     title: { 
-      fontSize: 11, 
-      color: '#000000',
+      fontSize: config.titleFontSize, 
+      color: config.primaryColor,
       fontWeight: 'bold',
     },
     contactGrid: {
@@ -67,67 +109,67 @@ const Template1 = ({
       alignItems: 'flex-end',
     },
     contactItem: {
-      fontSize: 9,
-      color: '#000000',
+      fontSize: config.smallFontSize,
+      color: config.textColor,
     },
     
     // Two Column Layout
     mainContent: {
       flexDirection: 'row',
-      gap: 15,
+      gap: config.columnGap,
     },
     leftColumn: {
-      width: '35%',
+      width: config.leftColumnWidth,
       paddingRight: 10,
     },
     rightColumn: {
-      width: '65%',
+      width: config.rightColumnWidth,
       paddingLeft: 10,
-      borderLeftWidth: 2,
-      borderLeftColor: '#000000',
+      borderLeftWidth: config.columnBorderWidth,
+      borderLeftColor: config.accentColor,
     },
     
     // Section Headers - ATS Friendly
     sectionHeader: {
-      fontSize: 11,
+      fontSize: config.headerFontSize,
       fontWeight: 'bold',
-      color: '#000000',
-      marginTop: 12,
-      marginBottom: 6,
+      color: config.primaryColor,
+      marginTop: config.sectionMarginTop,
+      marginBottom: config.sectionMarginBottom,
       paddingBottom: 3,
-      borderBottomWidth: 1.5,
-      borderBottomColor: '#000000',
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
+      borderBottomWidth: config.sectionBorderWidth,
+      borderBottomColor: config.accentColor,
+      textTransform: config.textTransform,
+      letterSpacing: config.letterSpacing,
     },
     
     sectionHeaderLeft: {
-      fontSize: 11,
+      fontSize: config.headerFontSize,
       fontWeight: 'bold',
-      color: '#000000',
-      marginTop: 12,
-      marginBottom: 6,
+      color: config.primaryColor,
+      marginTop: config.sectionMarginTop,
+      marginBottom: config.sectionMarginBottom,
       paddingBottom: 3,
-      borderBottomWidth: 1.5,
-      borderBottomColor: '#000000',
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
+      borderBottomWidth: config.sectionBorderWidth,
+      borderBottomColor: config.accentColor,
+      textTransform: config.textTransform,
+      letterSpacing: config.letterSpacing,
     },
     
     // Skills - Clean List
     skillItem: {
-      marginBottom: 8,
+      marginBottom: config.itemMarginBottom,
     },
     skillCategory: {
-      fontSize: 9.5,
+      fontSize: config.smallFontSize + 0.5,
       fontWeight: 'bold',
-      color: '#000000',
+      color: config.textColor,
       marginBottom: 2,
     },
     skillValue: {
-      fontSize: 9,
-      color: '#000000',
-      lineHeight: 1.4,
+      fontSize: config.smallFontSize,
+      color: config.textColor,
+      lineHeight: config.lineHeight,
     },
     
     // Education - Compact Left Column
@@ -135,35 +177,35 @@ const Template1 = ({
       marginBottom: 10,
     },
     degreeNameCompact: {
-      fontSize: 10,
+      fontSize: config.bodyFontSize,
       fontWeight: 'bold',
-      color: '#000000',
+      color: config.textColor,
       marginBottom: 2,
     },
     institutionCompact: {
-      fontSize: 9,
-      color: '#000000',
+      fontSize: config.smallFontSize,
+      color: config.textColor,
       marginBottom: 2,
     },
     yearCompact: {
-      fontSize: 9,
-      color: '#000000',
+      fontSize: config.smallFontSize,
+      color: config.textColor,
       fontStyle: 'italic',
     },
     
     // Certifications - Clean
     certItem: {
-      fontSize: 9,
-      color: '#000000',
+      fontSize: config.smallFontSize,
+      color: config.textColor,
       marginBottom: 4,
       lineHeight: 1.3,
     },
     
     // Summary
     summaryText: {
-      fontSize: 10,
+      fontSize: config.bodyFontSize,
       lineHeight: 1.5,
-      color: '#000000',
+      color: config.textColor,
       textAlign: 'justify',
       marginBottom: 8,
     },
@@ -181,18 +223,18 @@ const Template1 = ({
       marginBottom: 2,
     },
     jobTitle: {
-      fontSize: 11,
+      fontSize: config.headerFontSize,
       fontWeight: 'bold',
-      color: '#000000',
+      color: config.textColor,
     },
     dateRange: {
-      fontSize: 9,
-      color: '#000000',
+      fontSize: config.smallFontSize,
+      color: config.textColor,
       fontStyle: 'italic',
     },
     companyInfo: {
-      fontSize: 9.5,
-      color: '#000000',
+      fontSize: config.smallFontSize + 0.5,
+      color: config.textColor,
       marginBottom: 4,
     },
     achievementItem: {
@@ -201,14 +243,14 @@ const Template1 = ({
     },
     bullet: {
       width: 10,
-      fontSize: 9,
-      color: '#000000',
+      fontSize: config.smallFontSize,
+      color: config.textColor,
     },
     achievementText: {
       flex: 1,
-      fontSize: 9.5,
-      lineHeight: 1.4,
-      color: '#000000',
+      fontSize: config.smallFontSize + 0.5,
+      lineHeight: config.lineHeight,
+      color: config.textColor,
     },
     
     // Projects
@@ -221,19 +263,19 @@ const Template1 = ({
       marginBottom: 2,
     },
     projectTitle: {
-      fontSize: 11,
+      fontSize: config.headerFontSize,
       fontWeight: 'bold',
-      color: '#000000',
+      color: config.textColor,
     },
     projectTech: {
-      fontSize: 9,
-      color: '#000000',
+      fontSize: config.smallFontSize,
+      color: config.textColor,
       marginBottom: 4,
       fontStyle: 'italic',
     },
   });
 
-  // Group skills
+  // Group skills (utility function kept inline)
   const groupedSkills = {};
   const ungroupedSkills = [];
   if (skills && Array.isArray(skills)) {
@@ -351,7 +393,7 @@ const Template1 = ({
                   {sectionTitles.certifications || "CERTIFICATIONS"}
                 </Text>
                 {certifications.filter(cert => cert && cert.trim()).map((cert, idx) => (
-                  <Text key={idx} style={styles.certItem}>• {cert}</Text>
+                  <Text key={idx} style={styles.certItem}>{config.bulletStyle} {cert}</Text>
                 ))}
               </View>
             )}
@@ -381,7 +423,7 @@ const Template1 = ({
                     {exp.achievements && exp.achievements.map((ach, j) => (
                       ach && ach.trim() && (
                         <View key={j} style={styles.achievementItem}>
-                          <Text style={styles.bullet}>•</Text>
+                          <Text style={styles.bullet}>{config.bulletStyle}</Text>
                           <Text style={styles.achievementText}>{ach}</Text>
                         </View>
                       )
@@ -409,7 +451,7 @@ const Template1 = ({
                     {proj.description && proj.description.map((desc, j) => (
                       desc && desc.trim() && (
                         <View key={j} style={styles.achievementItem}>
-                          <Text style={styles.bullet}>•</Text>
+                          <Text style={styles.bullet}>{config.bulletStyle}</Text>
                           <Text style={styles.achievementText}>{desc}</Text>
                         </View>
                       )
@@ -426,7 +468,7 @@ const Template1 = ({
                   <Text style={styles.sectionHeader}>{section.title}</Text>
                   {section.items && section.items.filter(item => item && item.trim()).map((item, idx) => (
                     <View key={idx} style={styles.achievementItem}>
-                      <Text style={styles.bullet}>•</Text>
+                      <Text style={styles.bullet}>{config.bulletStyle}</Text>
                       <Text style={styles.achievementText}>{item}</Text>
                     </View>
                   ))}

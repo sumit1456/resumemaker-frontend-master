@@ -1,0 +1,116 @@
+/* FabricPDF.css */
+
+.fabric-pdf-wrapper {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background: #f5f5f5;
+  background: black;
+  padding: 10px 15px;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.fabric-pdf-container {
+  background: rgb(0, 0, 0);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  max-width: 800px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.fabric-pdf-container canvas {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Custom scrollbar styling */
+.fabric-pdf-wrapper::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.fabric-pdf-wrapper::-webkit-scrollbar-track {
+  background: #e0e0e0;
+  border-radius: 5px;
+}
+
+.fabric-pdf-wrapper::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 5px;
+}
+
+.fabric-pdf-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Responsive design for tablets and below */
+@media screen and (max-width: 768px) {
+  .fabric-pdf-wrapper {
+    padding: 8px 10px;
+  }
+
+  .fabric-pdf-container {
+    padding: 15px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Hide scrollbar on mobile for cleaner look */
+  .fabric-pdf-wrapper::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+}
+
+/* Responsive design for mobile phones */
+@media screen and (max-width: 480px) {
+  .fabric-pdf-wrapper {
+    padding: 5px;
+  }
+
+  .fabric-pdf-container {
+    padding: 10px;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Even thinner scrollbar on small screens */
+  .fabric-pdf-wrapper::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+}
+
+/* For very small screens */
+@media screen and (max-width: 360px) {
+  .fabric-pdf-wrapper {
+    padding: 3px;
+  }
+
+  .fabric-pdf-container {
+    padding: 8px;
+  }
+}
+
+/* Landscape mode optimization for mobile */
+@media screen and (max-width: 768px) and (orientation: landscape) {
+  .fabric-pdf-wrapper {
+    padding: 5px 10px;
+  }
+
+  .fabric-pdf-container {
+    padding: 10px;
+  }
+}
+
+
+
+
+
+
+

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import { useParams } from "react-router-dom";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
 import ResumeDocument from './Template1';
 import ModernResumeDocument from './Template2';
 import ATSFriendlyResumeDocument from './Template3';
@@ -18,6 +18,9 @@ import LoadingAnimation from "../../components/PopUp/LoadingAnimation.jsx";
 import { useDispatch, useSelector } from 'react-redux';
 import { setCurrentResume, setEnhancedResume } from "../../redux/store.js";
 import { setCurrentResumeId } from "../../redux/store.js";
+import FatbricPDF from "../../FabricDemo.jsx";
+
+
 
 
 
@@ -523,6 +526,7 @@ export default function ResumeEditor({ resume: propsResume}) {
   const [userId, setUserId] = useState(id);
   const currentResumeId = useSelector((state)=>state.resume.resumeId);
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
 
   
@@ -795,6 +799,10 @@ setProjects(prev =>
 
   
 };
+
+
+
+
 
 
 
@@ -1430,6 +1438,31 @@ useEffect(() => {
   };
 
 
+ 
+const uiEditor = () => {
+  const payload = buildResumePayload();
+  dispatch(setCurrentResume(payload));
+  navigate("/ui-editor");
+};
+
+
+
+  
+
+const buildResumePayload = () => {
+  return {
+    resumeDetails,
+    skills,
+    experiences,
+    projects,
+    educationList,
+    certifications,
+    sectionTitles,
+  };
+};
+
+
+
 
 
  
@@ -1906,7 +1939,11 @@ useEffect(() => {
           <div className="preview-panel">
 
             <div className="preview-header">
-              <h3>Live Preview</h3>
+              <div className="preview-header-title-container">
+                  <h3>Live Preview</h3>
+                   <h3><button onClick={uiEditor} >Advanced Editor</button></h3>
+              </div>
+            
               <div className="template-selector-controls">
               <label className="template-label">Choose Template:</label>
               <select value={selectedTemplate} onChange={(e) => handleTemplateChange(e.target.value)} className="template-select">
@@ -1930,9 +1967,11 @@ useEffect(() => {
             
             <div className="preview-content">
               <ErrorBoundary>
-                <PDFViewer pdfBlob={pdfBlob} />
+                 <FatbricPDF pdfBlob={pdfBlob}/>
               </ErrorBoundary>
             </div>
+
+
           </div>
 
 

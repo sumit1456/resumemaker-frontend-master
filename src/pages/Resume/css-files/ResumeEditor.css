@@ -225,7 +225,7 @@ body {
   width: 100%;
   overflow: hidden;
   border: 2px solid rgb(56, 56, 56);
-  z-index: 10;
+  z-index: 39;
 }
 
 .ats-resume {
@@ -694,7 +694,7 @@ h2.section-title,
   flex-direction: column;
   border: 2px solid rgba(255, 255, 255, 0.1);
   transition: all 0.3s ease;
-  height: max-content;
+  max-height: 1080px;
   position: sticky;
   width: 100%;
 }
@@ -718,6 +718,12 @@ h2.section-title,
   color: var(--white);
   border-bottom: 2px solid rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(10px);
+}
+
+.preview-header-title-container{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .preview-header h3 {

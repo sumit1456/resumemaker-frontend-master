@@ -44,13 +44,13 @@ const MessageOverlay = ({
       left: 0,
       right: 0,
       bottom: 0,
-      background: 'rgba(0, 0, 0, 0.92)',
-      backdropFilter: 'blur(4px)',
+      background: 'rgba(0, 0, 0, 0.5)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       zIndex: 9999,
-      animation: 'fadeIn 0.2s ease-out'
+      animation: 'fadeIn 0.2s ease-out',
+      backdropFilter: 'blur(4px)', 
     }}>
       <div style={{
         background: 'linear-gradient(145deg, #1f1f1f 0%, #161616 100%)',
@@ -133,7 +133,7 @@ const MessageOverlay = ({
             padding: '0 32px 36px 32px'
           }}>
             <div style={{
-              background: 'linear-gradient(135deg, rgba(60, 30, 30, 0.4) 0%, rgba(40, 20, 20, 0.5) 100%)',
+              background: 'linear-gradient(135deg, rgba(55, 55, 55, 0.4) 0%, rgba(75, 74, 74, 0.5) 100%)',
               borderRadius: '12px',
               padding: '18px 22px',
               border: '1px solid rgba(139, 69, 19, 0.3)',
