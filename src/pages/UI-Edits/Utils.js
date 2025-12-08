@@ -349,3 +349,34 @@ export const colorUtils = {
     return colorUtils.isDark(hex) ? '#FFFFFF' : '#000000';
   }
 };
+
+
+export function mergeResumeData(currentResumeDetails = {}, resumeData = {}) {
+  return {
+    resumeDetails: {
+      name: resumeData.resumeDetails?.name ?? currentResumeDetails.resumeDetails?.name ?? "",
+      title: resumeData.resumeDetails?.title ?? currentResumeDetails.resumeDetails?.title ?? "",
+      contact: {
+        phone: resumeData.resumeDetails?.contact?.phone 
+          ?? currentResumeDetails.resumeDetails?.contact?.phone 
+          ?? "",
+        email: resumeData.resumeDetails?.contact?.email 
+          ?? currentResumeDetails.resumeDetails?.contact?.email 
+          ?? ""
+      },
+      summary: resumeData.resumeDetails?.summary 
+        ?? currentResumeDetails.resumeDetails?.summary 
+        ?? ""
+    },
+
+    skills: resumeData.skills ?? currentResumeDetails.skills ?? [],
+
+    experiences: resumeData.experiences ?? currentResumeDetails.experiences ?? [],
+
+    projects: resumeData.projects ?? currentResumeDetails.projects ?? [],
+
+    educationList: resumeData.educationList ?? currentResumeDetails.educationList ?? [],
+
+    certifications: resumeData.certifications ?? currentResumeDetails.certifications ?? []
+  };
+}

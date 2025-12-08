@@ -8,10 +8,7 @@ import { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import EmailVerification from "./features/auth/Verification.jsx";
 import BackendWakePopup from "./components/PopUp/Backendpopup.jsx";
-import UIEditor from "./pages/UI-Edits/UIEditor.jsx"
 import EditorPage from "./pages/UI-Edits/EditorPage.jsx";
-
-
 
 
 

@@ -559,7 +559,6 @@ export default function ResumeEditor({ resume: propsResume}) {
   useEffect(() => {
   if (!importedResume) return;
 
-  downloadResponse(importedResume);
 
 
 
@@ -730,7 +729,6 @@ useEffect(() => {
 const applyEnhancedResume = (enhancedResume) => {
   if (!enhancedResume) return;
 
-  downloadResponse(enhancedResume);
 
   // ---------------- Resume Details ----------------
   if (enhancedResume.resumeDetails) {

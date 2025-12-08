@@ -10,7 +10,7 @@ const EditorPage = () => {
   return (
     <div style={{
       position: 'fixed',
-      top: 0,
+      top: 100,
       left: 0,
       right: 0,
       bottom: 0,

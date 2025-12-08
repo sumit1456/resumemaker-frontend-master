@@ -225,7 +225,9 @@ body {
   width: 100%;
   overflow: hidden;
   border: 2px solid rgb(56, 56, 56);
-  z-index: 39;
+  
+
+
 }
 
 .ats-resume {
@@ -249,7 +251,6 @@ body {
   border-radius: 6px;
   font-size: 32px;
   font-weight: 700;
-  text-transform: uppercase;
   letter-spacing: 3px;
   margin-bottom: var(--space-3);
   color: #ffffff;
@@ -1847,6 +1848,11 @@ select {
   border-top-color: var(--white);
   border-radius: 50%;
   animation: spin 1s linear infinite;
+}
+
+
+.editor-panel{
+  z-index: 10;
 }
 
 

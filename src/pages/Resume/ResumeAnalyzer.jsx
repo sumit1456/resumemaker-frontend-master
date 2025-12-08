@@ -5,8 +5,8 @@ import "./css-files/analyze.css";
 import LoadingAnimation from "../../components/PopUp/LoadingAnimation";
 // import "./css-files/analysis-output.css"; // Import the new CSS file
 
-const API_BASE_URL = 'https://resumemaker-1.onrender.com';
-const API_BASE_URL2 = 'http://localhost:8080';
+const API_BASE_URL2 = 'https://resumemaker-1.onrender.com';
+const API_BASE_URL = 'http://localhost:8080';
 
 const techSkills = [
   "javascript","python","java","react","angular","vue","node",
@@ -771,7 +771,6 @@ export default function ResumeAnalyzer({
       }
       
       const data = await res.json();
-      downloadResponse(data);
       dispatch(setEnhancedResume(data));
       window.showMessage('Sucess', 'Enhancement Completed', 'success', 1500);
      
@@ -826,6 +825,8 @@ export default function ResumeAnalyzer({
       console.error("No content found in AI response", data);
     }
 
+    console.log("Printing the response for resume import");
+    
     console.log("Upload successful:", data);
     window.showMessage("Success", 'Resume has been imported', "success", 1500);
   } catch (error) {
