@@ -1132,3 +1132,172 @@
 }
 
 
+/* ==================== MOBILE RESPONSIVE ==================== */
+
+/* Tablets (<= 768px) */
+@media (max-width: 768px) {
+  .editor-container {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+  }
+
+  .left-panel,
+  .right-panel {
+    width: 100%;
+    height: auto;
+    max-height: 200px;
+    overflow-y: auto;
+    border-right: none;
+    border-bottom: 1px solid #222;
+    padding: 12px;
+  }
+
+  .canvas-container {
+    border-right: none;
+    padding: 12px;
+  }
+
+  .canvas-scroll-wrapper {
+    padding: 12px;
+    overflow-x: auto;
+    justify-content: flex-start;
+  }
+
+  .canvas-wrapper {
+    width: 100%;
+    max-width: 100%;
+    transform: scale(0.8);
+  }
+
+  .zoom-controls {
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 6px 10px;
+    gap: 6px;
+  }
+
+  .zoom-value {
+    min-width: 40px;
+  }
+
+  .panel-title {
+    font-size: 12px;
+  }
+
+  .control-label,
+  .control-label-small,
+  .section-subtitle {
+    font-size: 10px;
+  }
+
+  .control-input,
+  .control-input-small,
+  .control-select {
+    font-size: 12px;
+    padding: 6px 8px;
+  }
+
+  .btn-primary,
+  .btn-secondary,
+  .btn-arrow,
+  .btn-resize,
+  .btn-delete,
+  .btn-zoom,
+  .btn-zoom-reset {
+    font-size: 10px;
+    padding: 6px 8px;
+  }
+
+  .canvas-hint,
+  .template-badge {
+    font-size: 9px;
+    padding: 6px 10px;
+  }
+
+  .shape-properties,
+  .line-properties,
+  .section-controls-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+
+/* Phones (<= 480px) */
+@media (max-width: 480px) {
+  .editor-container {
+    flex-direction: column;
+    padding: 0;
+  }
+
+  .left-panel,
+  .right-panel {
+    max-height: 150px;
+    padding: 8px;
+  }
+
+  .canvas-container {
+    padding: 8px;
+  }
+
+  .canvas-scroll-wrapper {
+    padding: 8px;
+    justify-content: flex-start;
+  }
+
+  .canvas-wrapper {
+    width: 100%;
+    transform: scale(0.7);
+  }
+
+  .panel-title {
+    font-size: 11px;
+  }
+
+  .control-label,
+  .control-label-small,
+  .section-subtitle {
+    font-size: 9px;
+  }
+
+  .control-input,
+  .control-input-small,
+  .control-select {
+    font-size: 11px;
+    padding: 4px 6px;
+  }
+
+  .btn-primary,
+  .btn-secondary,
+  .btn-arrow,
+  .btn-resize,
+  .btn-delete,
+  .btn-zoom,
+  .btn-zoom-reset {
+    font-size: 9px;
+    padding: 4px 6px;
+  }
+
+  .canvas-hint,
+  .template-badge {
+    font-size: 8px;
+    padding: 4px 8px;
+  }
+
+  .zoom-controls {
+    bottom: 8px;
+    gap: 4px;
+  }
+
+  .zoom-value {
+    min-width: 30px;
+  }
+
+  .shape-properties,
+  .line-properties,
+  .section-controls-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}

@@ -577,68 +577,7 @@ const UIEditor = () => {
     setSectionWidths(extractWidthsFromConfig(styleConfig));
   }, []);
 
-  // Render Section to Canvas
-
-
-  // const renderSectionToCanvas = async (refKey, sectionName) => {
-  //   const element = sectionRefs[refKey].current;
-  //   if (!element || !fabricRef.current) return;
-  //   const position = sectionPositions[sectionName];
-    
-  //   try {
-  //     const wrapper = document.createElement("div");
-  //     wrapper.style.cssText = "position:absolute;left:-99999px;display:inline-block";
-  //     wrapper.appendChild(element.cloneNode(true));
-  //     document.body.appendChild(wrapper);
-  //     await new Promise(r => setTimeout(r, 10));
-      
-  //     // Get the section's background color - if transparent, use null for html2canvas
-  //     const sectionBg = styleConfig[sectionName]?.container?.backgroundColor;
-  //     const bgColor = (sectionBg === 'transparent' || !sectionBg) 
-  //       ? null 
-  //       : sectionBg;
-      
-  //     const canvas = await html2canvas(wrapper, { 
-  //       scale: 2, // Increased from 1 to 2 for better quality
-  //       backgroundColor: bgColor,
-  //       logging: false,
-  //       useCORS: true,
-  //       allowTaint: true
-  //     });
-      
-  //     document.body.removeChild(wrapper);
-      
-  //     return new Promise((resolve) => {
-  //       fabric.Image.fromURL(canvas.toDataURL("image/png"), (img) => {
-  //         const yPos = position.y;
-  //         const targetCanvas = (yPos >= 842 && showPage2 && fabric2Ref.current) ? fabric2Ref.current : fabricRef.current;
-  //         const adjustedY = yPos >= 842 ? yPos - 842 : yPos;
-          
-  //         img.set({ 
-  //           left: position.x, 
-  //           top: adjustedY, 
-  //           scaleX: (position.scaleX || 1) * 0.5, // Scale down since we doubled the render
-  //           scaleY: (position.scaleY || 1) * 0.5,
-  //           selectable: true, 
-  //           lockRotation: true, 
-  //           cornerStyle: 'circle', 
-  //           cornerColor: '#0066ff', 
-  //           cornerSize: 10, 
-  //           borderColor: '#0066ff' 
-  //         });
-  //         img.sectionName = sectionName;
-  //         img.originalY = yPos; // Store original Y for page detection
-  //         targetCanvas.add(img);
-  //         resolve();
-  //       });
-  //     });
-  //   } catch (err) { 
-  //     console.error(err); 
-  //   }
-  // };
-
-
-  // Render Section to Canvas - REPLACE THIS FUNCTION
+ 
 const renderSectionToCanvas = async (refKey, sectionName) => {
   const element = sectionRefs[refKey].current;
   if (!element || !fabricRef.current) return;
@@ -861,75 +800,6 @@ const renderSectionToCanvas = async (refKey, sectionName) => {
     });
   };
 
-  // Handle Object Modified
-  // const handleObjectModified = (e) => {
-  //   const obj = e.target;
-    
-  //   if (obj?.sectionName) {
-  //     // Check if object was moved from canvas 1 to canvas 2 or vice versa
-  //     const actualY = obj.originalY ? obj.originalY : obj.top;
-  //     const newY = obj.canvas === fabric2Ref.current ? obj.top + 842 : obj.top;
-      
-  //     setSectionPositions(p => ({ 
-  //       ...p, 
-  //       [obj.sectionName]: { 
-  //         x: Math.round(obj.left), 
-  //         y: Math.round(newY), 
-  //         scaleX: obj.scaleX, 
-  //         scaleY: obj.scaleY 
-  //       }
-  //     }));
-      
-  //     // If section crossed page boundary, re-render
-  //     if ((actualY < 842 && newY >= 842) || (actualY >= 842 && newY < 842)) {
-  //       setTimeout(renderAllSections, 100);
-  //     }
-  //   } else if (obj?.lineId) {
-  //     const lineData = {
-  //       x1: Math.round(obj.x1),
-  //       y1: Math.round(obj.y1),
-  //       x2: Math.round(obj.x2),
-  //       y2: Math.round(obj.y2),
-  //       thickness: Math.round(obj.strokeWidth)
-  //     };
-      
-  //     setRememberedLinePositions(prev => ({
-  //       ...prev,
-  //       [obj.lineId]: lineData
-  //     }));
-      
-  //     setLines(p => p.map(l => {
-  //       if (l.id === obj.lineId) {
-  //         return { ...l, ...lineData };
-  //       }
-  //       return l;
-  //     }));
-  //   } else if (obj?.shapeId) {
-  //     const shapeData = {
-  //       x: Math.round(obj.left),
-  //       y: Math.round(obj.top),
-  //       width: Math.round(obj.width * obj.scaleX),
-  //       height: Math.round(obj.height * obj.scaleY)
-  //     };
-      
-  //     // Update remembered positions
-  //     setRememberedShapePositions(prev => ({
-  //       ...prev,
-  //       [obj.shapeId]: shapeData
-  //     }));
-      
-  //     // Update the shapes array
-  //     setBackgroundShapes(p => p.map(s => {
-  //       if (s.id === obj.shapeId) {
-  //         return { ...s, ...shapeData };
-  //       }
-  //       return s;
-  //     }));
-  //   }
-  // };
-
-
-  // Handle Object Modified - REPLACE THIS FUNCTION
 const handleObjectModified = (e) => {
   const obj = e.target;
   
