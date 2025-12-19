@@ -7,84 +7,683 @@ import { mergeResumeData } from "./Utils";
 import { ATS_TEMPLATE_CONFIG, MODERN_TEMPLATE_CONFIG, TWO_COLUMN_TEMPLATE_CONFIG, TEMPLATE5_CONFIG } from "./TemplateConfigs";
 import { defaultResumeData } from "./Utils";
 import "./UIEditor.css";
+import {
+  buildHeaderLayout,
+  configToLayout,
+  parseSize,
+  renderHeaderWithLayoutEngine,
+  buildTwoColumnResume,
+  buildSkillsGrid,
+  buildExperienceTimeline,
+  buildCompleteResume,
+  buildSkillsSection,
+  buildEducationSection,
+  buildExperienceSection,
+  buildProjectsSection,
+  buildCertificationsSection
+} from './CanvasEngineFunctions';
 
+import {
+  CanvasLayoutEngine,
+  FlexNode,
+  GridNode,
+  TextNode,
+  BlockNode,
+  SpacerNode
+} from "./CanvasEngine.jsx";
 
 
 import { Stage, Layer, Image as KonvaImage, Line, Rect, Transformer, Text } from 'react-konva';
-import { Phone, Mail, Linkedin, Github, MapPin, Globe } from "lucide-react";
 
-const contactIconMap = {
-  phone: Phone,
-  email: Mail,
-  linkedin: Linkedin,
-  github: Github,
-  location: MapPin,
-  website: Globe
-};
 
+// const FlexibleContainer = ({ children, config }) => {
+//   return (
+//     <div style={{
+//       width: config.width || "fit-content",
+//       maxWidth: config.maxWidth || "100%",
+//       padding: config.padding || "10px",
+//       margin: config.margin || "0",
+//       backgroundColor: config.backgroundColor || "#FFFFFF",
+//       fontFamily: config.fontFamily || "Arial",
+//       color: config.color || "#000000",
+//       boxSizing: "border-box",
+//       overflow: config.overflow || "hidden",
+//       border: config.border || "none",
+//       borderRadius: config.borderRadius || "0",
+//       boxShadow: config.boxShadow || "none",
+//     }}>
+//       {children}
+//     </div>
+//   );
+// };
+
+// /**
+//  * Flexible Section Header - Can render any section title with full config
+//  */
+// const FlexibleSectionHeader = ({ title, config }) => {
+//   return (
+//     <div style={{
+//       fontSize: config.fontSize || "14px",
+//       fontWeight: config.fontWeight || "bold",
+//       color: config.color || "#000000",
+//       marginBottom: config.marginBottom || "8px",
+//       marginTop: config.marginTop || "0",
+//       paddingBottom: config.paddingBottom || "3px",
+//       paddingTop: config.paddingTop || "0",
+//       borderBottom: config.borderBottom || "none",
+//       borderTop: config.borderTop || "none",
+//       textTransform: config.textTransform || "none",
+//       letterSpacing: config.letterSpacing || "0",
+//       textAlign: config.textAlign || "left",
+//       display: config.display || "block",
+//       background: config.background || "transparent",
+//       padding: config.padding,
+//     }}>
+//       {config.icon && <span style={{ marginRight: "8px" }}>{config.icon}</span>}
+//       {title}
+//     </div>
+//   );
+// };
+
+// /**
+//  * Flexible Layout Container - Handles flex/grid layouts
+//  */
+// const FlexibleLayout = ({ children, config }) => {
+//   const isGrid = config.display === "grid";
+  
+//   return (
+//     <div style={{
+//       display: config.display || "flex",
+//       flexDirection: config.flexDirection || "row",
+//       justifyContent: config.justifyContent || "flex-start",
+//       alignItems: config.alignItems || "stretch",
+//       flexWrap: config.flexWrap || "nowrap",
+//       gap: config.gap || "0",
+//       gridTemplateColumns: isGrid ? config.gridTemplateColumns : undefined,
+//       gridTemplateRows: isGrid ? config.gridTemplateRows : undefined,
+//       padding: config.padding,
+//       margin: config.margin,
+//     }}>
+//       {children}
+//     </div>
+//   );
+// };
+
+// /**
+//  * Flexible Text Block - For any text content
+//  */
+// const FlexibleText = ({ children, config }) => {
+//   return (
+//     <div style={{
+//       fontSize: config.fontSize || "10px",
+//       fontWeight: config.fontWeight || "normal",
+//       fontStyle: config.fontStyle || "normal",
+//       color: config.color || "#000000",
+//       lineHeight: config.lineHeight || "1.4",
+//       textAlign: config.textAlign || "left",
+//       marginBottom: config.marginBottom || "0",
+//       marginTop: config.marginTop || "0",
+//       padding: config.padding,
+//       textTransform: config.textTransform || "none",
+//       letterSpacing: config.letterSpacing || "0",
+//       wordWrap: config.wordWrap || "break-word",
+//       whiteSpace: config.whiteSpace || "normal",
+//       textDecoration: config.textDecoration || "none",
+//       background: config.background || "transparent",
+//       border: config.border,
+//       borderRadius: config.borderRadius,
+//       display: config.display || "block",
+//       flex: config.flex,
+//       width: config.width,
+//       maxWidth: config.maxWidth,
+//     }}>
+//       {children}
+//     </div>
+//   );
+// };
+
+// /**
+//  * Flexible Bullet List - Configurable bullet points
+//  */
+// // const FlexibleBulletList = ({ items, config }) => {
+// //   if (!items || items.length === 0) return null;
+  
+// //   return (
+// //     <div style={{ marginTop: config.containerMarginTop || "0" }}>
+// //       {items.filter(item => item?.trim()).map((item, index) => (
+// //         <div key={index} style={{
+// //           display: "flex",
+// //           marginBottom: config.itemMarginBottom || "3px",
+// //           alignItems: config.alignItems || "flex-start",
+// //         }}>
+// //           <div style={{
+// //             width: config.bulletWidth || "10px",
+// //             minWidth: config.bulletWidth || "10px",
+// //             color: config.bulletColor || "#000000",
+// //             fontSize: config.bulletSize || "10px",
+// //             flexShrink: 0,
+// //             marginRight: config.bulletMarginRight || "0",
+// //             marginTop: config.bulletMarginTop || "0",
+// //           }}>
+// //             {config.bulletStyle || "•"}
+// //           </div>
+// //           <FlexibleText config={{
+// //             fontSize: config.textSize || "10px",
+// //             color: config.textColor || "#000000",
+// //             lineHeight: config.lineHeight || "1.4",
+// //             flex: 1,
+// //           }}>
+// //             {item}
+// //           </FlexibleText>
+// //         </div>
+// //       ))}
+// //     </div>
+// //   );
+// // };
+
+
+// // ========== FLEXIBLE BULLET LIST ==========
+// const FlexibleBulletList = ({ items = [], styleConfig = {} }) => {
+//   const config = styleConfig;
+
+//   return (
+//     <div
+//       style={{
+//         display: "flex",
+//         flexDirection: "column",
+//         gap: config.bulletGap || "4px",
+//         width: "100%",
+//       }}
+//     >
+//       {items.map((item, index) => (
+//         <div
+//           key={index}
+//           style={{
+//             display: "flex",
+//             flexDirection: "row",
+//             alignItems: "flex-start",
+//             width: "100%",
+//           }}
+//         >
+//           {/* Bullet */}
+//           <div
+//             style={{
+//               marginTop: "2px",
+//               width: "10px",
+//               minWidth: "10px",
+//               fontSize: config.bulletSize || "12px",
+//               color: config.textColor || "#000000",
+//               lineHeight: config.lineHeight || "1.4",
+//               userSelect: "none",
+//             }}
+//           >
+//             •
+//           </div>
+
+//           {/* Text */}
+//           <div
+//             style={{
+//               flex: 1,
+//               minWidth: 0, // 💥 REQUIRED so bullets don’t break line
+//               fontSize: config.textSize || "10px",
+//               color: config.textColor || "#000000",
+//               lineHeight: config.lineHeight || "1.4",
+//               whiteSpace: "normal",
+//               wordBreak: "normal",
+//               overflowWrap: "anywhere", // 💥 best for resumes
+//             }}
+//           >
+//             {item}
+//           </div>
+//         </div>
+//       ))}
+//     </div>
+//   );
+// };
+
+
+// // ========== FLEXIBLE SECTION COMPONENTS ==========
+
+// /**
+//  * HEADER SECTION - Fully Flexible
+//  */
+// export const FlexibleHeaderSection = ({ resumeDetails, styleConfig }) => {
+//   const config = styleConfig.header;
+  
+//   return (
+//     <FlexibleContainer config={config.container}>
+//       <FlexibleLayout config={config.mainLayout}>
+//         {/* Name Section */}
+//         <FlexibleLayout config={config.nameSection}>
+//           <FlexibleText config={config.nameStyle}>
+//             {resumeDetails.name || "Your Name"}
+//           </FlexibleText>
+//           {config.showTitle && (
+//             <FlexibleText config={config.titleStyle}>
+//               {resumeDetails.title || "Your Title"}
+//             </FlexibleText>
+//           )}
+//         </FlexibleLayout>
+        
+//         {/* Contact Section */}
+//         {config.showContact && (
+//           <FlexibleLayout config={config.contactLayout}>
+//             {config.contactOrder.map((contactType, idx) => {
+//               const value = resumeDetails.contact?.[contactType];
+//               if (!value) return null;
+              
+//               return (
+//                 <FlexibleText key={idx} config={config.contactItemStyle}>
+//                   {config.showContactIcons && config.contactIcons?.[contactType] && (
+//                     <span style={{ marginRight: "4px" }}>{config.contactIcons[contactType]}</span>
+//                   )}
+//                   {value}
+//                 </FlexibleText>
+//               );
+//             })}
+//           </FlexibleLayout>
+//         )}
+//       </FlexibleLayout>
+      
+//       {config.showDivider && (
+//         <div style={{
+//           borderBottom: config.dividerStyle || "1px solid #000",
+//           marginTop: config.dividerMarginTop || "8px",
+//           marginBottom: config.dividerMarginBottom || "8px",
+//         }} />
+//       )}
+//     </FlexibleContainer>
+//   );
+// };
+
+// /**
+//  * SUMMARY SECTION - Fully Flexible
+//  */
+// export const FlexibleSummarySection = ({ summary, styleConfig }) => {
+//   const config = styleConfig.summary;
+  
+//   return (
+//     <FlexibleContainer config={config.container}>
+//       {config.showTitle && (
+//         <FlexibleSectionHeader title="SUMMARY" config={config.titleStyle} />
+//       )}
+//       <FlexibleText config={config.bodyStyle}>
+//         {summary}
+//       </FlexibleText>
+//     </FlexibleContainer>
+//   );
+// };
+
+// /**
+//  * SKILLS SECTION - Fully Flexible
+//  */
+// export const FlexibleSkillsSection = ({ skills, styleConfig }) => {
+//   const config = styleConfig.skills;
+  
+//   // Parse skills (grouped vs flat)
+//   const groupedSkills = {};
+//   const ungroupedSkills = [];
+  
+//   if (skills && Array.isArray(skills)) {
+//     skills.forEach(skill => {
+//       if (skill && skill.includes(" - ")) {
+//         const [cat, val] = skill.split(" - ");
+//         groupedSkills[cat.trim()] = val.trim();
+//       } else if (skill?.trim()) {
+//         ungroupedSkills.push(skill.trim());
+//       }
+//     });
+//   }
+  
+//   return (
+//     <FlexibleContainer config={config.container}>
+//       {config.showTitle && (
+//         <FlexibleSectionHeader title="SKILLS" config={config.titleStyle} />
+//       )}
+      
+//       <FlexibleLayout config={config.contentLayout}>
+//         {/* Grouped Skills */}
+//         {Object.entries(groupedSkills).map(([category, value], idx) => (
+//           <div key={idx} style={{ marginBottom: config.itemMarginBottom || "8px" }}>
+//             {config.showCategories && (
+//               <FlexibleText config={config.categoryStyle}>
+//                 {category}
+//               </FlexibleText>
+//             )}
+//             <FlexibleText config={config.valueStyle}>
+//               {value}
+//             </FlexibleText>
+//           </div>
+//         ))}
+        
+//         {/* Ungrouped Skills */}
+//         {ungroupedSkills.length > 0 && (
+//           <div style={{ marginBottom: config.itemMarginBottom || "8px" }}>
+//             {config.showCategories && (
+//               <FlexibleText config={config.categoryStyle}>
+//                 Other
+//               </FlexibleText>
+//             )}
+//             {config.displayType === "list" ? (
+//               <FlexibleBulletList items={ungroupedSkills} config={config.bulletConfig} />
+//             ) : (
+//               <FlexibleText config={config.valueStyle}>
+//                 {ungroupedSkills.join(config.separator || ", ")}
+//               </FlexibleText>
+//             )}
+//           </div>
+//         )}
+//       </FlexibleLayout>
+//     </FlexibleContainer>
+//   );
+// };
+
+// /**
+//  * EXPERIENCE SECTION - Fully Flexible
+//  */
+// export const FlexibleExperienceSection = ({ experiences, styleConfig }) => {
+//   const config = styleConfig.experience;
+  
+//   return (
+//     <FlexibleContainer config={config.container}>
+//       {config.showTitle && (
+//         <FlexibleSectionHeader title="EXPERIENCE" config={config.titleStyle} />
+//       )}
+      
+//       {experiences.map((exp, idx) => (
+//         <div key={idx} style={{ marginBottom: config.itemMarginBottom || "12px" }}>
+//           <FlexibleLayout config={config.headerLayout}>
+//             {/* Position/Company layout controlled by config */}
+//             {config.positionFirst ? (
+//               <>
+//                 <FlexibleText config={config.positionStyle}>
+//                   {exp.position}
+//                 </FlexibleText>
+//                 <FlexibleText config={config.durationStyle}>
+//                   {exp.duration}
+//                 </FlexibleText>
+//               </>
+//             ) : (
+//               <>
+//                 <FlexibleText config={config.companyStyle}>
+//                   {exp.company}
+//                 </FlexibleText>
+//                 <FlexibleText config={config.durationStyle}>
+//                   {exp.duration}
+//                 </FlexibleText>
+//               </>
+//             )}
+//           </FlexibleLayout>
+          
+//           <FlexibleLayout config={config.subHeaderLayout}>
+//             <FlexibleText config={config.companyStyle}>
+//               {config.positionFirst ? exp.company : exp.position}
+//               {exp.location && config.showLocation ? `, ${exp.location}` : ""}
+//             </FlexibleText>
+//           </FlexibleLayout>
+          
+//           {/* Achievements */}
+//           {config.showAchievements && exp.achievements && (
+//             <FlexibleBulletList items={exp.achievements} config={config.bulletConfig} />
+//           )}
+//         </div>
+//       ))}
+//     </FlexibleContainer>
+//   );
+// };
+
+// /**
+//  * PROJECTS SECTION - Fully Flexible
+//  */
+// export const FlexibleProjectsSection = ({ projects, styleConfig }) => {
+//   const config = styleConfig.projects;
+  
+//   return (
+//     <FlexibleContainer config={config.container}>
+//       {config.showTitle && (
+//         <FlexibleSectionHeader title="PROJECTS" config={config.titleStyle} />
+//       )}
+      
+//       {projects.map((proj, idx) => (
+//         <div key={idx} style={{ marginBottom: config.itemMarginBottom || "12px" }}>
+//           <FlexibleLayout config={config.headerLayout}>
+//             <FlexibleText config={config.nameStyle}>
+//               {proj.name}
+//             </FlexibleText>
+//             {proj.duration && config.showDuration && (
+//               <FlexibleText config={config.durationStyle}>
+//                 {proj.duration}
+//               </FlexibleText>
+//             )}
+//           </FlexibleLayout>
+          
+//           {proj.technologies && config.showTechnologies && (
+//             <FlexibleText config={config.techStyle}>
+//               {proj.technologies}
+//             </FlexibleText>
+//           )}
+          
+//           {config.showDescription && proj.description && (
+//             <FlexibleBulletList items={proj.description} config={config.bulletConfig} />
+//           )}
+//         </div>
+//       ))}
+//     </FlexibleContainer>
+//   );
+// };
+
+// /**
+//  * EDUCATION SECTION - Fully Flexible
+//  */
+// export const FlexibleEducationSection = ({ educationList, styleConfig }) => {
+//   const config = styleConfig.education;
+  
+//   return (
+//     <FlexibleContainer config={config.container}>
+//       {config.showTitle && (
+//         <FlexibleSectionHeader title="EDUCATION" config={config.titleStyle} />
+//       )}
+      
+//       {educationList.map((edu, idx) => (
+//         <div key={idx} style={{ marginBottom: config.itemMarginBottom || "10px" }}>
+//           <FlexibleText config={config.degreeStyle}>
+//             {edu.degree}
+//           </FlexibleText>
+          
+//           {edu.institution && config.showInstitution && (
+//             <FlexibleText config={config.institutionStyle}>
+//               {edu.institution}
+//             </FlexibleText>
+//           )}
+          
+//           <FlexibleLayout config={config.detailsLayout}>
+//             {edu.year && (
+//               <FlexibleText config={config.detailsStyle}>
+//                 {edu.year}
+//               </FlexibleText>
+//             )}
+//             {edu.gpa && config.showGpa && (
+//               <FlexibleText config={config.detailsStyle}>
+//                 {config.gpaPrefix || "GPA: "}{edu.gpa}
+//               </FlexibleText>
+//             )}
+//             {edu.location && config.showLocation && (
+//               <FlexibleText config={config.detailsStyle}>
+//                 {edu.location}
+//               </FlexibleText>
+//             )}
+//           </FlexibleLayout>
+//         </div>
+//       ))}
+//     </FlexibleContainer>
+//   );
+// };
+
+// /**
+//  * CERTIFICATIONS SECTION - Fully Flexible
+//  */
+// export const FlexibleCertificationsSection = ({ certifications, styleConfig }) => {
+//   const config = styleConfig.certifications;
+  
+//   return (
+//     <FlexibleContainer config={config.container}>
+//       {config.showTitle && (
+//         <FlexibleSectionHeader title="CERTIFICATIONS" config={config.titleStyle} />
+//       )}
+      
+//       {config.displayType === "list" ? (
+//         <FlexibleBulletList items={certifications} config={config.bulletConfig} />
+//       ) : (
+//         certifications.filter(cert => cert?.trim()).map((cert, idx) => (
+//           <FlexibleText key={idx} config={config.itemStyle}>
+//             {cert}
+//           </FlexibleText>
+//         ))
+//       )}
+//     </FlexibleContainer>
+//   );
+// };
+
+
+// ========== ENHANCED BASE COMPONENTS ==========
+
+/**
+ * Universal Style Applicator - Applies any CSS property
+ * Filters out non-CSS properties and nested objects
+ */
+
+
+// const applyStyles = (baseStyle, configStyle) => {
+//   if (!configStyle) return baseStyle;
+  
+//   const validStyles = {};
+//   const validCSSProps = new Set([
+//     'alignContent', 'alignItems', 'alignSelf', 'animation', 'animationDelay', 
+//     'animationDirection', 'animationDuration', 'animationFillMode', 
+//     'animationIterationCount', 'animationName', 'animationPlayState', 
+//     'animationTimingFunction', 'backfaceVisibility', 'background', 
+//     'backgroundAttachment', 'backgroundBlendMode', 'backgroundClip', 
+//     'backgroundColor', 'backgroundImage', 'backgroundOrigin', 'backgroundPosition', 
+//     'backgroundRepeat', 'backgroundSize', 'border', 'borderBottom', 
+//     'borderBottomColor', 'borderBottomLeftRadius', 'borderBottomRightRadius', 
+//     'borderBottomStyle', 'borderBottomWidth', 'borderCollapse', 'borderColor', 
+//     'borderImage', 'borderImageOutset', 'borderImageRepeat', 'borderImageSlice', 
+//     'borderImageSource', 'borderImageWidth', 'borderLeft', 'borderLeftColor', 
+//     'borderLeftStyle', 'borderLeftWidth', 'borderRadius', 'borderRight', 
+//     'borderRightColor', 'borderRightStyle', 'borderRightWidth', 'borderSpacing', 
+//     'borderStyle', 'borderTop', 'borderTopColor', 'borderTopLeftRadius', 
+//     'borderTopRightRadius', 'borderTopStyle', 'borderTopWidth', 'borderWidth', 
+//     'bottom', 'boxDecorationBreak', 'boxShadow', 'boxSizing', 'breakAfter', 
+//     'breakBefore', 'breakInside', 'captionSide', 'caretColor', 'clear', 'clip', 
+//     'clipPath', 'color', 'columnCount', 'columnFill', 'columnGap', 'columnRule', 
+//     'columnRuleColor', 'columnRuleStyle', 'columnRuleWidth', 'columnSpan', 
+//     'columnWidth', 'columns', 'content', 'counterIncrement', 'counterReset', 
+//     'cursor', 'direction', 'display', 'emptyCells', 'filter', 'flex', 
+//     'flexBasis', 'flexDirection', 'flexFlow', 'flexGrow', 'flexShrink', 
+//     'flexWrap', 'float', 'font', 'fontFamily', 'fontFeatureSettings', 
+//     'fontKerning', 'fontSize', 'fontSizeAdjust', 'fontStretch', 'fontStyle', 
+//     'fontSynthesis', 'fontVariant', 'fontVariantCaps', 'fontVariantLigatures', 
+//     'fontVariantNumeric', 'fontVariantPosition', 'fontWeight', 'gap', 'grid', 
+//     'gridArea', 'gridAutoColumns', 'gridAutoFlow', 'gridAutoRows', 'gridColumn', 
+//     'gridColumnEnd', 'gridColumnGap', 'gridColumnStart', 'gridGap', 'gridRow', 
+//     'gridRowEnd', 'gridRowGap', 'gridRowStart', 'gridTemplate', 'gridTemplateAreas', 
+//     'gridTemplateColumns', 'gridTemplateRows', 'height', 'hyphens', 'imageRendering', 
+//     'isolation', 'justifyContent', 'justifyItems', 'justifySelf', 'left', 
+//     'letterSpacing', 'lineBreak', 'lineHeight', 'listStyle', 'listStyleImage', 
+//     'listStylePosition', 'listStyleType', 'margin', 'marginBottom', 'marginLeft', 
+//     'marginRight', 'marginTop', 'mask', 'maskClip', 'maskComposite', 'maskImage', 
+//     'maskMode', 'maskOrigin', 'maskPosition', 'maskRepeat', 'maskSize', 'maskType', 
+//     'maxHeight', 'maxWidth', 'minHeight', 'minWidth', 'mixBlendMode', 'objectFit', 
+//     'objectPosition', 'opacity', 'order', 'orphans', 'outline', 'outlineColor', 
+//     'outlineOffset', 'outlineStyle', 'outlineWidth', 'overflow', 'overflowWrap', 
+//     'overflowX', 'overflowY', 'padding', 'paddingBottom', 'paddingLeft', 
+//     'paddingRight', 'paddingTop', 'pageBreakAfter', 'pageBreakBefore', 
+//     'pageBreakInside', 'perspective', 'perspectiveOrigin', 'placeContent', 
+//     'placeItems', 'placeSelf', 'pointerEvents', 'position', 'quotes', 'resize', 
+//     'right', 'rowGap', 'scrollBehavior', 'tabSize', 'tableLayout', 'textAlign', 
+//     'textAlignLast', 'textCombineUpright', 'textDecoration', 'textDecorationColor', 
+//     'textDecorationLine', 'textDecorationStyle', 'textIndent', 'textJustify', 
+//     'textOrientation', 'textOverflow', 'textShadow', 'textTransform', 
+//     'textUnderlinePosition', 'top', 'transform', 'transformOrigin', 'transformStyle', 
+//     'transition', 'transitionDelay', 'transitionDuration', 'transitionProperty', 
+//     'transitionTimingFunction', 'unicodeBidi', 'userSelect', 'verticalAlign', 
+//     'visibility', 'whiteSpace', 'widows', 'width', 'willChange', 'wordBreak', 
+//     'wordSpacing', 'wordWrap', 'writingMode', 'zIndex'
+//   ]);
+  
+//   Object.keys(configStyle).forEach(key => {
+//     const value = configStyle[key];
+//     // Only include valid CSS properties with primitive values
+//     if (validCSSProps.has(key) && (typeof value === 'string' || typeof value === 'number')) {
+//       validStyles[key] = value;
+//     }
+//   });
+  
+//   return { ...baseStyle, ...validStyles };
+// };
 
 
 const applyStyles = (baseStyle, configStyle) => {
   if (!configStyle) return baseStyle;
-
+  
   const validStyles = {};
   const validCSSProps = new Set([
-    'alignContent', 'alignItems', 'alignSelf', 'animation', 'animationDelay',
-    'animationDirection', 'animationDuration', 'animationFillMode',
-    'animationIterationCount', 'animationName', 'animationPlayState',
-    'animationTimingFunction', 'backfaceVisibility', 'background',
-    'backgroundAttachment', 'backgroundBlendMode', 'backgroundClip',
-    'backgroundColor', 'backgroundImage', 'backgroundOrigin', 'backgroundPosition',
-    'backgroundRepeat', 'backgroundSize', 'border', 'borderBottom',
-    'borderBottomColor', 'borderBottomLeftRadius', 'borderBottomRightRadius',
-    'borderBottomStyle', 'borderBottomWidth', 'borderCollapse', 'borderColor',
-    'borderImage', 'borderImageOutset', 'borderImageRepeat', 'borderImageSlice',
-    'borderImageSource', 'borderImageWidth', 'borderLeft', 'borderLeftColor',
-    'borderLeftStyle', 'borderLeftWidth', 'borderRadius', 'borderRight',
-    'borderRightColor', 'borderRightStyle', 'borderRightWidth', 'borderSpacing',
-    'borderStyle', 'borderTop', 'borderTopColor', 'borderTopLeftRadius',
-    'borderTopRightRadius', 'borderTopStyle', 'borderTopWidth', 'borderWidth',
-    'bottom', 'boxDecorationBreak', 'boxShadow', 'boxSizing', 'breakAfter',
-    'breakBefore', 'breakInside', 'captionSide', 'caretColor', 'clear', 'clip',
-    'clipPath', 'color', 'columnCount', 'columnFill', 'columnGap', 'columnRule',
-    'columnRuleColor', 'columnRuleStyle', 'columnRuleWidth', 'columnSpan',
-    'columnWidth', 'columns', 'content', 'counterIncrement', 'counterReset',
-    'cursor', 'direction', 'display', 'emptyCells', 'filter', 'flex',
-    'flexBasis', 'flexDirection', 'flexFlow', 'flexGrow', 'flexShrink',
-    'flexWrap', 'float', 'font', 'fontFamily', 'fontFeatureSettings',
-    'fontKerning', 'fontSize', 'fontSizeAdjust', 'fontStretch', 'fontStyle',
-    'fontSynthesis', 'fontVariant', 'fontVariantCaps', 'fontVariantLigatures',
-    'fontVariantNumeric', 'fontVariantPosition', 'fontWeight', 'gap', 'grid',
-    'gridArea', 'gridAutoColumns', 'gridAutoFlow', 'gridAutoRows', 'gridColumn',
-    'gridColumnEnd', 'gridColumnGap', 'gridColumnStart', 'gridGap', 'gridRow',
-    'gridRowEnd', 'gridRowGap', 'gridRowStart', 'gridTemplate', 'gridTemplateAreas',
-    'gridTemplateColumns', 'gridTemplateRows', 'height', 'hyphens', 'imageRendering',
-    'isolation', 'justifyContent', 'justifyItems', 'justifySelf', 'left',
-    'letterSpacing', 'lineBreak', 'lineHeight', 'listStyle', 'listStyleImage',
-    'listStylePosition', 'listStyleType', 'margin', 'marginBottom', 'marginLeft',
-    'marginRight', 'marginTop', 'mask', 'maskClip', 'maskComposite', 'maskImage',
-    'maskMode', 'maskOrigin', 'maskPosition', 'maskRepeat', 'maskSize', 'maskType',
-    'maxHeight', 'maxWidth', 'minHeight', 'minWidth', 'mixBlendMode', 'objectFit',
-    'objectPosition', 'opacity', 'order', 'orphans', 'outline', 'outlineColor',
-    'outlineOffset', 'outlineStyle', 'outlineWidth', 'overflow', 'overflowWrap',
-    'overflowX', 'overflowY', 'padding', 'paddingBottom', 'paddingLeft',
-    'paddingRight', 'paddingTop', 'pageBreakAfter', 'pageBreakBefore',
-    'pageBreakInside', 'perspective', 'perspectiveOrigin', 'placeContent',
-    'placeItems', 'placeSelf', 'pointerEvents', 'position', 'quotes', 'resize',
-    'right', 'rowGap', 'scrollBehavior', 'tabSize', 'tableLayout', 'textAlign',
-    'textAlignLast', 'textCombineUpright', 'textDecoration', 'textDecorationColor',
-    'textDecorationLine', 'textDecorationStyle', 'textIndent', 'textJustify',
-    'textOrientation', 'textOverflow', 'textShadow', 'textTransform',
-    'textUnderlinePosition', 'top', 'transform', 'transformOrigin', 'transformStyle',
-    'transition', 'transitionDelay', 'transitionDuration', 'transitionProperty',
-    'transitionTimingFunction', 'unicodeBidi', 'userSelect', 'verticalAlign',
-    'visibility', 'whiteSpace', 'widows', 'width', 'willChange', 'wordBreak',
+    'alignContent', 'alignItems', 'alignSelf', 'animation', 'animationDelay', 
+    'animationDirection', 'animationDuration', 'animationFillMode', 
+    'animationIterationCount', 'animationName', 'animationPlayState', 
+    'animationTimingFunction', 'backfaceVisibility', 'background', 
+    'backgroundAttachment', 'backgroundBlendMode', 'backgroundClip', 
+    'backgroundColor', 'backgroundImage', 'backgroundOrigin', 'backgroundPosition', 
+    'backgroundRepeat', 'backgroundSize', 'border', 'borderBottom', 
+    'borderBottomColor', 'borderBottomLeftRadius', 'borderBottomRightRadius', 
+    'borderBottomStyle', 'borderBottomWidth', 'borderCollapse', 'borderColor', 
+    'borderImage', 'borderImageOutset', 'borderImageRepeat', 'borderImageSlice', 
+    'borderImageSource', 'borderImageWidth', 'borderLeft', 'borderLeftColor', 
+    'borderLeftStyle', 'borderLeftWidth', 'borderRadius', 'borderRight', 
+    'borderRightColor', 'borderRightStyle', 'borderRightWidth', 'borderSpacing', 
+    'borderStyle', 'borderTop', 'borderTopColor', 'borderTopLeftRadius', 
+    'borderTopRightRadius', 'borderTopStyle', 'borderTopWidth', 'borderWidth', 
+    'bottom', 'boxDecorationBreak', 'boxShadow', 'boxSizing', 'breakAfter', 
+    'breakBefore', 'breakInside', 'captionSide', 'caretColor', 'clear', 'clip', 
+    'clipPath', 'color', 'columnCount', 'columnFill', 'columnGap', 'columnRule', 
+    'columnRuleColor', 'columnRuleStyle', 'columnRuleWidth', 'columnSpan', 
+    'columnWidth', 'columns', 'content', 'counterIncrement', 'counterReset', 
+    'cursor', 'direction', 'display', 'emptyCells', 'filter', 'flex', 
+    'flexBasis', 'flexDirection', 'flexFlow', 'flexGrow', 'flexShrink', 
+    'flexWrap', 'float', 'font', 'fontFamily', 'fontFeatureSettings', 
+    'fontKerning', 'fontSize', 'fontSizeAdjust', 'fontStretch', 'fontStyle', 
+    'fontSynthesis', 'fontVariant', 'fontVariantCaps', 'fontVariantLigatures', 
+    'fontVariantNumeric', 'fontVariantPosition', 'fontWeight', 'gap', 'grid', 
+    'gridArea', 'gridAutoColumns', 'gridAutoFlow', 'gridAutoRows', 'gridColumn', 
+    'gridColumnEnd', 'gridColumnGap', 'gridColumnStart', 'gridGap', 'gridRow', 
+    'gridRowEnd', 'gridRowGap', 'gridRowStart', 'gridTemplate', 'gridTemplateAreas', 
+    'gridTemplateColumns', 'gridTemplateRows', 'height', 'hyphens', 'imageRendering', 
+    'isolation', 'justifyContent', 'justifyItems', 'justifySelf', 'left', 
+    'letterSpacing', 'lineBreak', 'lineHeight', 'listStyle', 'listStyleImage', 
+    'listStylePosition', 'listStyleType', 'margin', 'marginBottom', 'marginLeft', 
+    'marginRight', 'marginTop', 'mask', 'maskClip', 'maskComposite', 'maskImage', 
+    'maskMode', 'maskOrigin', 'maskPosition', 'maskRepeat', 'maskSize', 'maskType', 
+    'maxHeight', 'maxWidth', 'minHeight', 'minWidth', 'mixBlendMode', 'objectFit', 
+    'objectPosition', 'opacity', 'order', 'orphans', 'outline', 'outlineColor', 
+    'outlineOffset', 'outlineStyle', 'outlineWidth', 'overflow', 'overflowWrap', 
+    'overflowX', 'overflowY', 'padding', 'paddingBottom', 'paddingLeft', 
+    'paddingRight', 'paddingTop', 'pageBreakAfter', 'pageBreakBefore', 
+    'pageBreakInside', 'perspective', 'perspectiveOrigin', 'placeContent', 
+    'placeItems', 'placeSelf', 'pointerEvents', 'position', 'quotes', 'resize', 
+    'right', 'rowGap', 'scrollBehavior', 'tabSize', 'tableLayout', 'textAlign', 
+    'textAlignLast', 'textCombineUpright', 'textDecoration', 'textDecorationColor', 
+    'textDecorationLine', 'textDecorationStyle', 'textIndent', 'textJustify', 
+    'textOrientation', 'textOverflow', 'textShadow', 'textTransform', 
+    'textUnderlinePosition', 'top', 'transform', 'transformOrigin', 'transformStyle', 
+    'transition', 'transitionDelay', 'transitionDuration', 'transitionProperty', 
+    'transitionTimingFunction', 'unicodeBidi', 'userSelect', 'verticalAlign', 
+    'visibility', 'whiteSpace', 'widows', 'width', 'willChange', 'wordBreak', 
     'wordSpacing', 'wordWrap', 'writingMode', 'zIndex'
   ]);
-
+  
   // Merge base and config first
   const merged = { ...baseStyle, ...configStyle };
-
+  
   // Property conflict resolution: longhand properties take precedence over shorthand
   const shorthandMap = {
     'margin': ['marginTop', 'marginRight', 'marginBottom', 'marginLeft'],
@@ -94,7 +693,7 @@ const applyStyles = (baseStyle, configStyle) => {
     'borderStyle': ['borderTopStyle', 'borderRightStyle', 'borderBottomStyle', 'borderLeftStyle'],
     'borderColor': ['borderTopColor', 'borderRightColor', 'borderBottomColor', 'borderLeftColor'],
   };
-
+  
   // If any longhand property exists, remove the shorthand
   Object.keys(shorthandMap).forEach(shorthand => {
     const longhands = shorthandMap[shorthand];
@@ -103,7 +702,7 @@ const applyStyles = (baseStyle, configStyle) => {
       delete merged[shorthand];
     }
   });
-
+  
   // Filter to only valid CSS properties
   Object.keys(merged).forEach(key => {
     const value = merged[key];
@@ -111,7 +710,7 @@ const applyStyles = (baseStyle, configStyle) => {
       validStyles[key] = value;
     }
   });
-
+  
   return validStyles;
 };
 
@@ -119,30 +718,18 @@ const applyStyles = (baseStyle, configStyle) => {
  * Enhanced Flexible Container
  */
 const FlexibleContainer = ({ children, config = {} }) => {
-  // Debug logging for background color issue
-  const finalStyles = applyStyles({
-    width: "fit-content",
-    maxWidth: "100%",
-    padding: "10px",
-    margin: "0",
-    backgroundColor: "transparent",  // Changed from #FFFFFF to transparent
-    fontFamily: "Arial",
-    color: "#000000",
-    boxSizing: "border-box",
-    overflow: "hidden",
-  }, config);
-
-  // Log background color for debugging
-  if (config.backgroundColor !== undefined || finalStyles.backgroundColor !== "transparent") {
-    console.log("[FlexibleContainer] Background Debug:", {
-      configBg: config.backgroundColor,
-      finalBg: finalStyles.backgroundColor,
-      allConfig: config
-    });
-  }
-
   return (
-    <div style={finalStyles}>
+    <div style={applyStyles({
+      width: "fit-content",
+      maxWidth: "100%",
+      padding: "10px",
+      margin: "0",
+      backgroundColor: "#FFFFFF",
+      fontFamily: "Arial",
+      color: "#000000",
+      boxSizing: "border-box",
+      overflow: "hidden",
+    }, config)}>
       {children}
     </div>
   );
@@ -153,7 +740,7 @@ const FlexibleContainer = ({ children, config = {} }) => {
  */
 const FlexibleText = ({ children, config = {}, as = "div" }) => {
   const Element = as; // Can be div, span, p, h1, etc.
-
+  
   return (
     <Element style={applyStyles({
       fontSize: "10px",
@@ -202,7 +789,7 @@ const FlexibleSectionHeader = ({ title, config }) => {
  */
 const FlexibleLayout = ({ children, config = {} }) => {
   const isGrid = config.display === "grid";
-
+  
   return (
     <div style={applyStyles({
       display: "flex",
@@ -281,14 +868,97 @@ const FlexibleBulletList = ({ items = [], styleConfig = {} }) => {
   );
 };
 
+// ========== FLEXIBLE SECTION COMPONENTS (KEEPING ORIGINAL NAMES) ==========
+
+/**
+ * HEADER SECTION - Enhanced with backward compatibility
+ */
+// export const FlexibleHeaderSection = ({ resumeDetails, styleConfig }) => {
+//   const config = styleConfig.header;
+  
+//   return (
+//     <FlexibleContainer config={config.container}>
+//       {/* Main Header Layout */}
+//       <FlexibleLayout config={config.mainLayout}>
+        
+//         {/* Name Section - Enhanced */}
+//         <FlexibleLayout config={config.nameSection}>
+//           <FlexibleText 
+//             config={config.nameConfig || config.nameStyle}
+//             as={config.nameElement || "h1"}
+//           >
+//             {resumeDetails.name || "Your Name"}
+//           </FlexibleText>
+          
+//           {config.showTitle && (
+//             <FlexibleText 
+//               config={config.titleConfig || config.titleStyle}
+//               as={config.titleElement || "div"}
+//             >
+//               {resumeDetails.title || "Your Title"}
+//             </FlexibleText>
+//           )}
+//         </FlexibleLayout>
+        
+//         {/* Contact Section - Enhanced with per-item styling */}
+//         {config.showContact && (
+//           <FlexibleLayout config={config.contactLayout}>
+//             {config.contactOrder?.map((contactType, idx) => {
+//               const value = resumeDetails.contact?.[contactType];
+//               if (!value) return null;
+              
+//               // Get specific config for this contact type (NEW)
+//               const itemConfig = config.contactStyles?.[contactType] || config.contactItemStyle || {};
+//               const iconConfig = config.contactIconStyles?.[contactType] || config.contactIconStyle || {};
+              
+//               return (
+//                 <FlexibleLayout 
+//                   key={idx} 
+//                   config={{ 
+//                     display: "flex", 
+//                     alignItems: "center",
+//                     gap: "0px"
+//                   }}
+//                 >
+//                   {config.showContactIcons && (
+//                     <div style={applyStyles({
+//                       width: "5px",
+//                       height: "5px",
+//                       backgroundColor: "#E74C3C",
+//                       borderRadius: "50%",
+//                       marginRight: "8px",
+//                     }, iconConfig)} />
+//                   )}
+//                   <FlexibleText config={itemConfig}>
+//                     {config.contactIcons?.[contactType] && (
+//                       <span style={{ marginRight: "4px" }}>{config.contactIcons[contactType]}</span>
+//                     )}
+//                     {value}
+//                   </FlexibleText>
+//                 </FlexibleLayout>
+//               );
+//             })}
+//           </FlexibleLayout>
+//         )}
+//       </FlexibleLayout>
+      
+//       {/* Optional Divider */}
+//       {config.showDivider && (
+//         <div style={applyStyles({
+//           borderBottom: config.dividerStyle || "1px solid #000",
+//           marginTop: config.dividerMarginTop || "8px",
+//           marginBottom: config.dividerMarginBottom || "8px",
+//         }, typeof config.dividerStyle === 'object' ? config.dividerStyle : {})} />
+//       )}
+//     </FlexibleContainer>
+//   );
+// };
 
 export const FlexibleHeaderSection = ({ resumeDetails, styleConfig }) => {
   const config = styleConfig.header;
 
   // Helper function to render sections based on order
   const renderSection = (sectionType) => {
-
-
     switch (sectionType) {
       case 'name':
         return (
@@ -370,11 +1040,11 @@ export const FlexibleHeaderSection = ({ resumeDetails, styleConfig }) => {
               padding: config.contactPadding || "0px",
               width: config.contactWidth || "auto",
               flex: config.contactFlex || "initial",
-              order: typeof config.contactOrder === 'number' ? config.contactOrder : 3,
+              order: config.contactOrder ?? 3,
               ...config.contactZone,
             }}
           >
-            {(config.contactItems || config.contactOrder)?.map((type, idx) => {
+            {config.contactItems?.map((type, idx) => {
               const value = resumeDetails.contact?.[type];
               if (!value) return null;
 
@@ -393,27 +1063,14 @@ export const FlexibleHeaderSection = ({ resumeDetails, styleConfig }) => {
                   {config.showContactIcons && (
                     <div
                       style={{
+                        width: config.contactIconSize || "5px",
+                        height: config.contactIconSize || "5px",
+                        borderRadius: config.contactIconBorderRadius || "50%",
+                        backgroundColor: config.contactIconColor || "#E74C3C",
                         marginRight: config.contactIconMarginRight || "8px",
                         marginLeft: config.contactIconMarginLeft || "0px",
-                        display: "flex",
-                        alignItems: "center"
                       }}
-                    >
-                      {(() => {
-                        const IconComponent = contactIconMap[type] || Globe;
-                        // Determine size: if it looks like a "dot" size (<=6), use a default icon size
-                        const rawSize = config.contactIconSize;
-                        const sizeNum = parseInt(rawSize) || 0;
-                        const iconSize = (sizeNum > 6) ? rawSize : 14;
-
-                        return (
-                          <IconComponent
-                            size={iconSize}
-                            color={config.contactIconColor || "#000000"}
-                          />
-                        );
-                      })()}
-                    </div>
+                    />
                   )}
 
                   <FlexibleText config={config.contactItemStyle}>
@@ -456,16 +1113,16 @@ export const FlexibleHeaderSection = ({ resumeDetails, styleConfig }) => {
  */
 export const FlexibleSummarySection = ({ summary, styleConfig }) => {
   const config = styleConfig.summary;
-
+  
   return (
     <FlexibleContainer config={config.container}>
       {config.showTitle && (
-        <FlexibleSectionHeader
-          title={config.titleText || "SUMMARY"}
-          config={config.titleStyle}
+        <FlexibleSectionHeader 
+          title={config.titleText || "SUMMARY"} 
+          config={config.titleStyle} 
         />
       )}
-
+      
       {Array.isArray(summary) ? (
         config.displayType === "bullets" ? (
           <FlexibleBulletList items={summary} styleConfig={config.bulletConfig} />
@@ -490,11 +1147,11 @@ export const FlexibleSummarySection = ({ summary, styleConfig }) => {
  */
 export const FlexibleSkillsSection = ({ skills, styleConfig }) => {
   const config = styleConfig.skills;
-
+  
   // Parse skills based on display mode
   const groupedSkills = {};
   const flatSkills = [];
-
+  
   if (skills && Array.isArray(skills)) {
     skills.forEach(skill => {
       const separator = config.categorySeparator || " - ";
@@ -506,40 +1163,40 @@ export const FlexibleSkillsSection = ({ skills, styleConfig }) => {
       }
     });
   }
-
+  
   return (
     <FlexibleContainer config={config.container}>
       {config.showTitle && (
-        <FlexibleSectionHeader
-          title={config.titleText || "SKILLS"}
-          config={config.titleStyle}
+        <FlexibleSectionHeader 
+          title={config.titleText || "SKILLS"} 
+          config={config.titleStyle} 
         />
       )}
-
+      
       <FlexibleLayout config={config.contentLayout}>
         {/* Display Mode: Categories (DEFAULT) */}
-        {(!config.displayMode || config.displayMode === "categories" || config.displayMode === "text") &&
+        {(!config.displayMode || config.displayMode === "categories" || config.displayMode === "text") && 
           Object.entries(groupedSkills).map(([category, value], idx) => (
-            <div key={idx} style={applyStyles({ display: "flex", flexDirection: "column", marginBottom: config.itemMarginBottom || "8px" }, config.categoryLayout)}>
-              {config.showCategories && (
-                <FlexibleText config={config.categoryStyle}>
-                  {category}
-                  {config.categoryValueSeparator && (
-                    <span style={applyStyles({}, config.separatorStyle || {})}>{config.categoryValueSeparator}</span>
-                  )}
-                </FlexibleText>
-              )}
-              <FlexibleText config={config.valueStyle}>
-                {value}
+          <div key={idx} style={applyStyles({ display: "flex", flexDirection: "column", marginBottom: config.itemMarginBottom || "8px" }, config.categoryLayout)}>
+            {config.showCategories && (
+              <FlexibleText config={config.categoryStyle}>
+                {category}
+                {config.categoryValueSeparator && (
+                  <span style={applyStyles({}, config.separatorStyle || {})}>{config.categoryValueSeparator}</span>
+                )}
               </FlexibleText>
-            </div>
-          ))}
-
+            )}
+            <FlexibleText config={config.valueStyle}>
+              {value}
+            </FlexibleText>
+          </div>
+        ))}
+        
         {/* Display Mode: Tags */}
         {config.displayMode === "tags" && (
           <FlexibleLayout config={config.tagsContainer || { flexWrap: "wrap", gap: "6px" }}>
             {[...Object.keys(groupedSkills), ...flatSkills].map((skill, idx) => (
-              <FlexibleText
+              <FlexibleText 
                 key={idx}
                 config={config.tagStyle || {
                   padding: "4px 10px",
@@ -555,22 +1212,22 @@ export const FlexibleSkillsSection = ({ skills, styleConfig }) => {
             ))}
           </FlexibleLayout>
         )}
-
+        
         {/* Display Mode: List */}
         {config.displayMode === "list" && (
-          <FlexibleBulletList
-            items={[...Object.entries(groupedSkills).map(([k, v]) => `${k}: ${v}`), ...flatSkills]}
-            styleConfig={config.bulletConfig}
+          <FlexibleBulletList 
+            items={[...Object.entries(groupedSkills).map(([k,v]) => `${k}: ${v}`), ...flatSkills]} 
+            styleConfig={config.bulletConfig} 
           />
         )}
-
+        
         {/* Display Mode: Inline */}
         {config.displayMode === "inline" && (
           <FlexibleText config={config.inlineStyle || config.valueStyle}>
             {[...Object.values(groupedSkills), ...flatSkills].join(config.inlineSeparator || ", ")}
           </FlexibleText>
         )}
-
+        
         {/* Ungrouped Skills (for backward compatibility) */}
         {flatSkills.length > 0 && (!config.displayMode || config.displayMode === "categories" || config.displayMode === "text") && (
           <div style={{ marginBottom: config.itemMarginBottom || "8px" }}>
@@ -594,19 +1251,19 @@ export const FlexibleSkillsSection = ({ skills, styleConfig }) => {
  */
 export const FlexibleExperienceSection = ({ experiences, styleConfig }) => {
   const config = styleConfig.experience;
-
+  
   return (
     <FlexibleContainer config={config.container}>
       {config.showTitle && (
-        <FlexibleSectionHeader
-          title={config.titleText || "EXPERIENCE"}
-          config={config.titleStyle}
+        <FlexibleSectionHeader 
+          title={config.titleText || "EXPERIENCE"} 
+          config={config.titleStyle} 
         />
       )}
-
+      
       {experiences.map((exp, idx) => (
         <div key={idx} style={applyStyles({ marginBottom: config.itemMarginBottom || "12px" }, config.itemContainer || {})}>
-
+          
           {/* Custom Header Structure (NEW FEATURE) */}
           {config.headerStructure ? (
             config.headerStructure.map((structure, structIdx) => (
@@ -614,11 +1271,11 @@ export const FlexibleExperienceSection = ({ experiences, styleConfig }) => {
                 {structure.fields?.map((fieldName, fieldIdx) => {
                   const value = exp[fieldName];
                   if (!value && !structure.showEmpty) return null;
-
+                  
                   const fieldStyle = structure.styles?.[fieldName] || {};
                   const prefix = structure.prefix?.[fieldName] || "";
                   const suffix = structure.suffix?.[fieldName] || "";
-
+                  
                   return (
                     <FlexibleText key={fieldIdx} config={fieldStyle}>
                       {prefix}{value}{suffix}
@@ -651,7 +1308,7 @@ export const FlexibleExperienceSection = ({ experiences, styleConfig }) => {
                   </>
                 )}
               </FlexibleLayout>
-
+              
               <FlexibleLayout config={config.subHeaderLayout}>
                 <FlexibleText config={config.companyStyle}>
                   {config.positionFirst ? exp.company : exp.position}
@@ -660,7 +1317,7 @@ export const FlexibleExperienceSection = ({ experiences, styleConfig }) => {
               </FlexibleLayout>
             </>
           )}
-
+          
           {/* Achievements */}
           {config.showAchievements && exp.achievements && (
             <FlexibleBulletList items={exp.achievements} styleConfig={config.bulletConfig} />
@@ -676,26 +1333,19 @@ export const FlexibleExperienceSection = ({ experiences, styleConfig }) => {
  */
 export const FlexibleProjectsSection = ({ projects, styleConfig }) => {
   const config = styleConfig.projects;
-
-  // Debug: Log projects section background config
-  console.log("[Projects Section] Container config:", {
-    containerBg: config.container?.backgroundColor,
-    itemStyleBg: config.itemStyle?.backgroundColor,
-    fullContainer: config.container
-  });
-
+  
   return (
     <FlexibleContainer config={config.container}>
       {config.showTitle && (
-        <FlexibleSectionHeader
-          title={config.titleText || "PROJECTS"}
-          config={config.titleStyle}
+        <FlexibleSectionHeader 
+          title={config.titleText || "PROJECTS"} 
+          config={config.titleStyle} 
         />
       )}
-
+      
       {projects.map((proj, idx) => (
-        <FlexibleContainer
-          key={idx}
+        <FlexibleContainer 
+          key={idx} 
           config={config.itemStyle || { marginBottom: config.itemMarginBottom || "12px" }}
         >
           {/* Project Header */}
@@ -709,24 +1359,24 @@ export const FlexibleProjectsSection = ({ projects, styleConfig }) => {
               </FlexibleText>
             )}
           </FlexibleLayout>
-
+          
           {/* Technologies */}
           {proj.technologies && config.showTechnologies && (
             <FlexibleText config={config.techStyle}>
               {config.techPrefix || ""}{proj.technologies}
             </FlexibleText>
           )}
-
+          
           {/* Link */}
           {proj.link && config.showLink && (
-            <FlexibleText
-              as="a"
+            <FlexibleText 
+              as="a" 
               config={{ ...config.linkStyle, href: proj.link, target: "_blank" }}
             >
               {proj.link}
             </FlexibleText>
           )}
-
+          
           {/* Description */}
           {config.showDescription && proj.description && (
             Array.isArray(proj.description) ? (
@@ -748,26 +1398,19 @@ export const FlexibleProjectsSection = ({ projects, styleConfig }) => {
  */
 export const FlexibleEducationSection = ({ educationList, styleConfig }) => {
   const config = styleConfig.education;
-
-  // Debug: Log education section background config
-  console.log("[Education Section] Container config:", {
-    containerBg: config.container?.backgroundColor,
-    itemStyleBg: config.itemStyle?.backgroundColor,
-    fullContainer: config.container
-  });
-
+  
   return (
     <FlexibleContainer config={config.container}>
       {config.showTitle && (
-        <FlexibleSectionHeader
-          title={config.titleText || "EDUCATION"}
-          config={config.titleStyle}
+        <FlexibleSectionHeader 
+          title={config.titleText || "EDUCATION"} 
+          config={config.titleStyle} 
         />
       )}
-
+      
       {educationList.map((edu, idx) => (
-        <FlexibleContainer
-          key={idx}
+        <FlexibleContainer 
+          key={idx} 
           config={config.itemStyle || { marginBottom: config.itemMarginBottom || "10px" }}
         >
           {/* Custom Field Order (NEW FEATURE) */}
@@ -775,10 +1418,10 @@ export const FlexibleEducationSection = ({ educationList, styleConfig }) => {
             config.fieldOrder.map((field, fieldIdx) => {
               const value = edu[field];
               if (!value && !config.showEmptyFields) return null;
-
+              
               const fieldConfig = config.fieldStyles?.[field] || {};
               const prefix = config.fieldPrefixes?.[field] || "";
-
+              
               return (
                 <FlexibleText key={fieldIdx} config={fieldConfig}>
                   {prefix}{value}
@@ -791,13 +1434,13 @@ export const FlexibleEducationSection = ({ educationList, styleConfig }) => {
               <FlexibleText config={config.degreeStyle}>
                 {edu.degree}
               </FlexibleText>
-
+              
               {edu.institution && config.showInstitution && (
                 <FlexibleText config={config.institutionStyle}>
                   {edu.institution}
                 </FlexibleText>
               )}
-
+              
               <FlexibleLayout config={config.detailsLayout}>
                 {edu.year && (
                   <FlexibleText config={config.detailsStyle}>
@@ -828,16 +1471,16 @@ export const FlexibleEducationSection = ({ educationList, styleConfig }) => {
  */
 export const FlexibleCertificationsSection = ({ certifications, styleConfig }) => {
   const config = styleConfig.certifications;
-
+  
   return (
     <FlexibleContainer config={config.container}>
       {config.showTitle && (
-        <FlexibleSectionHeader
-          title={config.titleText || "CERTIFICATIONS"}
-          config={config.titleStyle}
+        <FlexibleSectionHeader 
+          title={config.titleText || "CERTIFICATIONS"} 
+          config={config.titleStyle} 
         />
       )}
-
+      
       {config.displayType === "list" ? (
         <FlexibleBulletList items={certifications} styleConfig={config.bulletConfig} />
       ) : config.displayType === "grid" ? (
@@ -862,53 +1505,6 @@ export const FlexibleCertificationsSection = ({ certifications, styleConfig }) =
 
 
 
-/**
- * CONTACT SECTION - Fully Flexible
- */
-export const FlexibleContactSection = ({ resumeDetails, styleConfig }) => {
-  const config = styleConfig.contact;
-
-  if (!config) return null;
-
-  return (
-    <FlexibleContainer config={config.container}>
-      {config.showTitle && (
-        <FlexibleSectionHeader title="CONTACT" config={config.titleStyle} />
-      )}
-
-      <FlexibleLayout config={config.contactLayout}>
-        {config.contactOrder.map((contactType, idx) => {
-          const value = resumeDetails.contact?.[contactType];
-          if (!value) return null;
-
-          return (
-            <div key={idx} style={{
-              display: 'flex',
-              alignItems: 'center',
-              marginBottom: config.itemMarginBottom || '0'
-            }}>
-              {config.showContactIcons && contactIconMap[contactType] && (
-                <span style={{
-                  marginRight: "6px",
-                  color: config.contactItemStyle?.color || "#000",
-                  display: "flex",
-                  alignItems: "center"
-                }}>
-                  {React.createElement(contactIconMap[contactType], { size: 12 })}
-                </span>
-              )}
-              <FlexibleText config={config.contactItemStyle}>
-                {value}
-              </FlexibleText>
-            </div>
-          );
-        })}
-      </FlexibleLayout>
-    </FlexibleContainer>
-  );
-};
-
-
 // ==================== MAIN UI EDITOR COMPONENT ====================
 
 const UIEditor = () => {
@@ -916,8 +1512,8 @@ const UIEditor = () => {
   const stageRef = useRef(null);
   const stage2Ref = useRef(null);
   const sectionRefs = useRef({});
-
-
+  
+  
   // State
   const [selectedLine, setSelectedLine] = useState(null);
   const [selectedShape, setSelectedShape] = useState(null);
@@ -935,27 +1531,13 @@ const UIEditor = () => {
   const [sectionImages, setSectionImages] = useState({});
   const [TemplateComponents, setTemplateComponents] = useState(null);
   const [resumeData, setResumeData] = useState(defaultResumeData);
-  const currentResume = useSelector((state) => state.resume.currentResume);
+  const currentResume = useSelector((state)=> state.resume.currentResume);
 
   const [resumeDetails, setResumeDetails] = useState(defaultResumeData);
 
-  // Mobile responsiveness state
-  const [isMobile, setIsMobile] = useState(false);
-  const [activeTab, setActiveTab] = useState('controls'); // 'controls' | 'properties'
-
-  // Mobile detection effect
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  useEffect(() => {
-    if (!currentResume) return;
-    setResumeData(currentResume);
+  useEffect(()=>{
+     if(!currentResume) return;
+     setResumeData(currentResume);
   }, [currentResume])
 
   const TEMPLATES = {
@@ -972,7 +1554,7 @@ const UIEditor = () => {
     setSectionPositions(defaultTemplate.positions || {});
     setLines(defaultTemplate.lines || []);
     setBackgroundShapes(defaultTemplate.shapes || []);
-
+    
     // Initialize IDs
     if (defaultTemplate.lines && defaultTemplate.lines.length > 0) {
       setNextLineId(Math.max(...defaultTemplate.lines.map(l => l.id || 0)) + 1);
@@ -985,31 +1567,30 @@ const UIEditor = () => {
 
   // ==================== USE EFFECTS ====================
 
-  // Initialize template components
-  useEffect(() => {
-    console.log('Initializing template components...');
-
-    setTemplateComponents({
-      header: FlexibleHeaderSection,
-      contact: FlexibleContactSection,
-      summary: FlexibleSummarySection,
-      skills: FlexibleSkillsSection,
-      experience: FlexibleExperienceSection,
-      projects: FlexibleProjectsSection,
-      education: FlexibleEducationSection,
-      certifications: FlexibleCertificationsSection
-    });
-
-    // Initialize section refs
-    const sections = ['header', 'contact', 'summary', 'skills', 'experience', 'education', 'projects', 'certifications'];
-    sections.forEach(section => {
-      if (!sectionRefs.current[section]) {
-        sectionRefs.current[section] = React.createRef();
-      }
-    });
-
-    console.log('Template components initialized');
-  }, []);
+// Initialize template components
+useEffect(() => {
+  console.log('Initializing template components...');
+  
+  setTemplateComponents({
+    header: FlexibleHeaderSection,
+    summary: FlexibleSummarySection,
+    skills: FlexibleSkillsSection,
+    experience: FlexibleExperienceSection,
+    projects: FlexibleProjectsSection,
+    education: FlexibleEducationSection,
+    certifications: FlexibleCertificationsSection
+  });
+  
+  // Initialize section refs
+  const sections = ['header', 'summary', 'skills', 'experience', 'education', 'projects', 'certifications'];
+  sections.forEach(section => {
+    if (!sectionRefs.current[section]) {
+      sectionRefs.current[section] = React.createRef();
+    }
+  });
+  
+  console.log('Template components initialized');
+}, []);
 
 
 
@@ -1028,18 +1609,18 @@ const UIEditor = () => {
   // };
 
   const extractWidthsAndHeightsFromConfig = (config) => {
-    const widths = {};
-    const heights = {};
-    Object.keys(config).forEach(key => {
-      if (config[key]?.container?.width) {
-        widths[key] = config[key].container.width;
-      }
-      if (config[key]?.container?.height) {
-        heights[key] = config[key].container.height;
-      }
-    });
-    return { widths, heights };
-  };
+  const widths = {};
+  const heights = {};
+  Object.keys(config).forEach(key => {
+    if (config[key]?.container?.width) {
+      widths[key] = config[key].container.width;
+    }
+    if (config[key]?.container?.height) {
+      heights[key] = config[key].container.height;
+    }
+  });
+  return { widths, heights };
+};
 
 
   // Handle width change
@@ -1053,28 +1634,28 @@ const UIEditor = () => {
 
   const [sectionHeights, setSectionHeights] = useState({});
 
-  // Add this helper function with your other helper functions
-  const handleHeightChange = (sectionName, value) => {
-    setSectionHeights(prev => ({
-      ...prev,
-      [sectionName]: value
-    }));
-  };
+// Add this helper function with your other helper functions
+const handleHeightChange = (sectionName, value) => {
+  setSectionHeights(prev => ({
+    ...prev,
+    [sectionName]: value
+  }));
+};
 
-  // Add this to apply height
-  const handleHeightBlur = (sectionName) => {
-    const height = sectionHeights[sectionName];
-    setStyleConfig(prev => ({
-      ...prev,
-      [sectionName]: {
-        ...prev[sectionName],
-        container: {
-          ...prev[sectionName]?.container,
-          height: height
-        }
+// Add this to apply height
+const handleHeightBlur = (sectionName) => {
+  const height = sectionHeights[sectionName];
+  setStyleConfig(prev => ({
+    ...prev,
+    [sectionName]: {
+      ...prev[sectionName],
+      container: {
+        ...prev[sectionName]?.container,
+        height: height
       }
-    }));
-  };
+    }
+  }));
+};
 
 
   // Handle width blur (apply the width)
@@ -1108,47 +1689,47 @@ const UIEditor = () => {
 
   // Add these helper methods to your component
 
-  const handleHeaderLayoutChange = (key, value) => {
-    setStyleConfig(prev => ({
-      ...prev,
-      header: {
-        ...prev.header,
-        [key]: value
-      }
-    }));
-  };
-
-  const handleHeaderStyleChange = (styleKey, property, value) => {
-    setStyleConfig(prev => ({
-      ...prev,
-      header: {
-        ...prev.header,
-        [styleKey]: {
-          ...prev.header?.[styleKey],
-          [property]: value
-        }
-      }
-    }));
-  };
-
-  const handleSectionOrderChange = (currentIndex, direction) => {
-    const currentOrder = styleConfig.header?.sectionOrder || ['name', 'title', 'contact'];
-    const newOrder = [...currentOrder];
-
-    if (direction === 'up' && currentIndex > 0) {
-      [newOrder[currentIndex], newOrder[currentIndex - 1]] = [newOrder[currentIndex - 1], newOrder[currentIndex]];
-    } else if (direction === 'down' && currentIndex < newOrder.length - 1) {
-      [newOrder[currentIndex], newOrder[currentIndex + 1]] = [newOrder[currentIndex + 1], newOrder[currentIndex]];
+const handleHeaderLayoutChange = (key, value) => {
+  setStyleConfig(prev => ({
+    ...prev,
+    header: {
+      ...prev.header,
+      [key]: value
     }
+  }));
+};
 
-    setStyleConfig(prev => ({
-      ...prev,
-      header: {
-        ...prev.header,
-        sectionOrder: newOrder
+const handleHeaderStyleChange = (styleKey, property, value) => {
+  setStyleConfig(prev => ({
+    ...prev,
+    header: {
+      ...prev.header,
+      [styleKey]: {
+        ...prev.header?.[styleKey],
+        [property]: value
       }
-    }));
-  };
+    }
+  }));
+};
+
+const handleSectionOrderChange = (currentIndex, direction) => {
+  const currentOrder = styleConfig.header?.sectionOrder || ['name', 'title', 'contact'];
+  const newOrder = [...currentOrder];
+  
+  if (direction === 'up' && currentIndex > 0) {
+    [newOrder[currentIndex], newOrder[currentIndex - 1]] = [newOrder[currentIndex - 1], newOrder[currentIndex]];
+  } else if (direction === 'down' && currentIndex < newOrder.length - 1) {
+    [newOrder[currentIndex], newOrder[currentIndex + 1]] = [newOrder[currentIndex + 1], newOrder[currentIndex]];
+  }
+  
+  setStyleConfig(prev => ({
+    ...prev,
+    header: {
+      ...prev.header,
+      sectionOrder: newOrder
+    }
+  }));
+};
 
   // Reset Layout
   // const resetLayout = () => {
@@ -1158,7 +1739,7 @@ const UIEditor = () => {
   //   setLines(template.lines || []);
   //   setBackgroundShapes(template.backgroundShapes || []);
   //   setZoom(1);
-
+    
   //   // Reset line and shape ID counters
   //   if (template.lines && template.lines.length > 0) {
   //     setNextLineId(Math.max(...template.lines.map(l => l.id)) + 1);
@@ -1174,44 +1755,44 @@ const UIEditor = () => {
 
 
   // Reset Layout - UPDATED
-  const resetLayout = () => {
-    const template = TEMPLATES[currentTemplate];
-    setSectionPositions(template.positions || {});
-
-    const { widths, heights } = extractWidthsAndHeightsFromConfig(template);
-    setSectionWidths(widths);
-    setSectionHeights(heights);
-
-    setLines(template.lines || []);
-    setBackgroundShapes(template.shapes || []);
-    setZoom(1);
-
-    // Reset line and shape ID counters
-    if (template.lines && template.lines.length > 0) {
-      setNextLineId(Math.max(...template.lines.map(l => l.id)) + 1);
-    } else {
-      setNextLineId(1);
-    }
-    if (template.shapes && template.shapes.length > 0) {
-      setNextShapeId(Math.max(...template.shapes.map(s => s.id)) + 1);
-    } else {
-      setNextShapeId(1);
-    }
-  };
+const resetLayout = () => {
+  const template = TEMPLATES[currentTemplate];
+  setSectionPositions(template.positions || {});
+  
+  const { widths, heights } = extractWidthsAndHeightsFromConfig(template);
+  setSectionWidths(widths);
+  setSectionHeights(heights);
+  
+  setLines(template.lines || []);
+  setBackgroundShapes(template.shapes || []);
+  setZoom(1);
+  
+  // Reset line and shape ID counters
+  if (template.lines && template.lines.length > 0) {
+    setNextLineId(Math.max(...template.lines.map(l => l.id)) + 1);
+  } else {
+    setNextLineId(1);
+  }
+  if (template.shapes && template.shapes.length > 0) {
+    setNextShapeId(Math.max(...template.shapes.map(s => s.id)) + 1);
+  } else {
+    setNextShapeId(1);
+  }
+};
 
   // Download as image
   const downloadResume = () => {
     if (!stageRef.current) return;
-
-    const uri1 = stageRef.current.toDataURL({ pixelRatio: 5 });
+    
+    const uri1 = stageRef.current.toDataURL({ pixelRatio: 3 });
     const link1 = document.createElement('a');
     link1.download = 'resume-page1.png';
     link1.href = uri1;
     link1.click();
-
+    
     if (showPage2 && stage2Ref.current) {
       setTimeout(() => {
-        const uri2 = stage2Ref.current.toDataURL({ pixelRatio: 5 });
+        const uri2 = stage2Ref.current.toDataURL({ pixelRatio: 3 });
         const link2 = document.createElement('a');
         link2.download = 'resume-page2.png';
         link2.href = uri2;
@@ -1233,18 +1814,18 @@ const UIEditor = () => {
   const getElementsForPage = (pageNum) => {
     const pageStart = (pageNum - 1) * 842;
     const pageEnd = pageNum * 842;
-
+    
     return {
       sections: Object.entries(sectionPositions || {}).filter(([_, pos]) => {
         return pos && pos.y >= pageStart && pos.y < pageEnd;
       }),
       lines: (lines || []).filter(line => {
-        return (line.y1 >= pageStart && line.y1 < pageEnd) ||
-          (line.y2 >= pageStart && line.y2 < pageEnd);
+        return (line.y1 >= pageStart && line.y1 < pageEnd) || 
+               (line.y2 >= pageStart && line.y2 < pageEnd);
       }),
       shapes: (backgroundShapes || []).filter(shape => {
         return (shape.y >= pageStart && shape.y < pageEnd) ||
-          (shape.y + shape.height > pageStart && shape.y < pageEnd);
+               (shape.y + shape.height > pageStart && shape.y < pageEnd);
       })
     };
   };
@@ -1268,7 +1849,7 @@ const UIEditor = () => {
   //   setSelectedLine(null);
   //   setSelectedShape(null);
   //   setSelectedSection(null);
-
+    
   //   // Reset counters
   //   if (template.lines && template.lines.length > 0) {
   //     setNextLineId(Math.max(...template.lines.map(l => l.id)) + 1);
@@ -1284,36 +1865,36 @@ const UIEditor = () => {
 
 
   const handleTemplateSwitch = (templateName) => {
-    setCurrentTemplate(templateName);
-    const template = TEMPLATES[templateName];
-    console.log(template);
-
-    setStyleConfig(template);
-    setSectionPositions(template.positions || {});
-
-    const { widths, heights } = extractWidthsAndHeightsFromConfig(template);
-    setSectionWidths(widths);
-    setSectionHeights(heights);
-
-    setLines(template.lines || []);
-    setBackgroundShapes(template.shapes || []);
-    setZoom(1);
-    setSelectedLine(null);
-    setSelectedShape(null);
-    setSelectedSection(null);
-
-    // Reset counters
-    if (template.lines && template.lines.length > 0) {
-      setNextLineId(Math.max(...template.lines.map(l => l.id)) + 1);
-    } else {
-      setNextLineId(1);
-    }
-    if (template.shapes && template.shapes.length > 0) {
-      setNextShapeId(Math.max(...template.shapes.map(s => s.id)) + 1);
-    } else {
-      setNextShapeId(1);
-    }
-  };
+  setCurrentTemplate(templateName);
+  const template = TEMPLATES[templateName];
+  console.log(template);
+  
+  setStyleConfig(template);
+  setSectionPositions(template.positions || {});
+  
+  const { widths, heights } = extractWidthsAndHeightsFromConfig(template);
+  setSectionWidths(widths);
+  setSectionHeights(heights);
+  
+  setLines(template.lines || []);
+  setBackgroundShapes(template.shapes || []);
+  setZoom(1);
+  setSelectedLine(null);
+  setSelectedShape(null);
+  setSelectedSection(null);
+  
+  // Reset counters
+  if (template.lines && template.lines.length > 0) {
+    setNextLineId(Math.max(...template.lines.map(l => l.id)) + 1);
+  } else {
+    setNextLineId(1);
+  }
+  if (template.shapes && template.shapes.length > 0) {
+    setNextShapeId(Math.max(...template.shapes.map(s => s.id)) + 1);
+  } else {
+    setNextShapeId(1);
+  }
+};
 
 
 
@@ -1347,7 +1928,7 @@ const UIEditor = () => {
 
   // Update line property
   const updateLine = (id, property, value) => {
-    setLines(lines.map(line =>
+    setLines(lines.map(line => 
       line.id === id ? { ...line, [property]: value } : line
     ));
   };
@@ -1357,8 +1938,8 @@ const UIEditor = () => {
     const step = 10;
     setLines(lines.map(line => {
       if (line.id !== id) return line;
-
-      switch (direction) {
+      
+      switch(direction) {
         case 'up':
           return { ...line, y1: line.y1 - step, y2: line.y2 - step };
         case 'down':
@@ -1378,7 +1959,7 @@ const UIEditor = () => {
     const step = 20;
     setLines(lines.map(line => {
       if (line.id !== id) return line;
-
+      
       if (line.orientation === 'horizontal') {
         return {
           ...line,
@@ -1395,14 +1976,14 @@ const UIEditor = () => {
 
   // Handle line drag end
   const handleLineDragEnd = (id, newPos) => {
-    setLines(lines.map(line =>
+    setLines(lines.map(line => 
       line.id === id ? { ...line, ...newPos } : line
     ));
   };
 
   // Handle line update
   const handleLineUpdate = (id, updates) => {
-    setLines(lines.map(line =>
+    setLines(lines.map(line => 
       line.id === id ? { ...line, ...updates } : line
     ));
   };
@@ -1436,21 +2017,21 @@ const UIEditor = () => {
 
   // Update background shape property
   const updateBackgroundShape = (id, property, value) => {
-    setBackgroundShapes(backgroundShapes.map(shape =>
+    setBackgroundShapes(backgroundShapes.map(shape => 
       shape.id === id ? { ...shape, [property]: value } : shape
     ));
   };
 
   // Handle shape drag end
   const handleShapeDragEnd = (id, newPos) => {
-    setBackgroundShapes(backgroundShapes.map(shape =>
+    setBackgroundShapes(backgroundShapes.map(shape => 
       shape.id === id ? { ...shape, x: newPos.x, y: newPos.y } : shape
     ));
   };
 
   // Handle shape update
   const handleShapeUpdate = (id, updates) => {
-    setBackgroundShapes(backgroundShapes.map(shape =>
+    setBackgroundShapes(backgroundShapes.map(shape => 
       shape.id === id ? { ...shape, ...updates } : shape
     ));
   };
@@ -1468,100 +2049,86 @@ const UIEditor = () => {
     }));
   };
 
-
+ 
   // Handle section transform - COMPLETE VERSION
-  const handleSectionTransform = (sectionName, newAttrs) => {
-    console.log('Transform:', sectionName, newAttrs); // Debug log
-
-    setSectionPositions(prev => ({
+const handleSectionTransform = (sectionName, newAttrs) => {
+  console.log('Transform:', sectionName, newAttrs); // Debug log
+  
+  setSectionPositions(prev => ({
+    ...prev,
+    [sectionName]: {
+      x: newAttrs.x,
+      y: newAttrs.y
+    }
+  }));
+  
+  // Update WIDTH
+  if (newAttrs.width) {
+    const widthPx = `${Math.round(newAttrs.width)}px`;
+    
+    setSectionWidths(prev => ({
+      ...prev,
+      [sectionName]: widthPx
+    }));
+    
+    setStyleConfig(prev => ({
       ...prev,
       [sectionName]: {
-        x: newAttrs.x,
-        y: newAttrs.y
+        ...prev[sectionName],
+        container: {
+          ...prev[sectionName]?.container,
+          width: widthPx
+        }
       }
     }));
-
-    // Update WIDTH
-    if (newAttrs.width) {
-      const widthPx = `${Math.round(newAttrs.width)}px`;
-
-      setSectionWidths(prev => ({
-        ...prev,
-        [sectionName]: widthPx
-      }));
-
-      setStyleConfig(prev => ({
-        ...prev,
-        [sectionName]: {
-          ...prev[sectionName],
-          container: {
-            ...prev[sectionName]?.container,
-            width: widthPx
-          }
+  }
+  
+  // Update HEIGHT
+  if (newAttrs.height) {
+    const heightPx = `${Math.round(newAttrs.height)}px`;
+    
+    setSectionHeights(prev => ({
+      ...prev,
+      [sectionName]: heightPx
+    }));
+    
+    setStyleConfig(prev => ({
+      ...prev,
+      [sectionName]: {
+        ...prev[sectionName],
+        container: {
+          ...prev[sectionName]?.container,
+          height: heightPx
         }
-      }));
-    }
+      }
+    }));
+  }
+};
 
-    // Update HEIGHT
-    if (newAttrs.height) {
-      const heightPx = `${Math.round(newAttrs.height)}px`;
-
-      setSectionHeights(prev => ({
-        ...prev,
-        [sectionName]: heightPx
-      }));
-
-      setStyleConfig(prev => ({
-        ...prev,
-        [sectionName]: {
-          ...prev[sectionName],
-          container: {
-            ...prev[sectionName]?.container,
-            height: heightPx
-          }
-        }
-      }));
-    }
-  };
-
-  // Auto-flow sections - WITH PAGINATION
+  // Auto-flow sections
   const autoFlowSections = () => {
     let currentY = 50;
     const spacing = 20;
-    const PAGE_HEIGHT = 842;
-    const PAGE_MARGIN = 50;
-    let currentPage = 1;
-
-    // Sort by current Y position to maintain relative order
     const sortedSections = Object.keys(sectionPositions).sort((a, b) => {
       const posA = sectionPositions[a];
       const posB = sectionPositions[b];
       return (posA?.y || 0) - (posB?.y || 0);
     });
-
+    
     const newPositions = {};
-
+    
     sortedSections.forEach(sectionName => {
       const img = sectionImages[sectionName];
       const height = img ? img.height : 100;
-      const currentX = sectionPositions[sectionName]?.x || 40;
-
-      // Check if we need to break to next page
-      // If currentY + height exceeds page boundary
-      if (currentPage === 1 && (currentY + height) > (PAGE_HEIGHT - PAGE_MARGIN)) {
-        currentPage = 2;
-        currentY = PAGE_HEIGHT + PAGE_MARGIN; // Start at Page 2 top (842 + 50)
-        setShowPage2(true);
-      }
-
+      
       newPositions[sectionName] = {
-        x: currentX, // Keep X position (respect columns)
+        x: sectionPositions[sectionName]?.x || 40,
         y: currentY
       };
-
+      
       currentY += height + spacing;
     });
-
+    
     setSectionPositions(newPositions);
   };
 
@@ -1595,27 +2162,27 @@ const UIEditor = () => {
             const node = e.target;
             node.scaleX(1);
             node.scaleY(1);
-
+            
             const dx = node.x();
             const dy = node.y();
-
+            
             onDragEnd(line.id, {
               x1: line.x1 + dx,
               y1: line.y1 + dy,
               x2: line.x2 + dx,
               y2: line.y2 + dy
             });
-
+            
             node.position({ x: 0, y: 0 });
           }}
           onTransformEnd={() => {
             const node = lineRef.current;
             const scaleX = node.scaleX();
             const scaleY = node.scaleY();
-
+            
             node.scaleX(1);
             node.scaleY(1);
-
+            
             onUpdate(line.id, {
               x2: line.x1 + (line.x2 - line.x1) * scaleX,
               y2: line.y1 + (line.y2 - line.y1) * scaleY
@@ -1667,10 +2234,10 @@ const UIEditor = () => {
             const node = shapeRef.current;
             const scaleX = node.scaleX();
             const scaleY = node.scaleY();
-
+            
             node.scaleX(1);
             node.scaleY(1);
-
+            
             onUpdate(shape.id, {
               width: Math.max(10, Math.round(shape.width * scaleX)),
               height: Math.max(10, Math.round(shape.height * scaleY))
@@ -1683,191 +2250,212 @@ const UIEditor = () => {
   };
 
   // Draggable Section Component - WITH VISIBLE RESIZE HANDLES
-  const DraggableSection = ({ sectionName, image, position, onDragEnd, onTransform, isSelected, onSelect }) => {
-    const imageRef = useRef();
-    const trRef = useRef();
+const DraggableSection = ({ sectionName, image, position, onDragEnd, onTransform, isSelected, onSelect }) => {
+  const imageRef = useRef();
+  const trRef = useRef();
 
-    useEffect(() => {
-      if (isSelected && trRef.current && imageRef.current) {
-        trRef.current.nodes([imageRef.current]);
-        trRef.current.getLayer().batchDraw();
-      }
-    }, [isSelected]);
+  useEffect(() => {
+    if (isSelected && trRef.current && imageRef.current) {
+      trRef.current.nodes([imageRef.current]);
+      trRef.current.getLayer().batchDraw();
+    }
+  }, [isSelected]);
 
-    if (!image) return null;
+  if (!image) return null;
 
-    return (
-      <>
-        <KonvaImage
-          ref={imageRef}
-          image={image}
-          x={position.x}
-          y={position.y}
-          draggable
-          onClick={onSelect}
-          onTap={onSelect}
-          onDragEnd={(e) => {
-            onDragEnd(sectionName, {
-              x: Math.round(e.target.x()),
-              y: Math.round(e.target.y())
-            });
-          }}
-          onTransformEnd={() => {
-            const node = imageRef.current;
-            const scaleX = node.scaleX();
-            const scaleY = node.scaleY();
-
-            const newWidth = Math.max(50, Math.round(node.width() * scaleX));
-            const newHeight = Math.max(20, Math.round(node.height() * scaleY));
-
-            onTransform(sectionName, {
-              x: Math.round(node.x()),
-              y: Math.round(node.y()),
-              width: newWidth,
-              height: newHeight
-            });
-
-            node.scaleX(1);
-            node.scaleY(1);
+  return (
+    <>
+      <KonvaImage
+        ref={imageRef}
+        image={image}
+        x={position.x}
+        y={position.y}
+        draggable
+        onClick={onSelect}
+        onTap={onSelect}
+        onDragEnd={(e) => {
+          onDragEnd(sectionName, {
+            x: Math.round(e.target.x()),
+            y: Math.round(e.target.y())
+          });
+        }}
+        onTransformEnd={() => {
+          const node = imageRef.current;
+          const scaleX = node.scaleX();
+          const scaleY = node.scaleY();
+          
+          const newWidth = Math.max(50, Math.round(node.width() * scaleX));
+          const newHeight = Math.max(20, Math.round(node.height() * scaleY));
+          
+          onTransform(sectionName, {
+            x: Math.round(node.x()),
+            y: Math.round(node.y()),
+            width: newWidth,
+            height: newHeight
+          });
+          
+          node.scaleX(1);
+          node.scaleY(1);
+        }}
+      />
+      {isSelected && (
+        <Transformer
+          ref={trRef}
+          rotateEnabled={false}
+          keepRatio={false}
+          enabledAnchors={[
+            'top-left',
+            'top-center', 
+            'top-right',
+            'middle-right',
+            'bottom-right',
+            'bottom-center',
+            'bottom-left',
+            'middle-left'
+          ]}
+          // Make anchors MORE VISIBLE
+          anchorSize={10}
+          anchorStroke="#3b82f6"
+          anchorFill="#ffffff"
+          anchorStrokeWidth={2}
+          anchorCornerRadius={2}
+          borderStroke="#3b82f6"
+          borderStrokeWidth={2}
+          borderDash={[4, 4]}
+          boundBoxFunc={(oldBox, newBox) => {
+            // Minimum sizes
+            if (newBox.width < 50) {
+              newBox.width = 50;
+            }
+            if (newBox.height < 20) {
+              newBox.height = 20;
+            }
+            return newBox;
           }}
         />
-        {isSelected && (
-          <Transformer
-            ref={trRef}
-            rotateEnabled={false}
-            keepRatio={false}
-            enabledAnchors={[
-              'top-left',
-              'top-center',
-              'top-right',
-              'middle-right',
-              'bottom-right',
-              'bottom-center',
-              'bottom-left',
-              'middle-left'
-            ]}
-            // Make anchors MORE VISIBLE
-            anchorSize={10}
-            anchorStroke="#3b82f6"
-            anchorFill="#ffffff"
-            anchorStrokeWidth={2}
-            anchorCornerRadius={2}
-            borderStroke="#3b82f6"
-            borderStrokeWidth={2}
-            borderDash={[4, 4]}
-            boundBoxFunc={(oldBox, newBox) => {
-              // Minimum sizes
-              if (newBox.width < 50) {
-                newBox.width = 50;
-              }
-              if (newBox.height < 20) {
-                newBox.height = 20;
-              }
-              return newBox;
-            }}
-          />
-        )}
-      </>
-    );
-  };
+      )}
+    </>
+  );
+};
 
 
 
   // ==================== USE EFFECTS ====================
 
   // Initialize template components
-
+ 
 
   useEffect(() => {
-    if (!TemplateComponents || !resumeData) return;
+  if (!TemplateComponents || !resumeData) return;
 
-    const renderSectionToImage = async (sectionName) => {
-      const ref = sectionRefs.current[sectionName];
-      if (!ref?.current) {
-        console.warn(`No ref found for ${sectionName}`);
+  const renderSectionWithEngine = (sectionName) => {
+    const ref = sectionRefs.current[sectionName];
+    if (!ref?.current) return;
+
+    const element = ref.current;
+    const width = element.offsetWidth || 515;
+    const height = element.offsetHeight || 200;
+
+    console.log(`🎨 Rendering ${sectionName}: ${width}x${height}`);
+
+    const canvas = document.createElement('canvas');
+    const engine = new CanvasLayoutEngine(canvas, { scale: 6 });
+    engine.initialize(width, height);
+
+    let layoutTree;
+
+    switch (sectionName) {
+      case 'header':
+        layoutTree = buildHeaderLayout(resumeData, styleConfig.header);
+        console.log('Header layoutTree:', layoutTree);
+        break;
+
+      case 'skills':
+        layoutTree = buildSkillsSection(resumeData.skills || []);
+        console.log('Skills layoutTree:', layoutTree);
+        break;
+
+      case 'experience':
+        layoutTree = buildExperienceSection(resumeData.experiences || []);
+        console.log('Experience layoutTree:', layoutTree);
+        break;
+
+      case 'projects':
+        layoutTree = buildProjectsSection(resumeData.projects || []);
+        console.log('Projects layoutTree:', layoutTree);
+        break;
+
+      case 'summary':
+        const summaryText = resumeData.resumeDetails?.summary || '';
+        layoutTree = new BlockNode({ padding: 8 }, [
+          new TextNode(summaryText, {
+            font: `${parseInt(styleConfig.summary?.bodyStyle?.fontSize) || 12}px Arial`,
+            color: styleConfig.summary?.bodyStyle?.color || '#000',
+            lineHeight: 16
+          })
+        ]);
+        console.log('Summary layoutTree:', layoutTree);
+        break;
+
+      case 'education':
+        layoutTree = buildEducationSection(resumeData.educationList || []);
+        console.log('Education layoutTree:', layoutTree);
+        break;
+
+      case 'certifications':
+        layoutTree = buildCertificationsSection(resumeData.certifications || []);
+        console.log('Certifications layoutTree:', layoutTree);
+        break;
+
+      default:
         return;
-      }
+    }
 
-      const element = ref.current;
+    // Handle null layoutTree (when section is empty)
+    if (!layoutTree) {
+      console.warn(`⚠️ ${sectionName} layoutTree is null/undefined`);
+      return;
+    }
 
-      try {
-        // Wait for fonts to load
-        await document.fonts.ready;
+    try {
+  console.log(`🖼️ About to render ${sectionName}...`);
+  engine.renderLayoutTree(layoutTree, { x: 0, y: 0, width, height });
+  
+  // ✅ USE toDataURL() instead of toImage()
+  const dataURL = engine.toDataURL('image/png', 1.0);
+  console.log(`✅ ${sectionName} dataURL length:`, dataURL?.length);
+  
+  if (!dataURL || typeof dataURL !== 'string' || !dataURL.startsWith('data:image')) {
+    console.error(`❌ Invalid dataURL for ${sectionName}:`, dataURL);
+    return;
+  }
 
-        // Force layout recalculation
-        element.offsetHeight; // Trigger reflow
+  const img = new Image();
+  img.width = width;
+  img.height = height;
+  img.onload = () => {
+    console.log(`✅ Image loaded successfully for ${sectionName}`);
+    setSectionImages(prev => ({ ...prev, [sectionName]: img }));
+  };
+  img.onerror = (e) => {
+    console.error(`❌ Image load failed for ${sectionName}:`, e);
+  };
+  img.src = dataURL;
+} catch (err) {
+  console.error(`❌ Error rendering ${sectionName}:`, err);
+  console.error('Stack:', err.stack);
+}
+  };
 
-        // Small delay to ensure all styles are applied
-        await new Promise(resolve => setTimeout(resolve, 100));
+  const timer = setTimeout(() => {
+    console.log('🚀 Starting render for all sections...');
+    console.log('Available sections:', Object.keys(sectionRefs.current));
+    console.log('Resume data:', resumeData);
+    Object.keys(sectionRefs.current).forEach(renderSectionWithEngine);
+  }, 300);
 
-        // Capture with proper options
-        const canvas = await html2canvas(element, {
-          backgroundColor: null,
-          scale: (window.devicePixelRatio || 1) * 10, // Improved quality as requested
-          logging: false,
-          useCORS: true,
-          allowTaint: true,
-          height: element.offsetHeight,
-
-          letterRendering: true,
-          imageTimeout: 0,
-
-          onclone: (clonedDoc) => {
-            const clonedElement = clonedDoc.querySelector(`[data-section="${sectionName}"]`);
-            if (clonedElement) {
-              clonedElement.style.opacity = '1';
-              clonedElement.style.visibility = 'visible';
-              clonedElement.style.display = 'block';
-            }
-          }
-        });
-
-        // Convert canvas to image
-        const img = new Image();
-        img.width = element.offsetWidth;
-        img.height = element.offsetHeight;
-
-        img.onload = () => {
-          console.log(`✓ Rendered ${sectionName}: ${img.width}x${img.height}`);
-          setSectionImages(prev => ({ ...prev, [sectionName]: img }));
-        };
-
-        img.onerror = (err) => {
-          console.error(`Failed to render ${sectionName}:`, err);
-        };
-
-        img.src = canvas.toDataURL('image/png', 1.0);
-
-      } catch (error) {
-        console.error(`Error rendering ${sectionName}:`, error);
-      }
-    };
-
-    // Render all sections sequentially
-    const renderAllSections = async () => {
-      const sections = Object.keys(sectionRefs.current);
-
-      for (const sectionName of sections) {
-        await renderSectionToImage(sectionName);
-      }
-
-      console.log('✓ All sections rendered');
-    };
-
-    // Wait for React to render components, then capture
-    const timer = setTimeout(() => {
-      renderAllSections();
-    }, 500);
-
-    return () => clearTimeout(timer);
-    // ❌ CRITICAL: Add ALL these dependencies so preview updates when you change styles
-  }, [
-    TemplateComponents,
-    styleConfig,        // ← This makes it re-render when you change styles in panel
-    resumeData,
-    sectionWidths,      // ← Updates when width changes
-    sectionHeights      // ← Updates when height changes
-  ]);
+  return () => clearTimeout(timer);
+}, [TemplateComponents, styleConfig, resumeData, sectionWidths, sectionHeights]);
 
 
 
@@ -1889,37 +2477,18 @@ const UIEditor = () => {
 
   return (
     <div className="editor-container">
-      {/* Mobile Tab Navigation */}
-      {isMobile && (
-        <div className="mobile-tabs">
-          <button
-            className={`mobile-tab ${activeTab === 'controls' ? 'active' : ''}`}
-            onClick={() => setActiveTab('controls')}
-          >
-            Controls
-          </button>
-          <button
-            className={`mobile-tab ${activeTab === 'properties' ? 'active' : ''}`}
-            onClick={() => setActiveTab('properties')}
-          >
-            Styles
-          </button>
-        </div>
-      )}
-
       {/* Hidden rendering area */}
 
 
-      {/* Hidden rendering area - NOW VISIBLE FOR COMPARISON */}
-      <div className="hidden-render" style={{ position: 'fixed', right: '10px', top: '100px', visibility: 'hidden', width: '794px', background: 'white', border: '3px solid #ff6b6b', borderRadius: '8px', padding: '10px', maxHeight: '80vh', overflowY: 'auto', zIndex: -10000, pointerEvents: 'none' }}>
+      {/* Hidden rendering area */}
+      <div className="hidden-render" style={{ position: 'absolute', left: '-100000x', top: '-10000px', visibility: 'none', width: '1050px', background: 'white' }}>
         {TemplateComponents && Object.entries(sectionRefs.current).map(([key, ref]) => {
           const Component = TemplateComponents[key];
           if (!Component) return null;
-
+          
           // Map data according to your FlexibleSection component props
           const propsMap = {
             header: { resumeDetails: resumeData?.resumeDetails, styleConfig: styleConfig },
-            contact: { resumeDetails: resumeData?.resumeDetails, styleConfig: styleConfig },
             summary: { summary: resumeData?.resumeDetails?.summary, styleConfig: styleConfig },
             skills: { skills: resumeData?.skills, styleConfig: styleConfig },
             experience: { experiences: resumeData?.experiences, styleConfig: styleConfig },
@@ -1927,12 +2496,12 @@ const UIEditor = () => {
             education: { educationList: resumeData?.educationList, styleConfig: styleConfig },
             certifications: { certifications: resumeData?.certifications, styleConfig: styleConfig }
           };
-
+          
           return (
             // <div key={key} ref={ref} style={{ width: styleConfig[key]?.container?.width || 'auto' }}>
             //   <Component {...propsMap[key]} />
             // </div>
-            <div key={key} ref={ref} data-section={key} style={{
+            <div key={key} ref={ref} style={{ 
               width: styleConfig[key]?.container?.width || 'auto',
               height: styleConfig[key]?.container?.height || 'auto',
               minHeight: styleConfig[key]?.container?.height || 'auto',
@@ -1941,8 +2510,8 @@ const UIEditor = () => {
               boxSizing: 'border-box',
               position: 'relative',
               minWidth: 0,
-            }}>
-              <Component {...propsMap[key]} />
+             }}>
+                <Component {...propsMap[key]} />
             </div>
           );
         })}
@@ -1951,14 +2520,14 @@ const UIEditor = () => {
 
 
       {/* LEFT PANEL - Section Controls */}
-      <div className={`left-panel ${isMobile && activeTab !== 'controls' ? 'mobile-hidden' : ''}`}>
+      <div className="left-panel">
         <h3 className="panel-title">TEMPLATE SELECT</h3>
-
+        
         {TEMPLATES && Object.keys(TEMPLATES).length > 0 && (
           <div className="control-group">
             <label className="control-label">Choose Template</label>
-            <select
-              value={currentTemplate}
+            <select 
+              value={currentTemplate} 
               onChange={(e) => handleTemplateSwitch(e.target.value)}
               className="control-select"
             >
@@ -1976,57 +2545,57 @@ const UIEditor = () => {
         <button onClick={addShape} className="btn-primary full-width">
           + ADD BACKGROUND SHAPE
         </button>
-
+        
         {backgroundShapes.length > 0 && backgroundShapes.map(shape => (
           <div key={shape.id} className={`shape-control ${selectedShape === shape.id ? 'selected' : ''}`}>
             <div className="line-header">
               <span className="line-label">{shape.label}</span>
               <button onClick={() => deleteBackgroundShape(shape.id)} className="btn-delete">✕</button>
             </div>
-
+            
             <div className="shape-properties">
               <div className="property-control">
                 <label className="control-label">X Position</label>
-                <input
-                  type="number"
-                  value={shape.x}
-                  onChange={(e) => updateBackgroundShape(shape.id, 'x', parseInt(e.target.value))}
+                <input 
+                  type="number" 
+                  value={shape.x} 
+                  onChange={(e) => updateBackgroundShape(shape.id, 'x', parseInt(e.target.value))} 
                   className="control-input"
                 />
               </div>
               <div className="property-control">
                 <label className="control-label">Y Position</label>
-                <input
-                  type="number"
-                  value={shape.y}
-                  onChange={(e) => updateBackgroundShape(shape.id, 'y', parseInt(e.target.value))}
+                <input 
+                  type="number" 
+                  value={shape.y} 
+                  onChange={(e) => updateBackgroundShape(shape.id, 'y', parseInt(e.target.value))} 
                   className="control-input"
                 />
               </div>
               <div className="property-control">
                 <label className="control-label">Width</label>
-                <input
-                  type="number"
-                  value={shape.width}
-                  onChange={(e) => updateBackgroundShape(shape.id, 'width', parseInt(e.target.value))}
+                <input 
+                  type="number" 
+                  value={shape.width} 
+                  onChange={(e) => updateBackgroundShape(shape.id, 'width', parseInt(e.target.value))} 
                   className="control-input"
                 />
               </div>
               <div className="property-control">
                 <label className="control-label">Height</label>
-                <input
-                  type="number"
-                  value={shape.height}
-                  onChange={(e) => updateBackgroundShape(shape.id, 'height', parseInt(e.target.value))}
+                <input 
+                  type="number" 
+                  value={shape.height} 
+                  onChange={(e) => updateBackgroundShape(shape.id, 'height', parseInt(e.target.value))} 
                   className="control-input"
                 />
               </div>
               <div className="property-control">
                 <label className="control-label">Color</label>
-                <input
-                  type="color"
-                  value={shape.color}
-                  onChange={(e) => updateBackgroundShape(shape.id, 'color', e.target.value)}
+                <input 
+                  type="color" 
+                  value={shape.color} 
+                  onChange={(e) => updateBackgroundShape(shape.id, 'color', e.target.value)} 
                   className="control-color"
                 />
               </div>
@@ -2049,13 +2618,13 @@ const UIEditor = () => {
                   {isTransparent && <span className="transparent-badge">TRANSPARENT</span>}
                   {isOnPage2 && <span className="transparent-badge" style={{ background: '#3b82f6' }}>PAGE 2</span>}
                 </summary>
-
-                <div className="position-controls-wrapper">
-                  <div className="position-grid-layout">
+              
+                <div className="position-controls" style={{ marginBottom: '12px', padding: '8px', background: '#f8f9fa', borderRadius: '4px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
                     <div className="control-item">
                       <label className="control-label-small">X Position</label>
-                      <input
-                        type="number"
+                      <input 
+                        type="number" 
                         value={Math.round(position.x)}
                         onChange={(e) => {
                           setSectionPositions(p => ({
@@ -2068,8 +2637,8 @@ const UIEditor = () => {
                     </div>
                     <div className="control-item">
                       <label className="control-label-small">Y Position</label>
-                      <input
-                        type="number"
+                      <input 
+                        type="number" 
                         value={Math.round(position.y)}
                         onChange={(e) => {
                           setSectionPositions(p => ({
@@ -2089,7 +2658,8 @@ const UIEditor = () => {
                           [sectionName]: { ...p[sectionName], y: 50 }
                         }));
                       }}
-                      className="btn-secondary btn-page-nav"
+                      className="btn-secondary"
+                      style={{ fontSize: '10px', padding: '4px 8px', flex: 1 }}
                     >
                       → Page 1
                     </button>
@@ -2101,7 +2671,8 @@ const UIEditor = () => {
                         }));
                         setShowPage2(true);
                       }}
-                      className="btn-secondary btn-page-nav"
+                      className="btn-secondary"
+                      style={{ fontSize: '10px', padding: '4px 8px', flex: 1 }}
                     >
                       → Page 2
                     </button>
@@ -2111,37 +2682,37 @@ const UIEditor = () => {
                 <div className="section-controls-grid">
                   <div className="control-item">
                     <label className="control-label-small">Width (px)</label>
-                    <input
-                      type="text"
-                      value={sectionWidths[sectionName]}
-                      onChange={(e) => handleWidthChange(sectionName, e.target.value)}
+                    <input 
+                      type="text" 
+                      value={sectionWidths[sectionName]} 
+                      onChange={(e) => handleWidthChange(sectionName, e.target.value)} 
                       onBlur={() => handleWidthBlur(sectionName)}
                       className="control-input-small"
                       placeholder="Width"
                     />
                   </div>
 
+      
 
+<div className="control-item">
+  <label className="control-label-small">Height (px)</label>
+  <input 
+    type="text" 
+    value={sectionHeights[sectionName] || '300px'} 
+    onChange={(e) => handleHeightChange(sectionName, e.target.value)} 
+    onBlur={() => handleHeightBlur(sectionName)}
+    className="control-input-small"
+    placeholder="auto or px"
+  />
+</div>
 
-                  <div className="control-item">
-                    <label className="control-label-small">Height (px)</label>
-                    <input
-                      type="text"
-                      value={sectionHeights[sectionName] || '300px'}
-                      onChange={(e) => handleHeightChange(sectionName, e.target.value)}
-                      onBlur={() => handleHeightBlur(sectionName)}
-                      className="control-input-small"
-                      placeholder="auto or px"
-                    />
-                  </div>
+                
 
-
-
-
+                
                   <div className="control-item">
                     <label className="control-label-small">Padding (px)</label>
-                    <input
-                      type="number"
+                    <input 
+                      type="number" 
                       value={parseInt(styleConfig[sectionName]?.container?.padding) || 0}
                       onChange={(e) => {
                         const newPadding = `${e.target.value}px`;
@@ -2156,8 +2727,8 @@ const UIEditor = () => {
                   <div className="control-item">
                     <label className="control-label-small">Background</label>
                     <div className="color-with-transparent">
-                      <input
-                        type="color"
+                      <input 
+                        type="color" 
                         value={styleConfig[sectionName]?.container?.backgroundColor === 'transparent' ? '#FFFFFF' : (styleConfig[sectionName]?.container?.backgroundColor || '#FFFFFF')}
                         onChange={(e) => handleStyleChange(sectionName, 'container', e.target.value, 'backgroundColor')}
                         className="control-color-small"
@@ -2180,8 +2751,8 @@ const UIEditor = () => {
                     <>
                       <div className="control-item">
                         <label className="control-label-small">Title Size</label>
-                        <input
-                          type="number"
+                        <input 
+                          type="number" 
                           value={parseInt(styleConfig[sectionName]?.titleStyle?.fontSize) || 12}
                           onChange={(e) => handleStyleChange(sectionName, 'titleStyle', `${e.target.value}px`, 'fontSize')}
                           className="control-input-small"
@@ -2192,8 +2763,8 @@ const UIEditor = () => {
 
                       <div className="control-item">
                         <label className="control-label-small">Title Color</label>
-                        <input
-                          type="color"
+                        <input 
+                          type="color" 
                           value={styleConfig[sectionName]?.titleStyle?.color || '#000000'}
                           onChange={(e) => handleStyleChange(sectionName, 'titleStyle', e.target.value, 'color')}
                           className="control-color-small"
@@ -2206,8 +2777,8 @@ const UIEditor = () => {
                     <>
                       <div className="control-item">
                         <label className="control-label-small">Body Size</label>
-                        <input
-                          type="number"
+                        <input 
+                          type="number" 
                           value={parseInt(styleConfig[sectionName]?.bodyStyle?.fontSize) || 10}
                           onChange={(e) => handleStyleChange(sectionName, 'bodyStyle', `${e.target.value}px`, 'fontSize')}
                           className="control-input-small"
@@ -2218,8 +2789,8 @@ const UIEditor = () => {
 
                       <div className="control-item">
                         <label className="control-label-small">Body Color</label>
-                        <input
-                          type="color"
+                        <input 
+                          type="color" 
                           value={styleConfig[sectionName]?.bodyStyle?.color || '#000000'}
                           onChange={(e) => handleStyleChange(sectionName, 'bodyStyle', e.target.value, 'color')}
                           className="control-color-small"
@@ -2238,28 +2809,28 @@ const UIEditor = () => {
         <button onClick={resetLayout} className="btn-primary full-width">
           ↻ RESET LAYOUT
         </button>
-
-        <button onClick={autoFlowSections} className="btn-primary full-width btn-auto-flow-action">
+        
+        <button onClick={autoFlowSections} className="btn-primary full-width" style={{ background: '#10b981', borderColor: '#10b981' }}>
           ⚡ AUTO-FLOW CONTENT
         </button>
-
+        
         <div className="button-grid">
           <button onClick={downloadResume} className="btn-secondary">📥 PNG</button>
         </div>
-
+        
         <h3 className="panel-title">DIVIDER LINES</h3>
         <div className="button-grid">
           <button onClick={() => addLine('horizontal')} className="btn-secondary">─ H</button>
           <button onClick={() => addLine('vertical')} className="btn-secondary">│ V</button>
         </div>
-
+        
         {lines.length > 0 && lines.map(line => (
           <div key={line.id} className={`line-control ${selectedLine === line.id ? 'selected' : ''}`}>
             <div className="line-header">
               <span className="line-label">{line.label}</span>
               <button onClick={() => deleteLine(line.id)} className="btn-delete">✕</button>
             </div>
-
+            
             <div className="line-move-control">
               <label className="control-label">Move Position</label>
               <div className="arrow-grid">
@@ -2274,7 +2845,7 @@ const UIEditor = () => {
                 <div></div>
               </div>
             </div>
-
+            
             <div className="line-resize-control">
               <label className="control-label">
                 Resize {line.orientation === 'vertical' ? 'Height' : 'Width'}
@@ -2284,24 +2855,24 @@ const UIEditor = () => {
                 <button onClick={() => resizeLine(line.id, 'increase')} className="btn-resize">+</button>
               </div>
             </div>
-
+            
             <div className="line-properties">
               <div className="property-control">
                 <label className="control-label">Thickness</label>
-                <input
-                  type="number"
-                  value={line.thickness}
-                  onChange={(e) => updateLine(line.id, 'thickness', parseFloat(e.target.value))}
-                  step="0.5"
+                <input 
+                  type="number" 
+                  value={line.thickness} 
+                  onChange={(e) => updateLine(line.id, 'thickness', parseFloat(e.target.value))} 
+                  step="0.5" 
                   className="control-input"
                 />
               </div>
               <div className="property-control">
                 <label className="control-label">Color</label>
-                <input
-                  type="color"
-                  value={line.color}
-                  onChange={(e) => updateLine(line.id, 'color', e.target.value)}
+                <input 
+                  type="color" 
+                  value={line.color} 
+                  onChange={(e) => updateLine(line.id, 'color', e.target.value)} 
                   className="control-color"
                 />
               </div>
@@ -2314,7 +2885,7 @@ const UIEditor = () => {
       {/* MIDDLE - Canvas */}
       <div className="canvas-container">
         <div className="canvas-scroll-wrapper">
-          <div className="canvas-stack-layout">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {/* Page 1 */}
             <div className="canvas-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
               <Stage
@@ -2337,7 +2908,7 @@ const UIEditor = () => {
                     />
                   ))}
                 </Layer>
-
+                
                 {/* Lines Layer */}
                 <Layer>
                   {page1Elements.lines.map(line => (
@@ -2351,7 +2922,7 @@ const UIEditor = () => {
                     />
                   ))}
                 </Layer>
-
+                
                 {/* Content Layer */}
                 <Layer>
                   {page1Elements.sections.map(([sectionName, pos]) => (
@@ -2398,7 +2969,7 @@ const UIEditor = () => {
                       );
                     })}
                   </Layer>
-
+                  
                   <Layer>
                     {page2Elements.lines.map(line => {
                       const adjustedLine = { ...line, y1: line.y1 - 842, y2: line.y2 - 842 };
@@ -2417,7 +2988,7 @@ const UIEditor = () => {
                       );
                     })}
                   </Layer>
-
+                  
                   <Layer>
                     {page2Elements.sections.map(([sectionName, pos]) => {
                       const adjustedPos = { ...pos, y: pos.y - 842 };
@@ -2450,15 +3021,15 @@ const UIEditor = () => {
           <button onClick={() => setZoom(Math.min(2, zoom + 0.1))} className="btn-zoom">+</button>
           <button onClick={() => setZoom(1)} className="btn-zoom-reset">100%</button>
           <button onClick={() => setZoom(0.7)} className="btn-zoom-reset">FIT</button>
-          <button
-            onClick={() => setShowPage2(!showPage2)}
+          <button 
+            onClick={() => setShowPage2(!showPage2)} 
             className={`btn-zoom-reset ${showPage2 ? 'active' : ''}`}
             style={{ marginLeft: '10px' }}
           >
             {showPage2 ? '1 PAGE' : '2 PAGES'}
           </button>
         </div>
-
+        
         <div className="canvas-hint">💡 DRAG & RESIZE • Scroll to see more</div>
         <div className="template-badge">
           {currentTemplate === 'ats' ? '📄 ATS' : currentTemplate === 'modern' ? '✨ MODERN' : '📑 TWO COLUMN'}
@@ -2468,16 +3039,16 @@ const UIEditor = () => {
       {/* ======================= RIGHT PANEL START ======================= */}
 
 
-
-      <div className={`right-panel ${isMobile && activeTab !== 'properties' ? 'mobile-hidden' : ''}`}>
+      
+      <div className="right-panel">
         <h3 className="panel-title">QUICK STYLE</h3>
-
+        
         {selectedSection ? (
           <div style={{ padding: '12px' }}>
-            <div style={{
-              background: '#f3f4f6',
-              padding: '8px 12px',
-              borderRadius: '6px',
+            <div style={{ 
+              background: '#f3f4f6', 
+              padding: '8px 12px', 
+              borderRadius: '6px', 
               marginBottom: '16px',
               fontSize: '12px',
               fontWeight: '600',
@@ -2485,14 +3056,14 @@ const UIEditor = () => {
             }}>
               📝 {selectedSection.toUpperCase()}
             </div>
-
+            
             {/* Font Size Quick Controls */}
             <div style={{ marginBottom: '16px' }}>
               <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
                 Font Size
               </label>
               <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                <button
+                <button 
                   onClick={() => {
                     const current = parseInt(styleConfig[selectedSection]?.bodyStyle?.fontSize) || 10;
                     handleStyleChange(selectedSection, 'bodyStyle', `${Math.max(6, current - 1)}px`, 'fontSize');
@@ -2502,10 +3073,10 @@ const UIEditor = () => {
                 >
                   −
                 </button>
-                <span style={{
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  minWidth: '40px',
+                <span style={{ 
+                  fontSize: '14px', 
+                  fontWeight: '600', 
+                  minWidth: '40px', 
                   textAlign: 'center',
                   background: 'white',
                   padding: '8px',
@@ -2514,7 +3085,7 @@ const UIEditor = () => {
                 }}>
                   {parseInt(styleConfig[selectedSection]?.bodyStyle?.fontSize) || 10}
                 </span>
-                <button
+                <button 
                   onClick={() => {
                     const current = parseInt(styleConfig[selectedSection]?.bodyStyle?.fontSize) || 10;
                     handleStyleChange(selectedSection, 'bodyStyle', `${Math.min(32, current + 1)}px`, 'fontSize');
@@ -2526,7 +3097,7 @@ const UIEditor = () => {
                 </button>
               </div>
             </div>
-
+            
             {/* Title Font Size (if applicable) */}
             {styleConfig[selectedSection]?.titleStyle && (
               <div style={{ marginBottom: '16px' }}>
@@ -2534,7 +3105,7 @@ const UIEditor = () => {
                   Title Font Size
                 </label>
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                  <button
+                  <button 
                     onClick={() => {
                       const current = parseInt(styleConfig[selectedSection]?.titleStyle?.fontSize) || 14;
                       handleStyleChange(selectedSection, 'titleStyle', `${Math.max(8, current - 1)}px`, 'fontSize');
@@ -2544,10 +3115,10 @@ const UIEditor = () => {
                   >
                     −
                   </button>
-                  <span style={{
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    minWidth: '40px',
+                  <span style={{ 
+                    fontSize: '14px', 
+                    fontWeight: '600', 
+                    minWidth: '40px', 
                     textAlign: 'center',
                     background: 'white',
                     padding: '8px',
@@ -2556,7 +3127,7 @@ const UIEditor = () => {
                   }}>
                     {parseInt(styleConfig[selectedSection]?.titleStyle?.fontSize) || 14}
                   </span>
-                  <button
+                  <button 
                     onClick={() => {
                       const current = parseInt(styleConfig[selectedSection]?.titleStyle?.fontSize) || 14;
                       handleStyleChange(selectedSection, 'titleStyle', `${Math.min(36, current + 1)}px`, 'fontSize');
@@ -2569,62 +3140,62 @@ const UIEditor = () => {
                 </div>
               </div>
             )}
-
+            
             {/* Text Color */}
             <div style={{ marginBottom: '16px' }}>
               <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
                 Text Color
               </label>
-              <input
-                type="color"
+              <input 
+                type="color" 
                 value={styleConfig[selectedSection]?.bodyStyle?.color || '#000000'}
                 onChange={(e) => handleStyleChange(selectedSection, 'bodyStyle', e.target.value, 'color')}
-                style={{
-                  width: '100%',
-                  height: '40px',
-                  border: '1px solid #d1d5db',
+                style={{ 
+                  width: '100%', 
+                  height: '40px', 
+                  border: '1px solid #d1d5db', 
                   borderRadius: '6px',
                   cursor: 'pointer'
                 }}
               />
             </div>
-
+            
             {/* Title Color (if applicable) */}
             {styleConfig[selectedSection]?.titleStyle && (
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
                   Title Color
                 </label>
-                <input
-                  type="color"
+                <input 
+                  type="color" 
                   value={styleConfig[selectedSection]?.titleStyle?.color || '#000000'}
                   onChange={(e) => handleStyleChange(selectedSection, 'titleStyle', e.target.value, 'color')}
-                  style={{
-                    width: '100%',
-                    height: '40px',
-                    border: '1px solid #d1d5db',
+                  style={{ 
+                    width: '100%', 
+                    height: '40px', 
+                    border: '1px solid #d1d5db', 
                     borderRadius: '6px',
                     cursor: 'pointer'
                   }}
                 />
               </div>
             )}
-
+            
             {/* Background Color */}
             <div style={{ marginBottom: '16px' }}>
               <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
                 Background
               </label>
               <div style={{ display: 'flex', gap: '6px' }}>
-                <input
-                  type="color"
+                <input 
+                  type="color" 
                   value={styleConfig[selectedSection]?.container?.backgroundColor === 'transparent' ? '#FFFFFF' : (styleConfig[selectedSection]?.container?.backgroundColor || '#FFFFFF')}
                   onChange={(e) => handleStyleChange(selectedSection, 'container', e.target.value, 'backgroundColor')}
                   disabled={styleConfig[selectedSection]?.container?.backgroundColor === 'transparent'}
-                  style={{
+                  style={{ 
                     flex: 1,
-                    height: '40px',
-                    border: '1px solid #d1d5db',
+                    height: '40px', 
+                    border: '1px solid #d1d5db', 
                     borderRadius: '6px',
                     cursor: 'pointer',
                     opacity: styleConfig[selectedSection]?.container?.backgroundColor === 'transparent' ? 0.5 : 1
@@ -2636,7 +3207,7 @@ const UIEditor = () => {
                     handleStyleChange(selectedSection, 'container', currentBg === 'transparent' ? '#FFFFFF' : 'transparent', 'backgroundColor');
                   }}
                   className="btn-secondary"
-                  style={{
+                  style={{ 
                     padding: '0 16px',
                     fontSize: '12px',
                     fontWeight: '600',
@@ -2652,13 +3223,13 @@ const UIEditor = () => {
                 {styleConfig[selectedSection]?.container?.backgroundColor === 'transparent' ? 'Transparent' : 'Solid'}
               </span>
             </div>
-
+            
             {/* Padding */}
             <div style={{ marginBottom: '16px' }}>
               <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
                 Padding
               </label>
-              <input
+              <input 
                 type="range"
                 min="0"
                 max="50"
@@ -2677,7 +3248,7 @@ const UIEditor = () => {
                 <span>50px</span>
               </div>
             </div>
-
+            
             {/* Width (range slider) */}
             <div style={{ marginBottom: '16px' }}>
               <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
@@ -2700,11 +3271,11 @@ const UIEditor = () => {
               </div>
             </div>
 
-
-
-            <div style={{
-              background: '#fef3c7',
-              padding: '12px',
+            
+            
+            <div style={{ 
+              background: '#fef3c7', 
+              padding: '12px', 
               borderRadius: '6px',
               border: '1px solid #fbbf24',
               marginTop: '20px'
@@ -2716,9 +3287,9 @@ const UIEditor = () => {
           </div>
         ) : (
           <div style={{ padding: '12px' }}>
-            <div style={{
-              background: '#f3f4f6',
-              padding: '20px',
+            <div style={{ 
+              background: '#f3f4f6', 
+              padding: '20px', 
               borderRadius: '8px',
               textAlign: 'center',
               color: '#6b7280',
@@ -2729,7 +3300,7 @@ const UIEditor = () => {
                 Click on a section in the canvas to edit its styles
               </p>
             </div>
-
+            
             <div style={{ marginTop: '20px', padding: '12px', background: '#eff6ff', borderRadius: '6px', border: '1px solid #3b82f6' }}>
               <h4 style={{ fontSize: '11px', fontWeight: '600', color: '#1e40af', margin: '0 0 8px 0' }}>
                 Quick Actions:

@@ -93,11 +93,11 @@ const PDFViewer = ({ pdfBlob }) => {
     let renderTask = null;
     const renderPage = async () => {
       if (!pdfDoc || !canvasRef.current) return;
-      
+
       if (renderTask) {
         renderTask.cancel();
       }
-      
+
       try {
         const page = await pdfDoc.getPage(currentPage);
         const baseViewport = page.getViewport({ scale: 1 });
@@ -113,7 +113,7 @@ const PDFViewer = ({ pdfBlob }) => {
         canvas.style.height = `${viewport.height}px`;
         context.scale(devicePixelRatio, devicePixelRatio);
         context.clearRect(0, 0, canvas.width, canvas.height);
-        
+
         renderTask = page.render({ canvasContext: context, viewport: viewport });
         await renderTask.promise;
         renderTask = null;
@@ -127,7 +127,7 @@ const PDFViewer = ({ pdfBlob }) => {
       }
     };
     renderPage();
-    
+
     return () => {
       if (renderTask) {
         renderTask.cancel();
@@ -199,154 +199,154 @@ const PDFViewer = ({ pdfBlob }) => {
 
 
       <div ref={containerRef} style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#0a0a0a' }}>
-  <div style={{ padding: '1rem', borderBottom: '1px solid #2a2a2a', display: 'flex', alignItems: 'center', gap: '1rem', backgroundColor: '#151515', flexWrap: 'wrap', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)' }}>
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem', backgroundColor: '#1f1f1f', borderRadius: '8px', border: '1px solid #2a2a2a' }}>
-      <button 
-        onClick={goToPrevious} 
-        disabled={currentPage <= 1} 
-        style={{ 
-          padding: '0.5rem 1rem', 
-          fontSize: '0.875rem', 
-          backgroundColor: 'transparent', 
-          color: currentPage <= 1 ? '#555' : '#ccc', 
-          border: 'none', 
-          borderRadius: '4px', 
-          cursor: currentPage <= 1 ? 'not-allowed' : 'pointer',
-          fontWeight: '500',
-          transition: 'all 0.2s ease',
-          opacity: currentPage <= 1 ? 0.4 : 1
-        }}
-        onMouseEnter={(e) => {
-          if (currentPage > 1) {
-            e.target.style.color = '#ffffff';
-            e.target.style.background = '#252525';
-          }
-        }}
-        onMouseLeave={(e) => {
-          e.target.style.background = 'transparent';
-          e.target.style.color = '#ccc';
-        }}
-      >‹ Previous</button>
-      <span style={{ fontSize: '0.875rem', fontWeight: '600', padding: '0.5rem 1rem', textAlign: 'center', color: '#ffffff', backgroundColor: '#252525', borderRadius: '4px', minWidth: '5rem' }}>
-        Page {currentPage} / {totalPages}
-      </span>
-      <button 
-        onClick={goToNext} 
-        disabled={currentPage >= totalPages} 
-        style={{ 
-          padding: '0.5rem 1rem', 
-          fontSize: '0.875rem', 
-          backgroundColor: 'transparent', 
-          color: currentPage >= totalPages ? '#555' : '#ccc', 
-          border: 'none', 
-          borderRadius: '4px', 
-          cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
-          fontWeight: '500',
-          transition: 'all 0.2s ease',
-          opacity: currentPage >= totalPages ? 0.4 : 1
-        }}
-        onMouseEnter={(e) => {
-          if (currentPage < totalPages) {
-            e.target.style.color = '#ffffff';
-            e.target.style.background = '#252525';
-          }
-        }}
-        onMouseLeave={(e) => {
-          e.target.style.background = 'transparent';
-          e.target.style.color = '#ccc';
-        }}
-      >Next ›</button>
-    </div>
-    
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: 'auto', padding: '0.5rem', backgroundColor: '#1f1f1f', borderRadius: '8px', border: '1px solid #2a2a2a' }}>
-      <button 
-        onClick={zoomOut} 
-        style={{ 
-          padding: '0.5rem', 
-          fontSize: '1rem', 
-          backgroundColor: 'transparent', 
-          color: '#ccc', 
-          border: 'none', 
-          borderRadius: '4px', 
-          cursor: 'pointer', 
-          minWidth: '36px',
-          height: '36px',
-          fontWeight: '600',
-          transition: 'all 0.2s ease',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}
-        onMouseEnter={(e) => {
-          e.target.style.background = '#252525';
-          e.target.style.color = '#ffffff';
-        }}
-        onMouseLeave={(e) => {
-          e.target.style.background = 'transparent';
-          e.target.style.color = '#ccc';
-        }}
-      >−</button>
-      <span style={{ fontSize: '0.875rem', minWidth: '4rem', textAlign: 'center', fontWeight: '600', color: '#ffffff', padding: '0.5rem 0.75rem', backgroundColor: '#252525', borderRadius: '4px' }}>
-        {Math.round(scale * 100)}%
-      </span>
-      <button 
-        onClick={zoomIn} 
-        style={{ 
-          padding: '0.5rem', 
-          fontSize: '1rem', 
-          backgroundColor: 'transparent', 
-          color: '#ccc', 
-          border: 'none', 
-          borderRadius: '4px', 
-          cursor: 'pointer', 
-          minWidth: '36px',
-          height: '36px',
-          fontWeight: '600',
-          transition: 'all 0.2s ease',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}
-        onMouseEnter={(e) => {
-          e.target.style.background = '#252525';
-          e.target.style.color = '#ffffff';
-        }}
-        onMouseLeave={(e) => {
-          e.target.style.background = 'transparent';
-          e.target.style.color = '#ccc';
-        }}
-      >+</button>
-      <div style={{ width: '1px', height: '24px', backgroundColor: '#2a2a2a', margin: '0 0.25rem' }}></div>
-      <button 
-        onClick={fitToWidth} 
-        style={{ 
-          padding: '0.5rem 1rem', 
-          fontSize: '0.875rem', 
-          backgroundColor: 'transparent', 
-          color: '#ccc', 
-          border: 'none', 
-          borderRadius: '4px', 
-          cursor: 'pointer',
-          fontWeight: '500',
-          transition: 'all 0.2s ease',
-          whiteSpace: 'nowrap'
-        }}
-        onMouseEnter={(e) => {
-          e.target.style.background = '#252525';
-          e.target.style.color = '#ffffff';
-        }}
-        onMouseLeave={(e) => {
-          e.target.style.background = 'transparent';
-          e.target.style.color = '#ccc';
-        }}
-      >Fit to Width</button>
-    </div>
-  </div>
-  
-  <div style={{ flex: 1, overflow: 'auto', backgroundColor: '#0d0d0d', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '2rem 1rem' }}>
-    <canvas ref={canvasRef} style={{ maxWidth: '100%', height: 'auto', boxShadow: '0 12px 40px rgba(0, 0, 0, 0.6)', backgroundColor: 'white', borderRadius: '2px', border: '1px solid #1a1a1a' }} />
-  </div>
-</div>
+        <div style={{ padding: '1rem', borderBottom: '1px solid #2a2a2a', display: 'flex', alignItems: 'center', gap: '1rem', backgroundColor: '#151515', flexWrap: 'wrap', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem', backgroundColor: '#1f1f1f', borderRadius: '8px', border: '1px solid #2a2a2a' }}>
+            <button
+              onClick={goToPrevious}
+              disabled={currentPage <= 1}
+              style={{
+                padding: '0.5rem 1rem',
+                fontSize: '0.875rem',
+                backgroundColor: 'transparent',
+                color: currentPage <= 1 ? '#555' : '#ccc',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: currentPage <= 1 ? 'not-allowed' : 'pointer',
+                fontWeight: '500',
+                transition: 'all 0.2s ease',
+                opacity: currentPage <= 1 ? 0.4 : 1
+              }}
+              onMouseEnter={(e) => {
+                if (currentPage > 1) {
+                  e.target.style.color = '#ffffff';
+                  e.target.style.background = '#252525';
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'transparent';
+                e.target.style.color = '#ccc';
+              }}
+            >‹ Previous</button>
+            <span style={{ fontSize: '0.875rem', fontWeight: '600', padding: '0.5rem 1rem', textAlign: 'center', color: '#ffffff', backgroundColor: '#252525', borderRadius: '4px', minWidth: '5rem' }}>
+              Page {currentPage} / {totalPages}
+            </span>
+            <button
+              onClick={goToNext}
+              disabled={currentPage >= totalPages}
+              style={{
+                padding: '0.5rem 1rem',
+                fontSize: '0.875rem',
+                backgroundColor: 'transparent',
+                color: currentPage >= totalPages ? '#555' : '#ccc',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
+                fontWeight: '500',
+                transition: 'all 0.2s ease',
+                opacity: currentPage >= totalPages ? 0.4 : 1
+              }}
+              onMouseEnter={(e) => {
+                if (currentPage < totalPages) {
+                  e.target.style.color = '#ffffff';
+                  e.target.style.background = '#252525';
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'transparent';
+                e.target.style.color = '#ccc';
+              }}
+            >Next ›</button>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: 'auto', padding: '0.5rem', backgroundColor: '#1f1f1f', borderRadius: '8px', border: '1px solid #2a2a2a' }}>
+            <button
+              onClick={zoomOut}
+              style={{
+                padding: '0.5rem',
+                fontSize: '1rem',
+                backgroundColor: 'transparent',
+                color: '#ccc',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                minWidth: '36px',
+                height: '36px',
+                fontWeight: '600',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = '#252525';
+                e.target.style.color = '#ffffff';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'transparent';
+                e.target.style.color = '#ccc';
+              }}
+            >−</button>
+            <span style={{ fontSize: '0.875rem', minWidth: '4rem', textAlign: 'center', fontWeight: '600', color: '#ffffff', padding: '0.5rem 0.75rem', backgroundColor: '#252525', borderRadius: '4px' }}>
+              {Math.round(scale * 100)}%
+            </span>
+            <button
+              onClick={zoomIn}
+              style={{
+                padding: '0.5rem',
+                fontSize: '1rem',
+                backgroundColor: 'transparent',
+                color: '#ccc',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                minWidth: '36px',
+                height: '36px',
+                fontWeight: '600',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = '#252525';
+                e.target.style.color = '#ffffff';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'transparent';
+                e.target.style.color = '#ccc';
+              }}
+            >+</button>
+            <div style={{ width: '1px', height: '24px', backgroundColor: '#2a2a2a', margin: '0 0.25rem' }}></div>
+            <button
+              onClick={fitToWidth}
+              style={{
+                padding: '0.5rem 1rem',
+                fontSize: '0.875rem',
+                backgroundColor: 'transparent',
+                color: '#ccc',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontWeight: '500',
+                transition: 'all 0.2s ease',
+                whiteSpace: 'nowrap'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = '#252525';
+                e.target.style.color = '#ffffff';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'transparent';
+                e.target.style.color = '#ccc';
+              }}
+            >Fit to Width</button>
+          </div>
+        </div>
+
+        <div style={{ flex: 1, overflow: 'auto', backgroundColor: '#0d0d0d', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '2rem 1rem' }}>
+          <canvas ref={canvasRef} style={{ maxWidth: '100%', height: 'auto', boxShadow: '0 12px 40px rgba(0, 0, 0, 0.6)', backgroundColor: 'white', borderRadius: '2px', border: '1px solid #1a1a1a' }} />
+        </div>
+      </div>
 
     </div>
   );
@@ -364,7 +364,7 @@ function useDebounce(value, delay) {
 
 
 
-export default function ResumeEditor({ resume: propsResume}) {
+export default function ResumeEditor({ resume: propsResume }) {
   const { resumeId } = useParams();
   const resumeRef = useRef();
   const [jobDescription, setJobDescription] = useState('');
@@ -372,18 +372,18 @@ export default function ResumeEditor({ resume: propsResume}) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isAnalyzingAI, setIsAnalyzingAI] = useState(false);
   const [isAIAnalysis, setIsAIAnalysis] = useState(false);
-  const id = useSelector((s)=>s.auth.userId);
+  const id = useSelector((s) => s.auth.userId);
   const [userId, setUserId] = useState(id);
-  const currentResumeId = useSelector((state)=>state.resume.resumeId);
+  const currentResumeId = useSelector((state) => state.resume.resumeId);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
 
-  
+
   const [localResume, setLocalResune] = useState(null);
 
-  console.log("From the state the user id is"+ userId);
-  
+  console.log("From the state the user id is" + userId);
+
 
 
 
@@ -400,29 +400,29 @@ export default function ResumeEditor({ resume: propsResume}) {
 
   const [customSections, setCustomSections] = useState([]);
 
-  const enhancedResume = useSelector((state)=>state.resume.enhancedResume);
+  const enhancedResume = useSelector((state) => state.resume.enhancedResume);
   const importedResume = useSelector(state => state.resume.importedResume);
   const currentResume = useSelector(state => state.resume.currentResume);
   const [localResumeId, setLocalResuneId] = useState(null);
 
-  
+
   useEffect(() => {
-  if (!importedResume) return;
+    if (!importedResume) return;
 
 
 
 
-  // SKILLS: map to strings or empty array
-  setSkills(
-    Array.isArray(importedResume?.skills)
-      ? importedResume.skills.map(s => (typeof s === "string" ? s : s?.name ?? "")).filter(Boolean)
-      : []
-  );
+    // SKILLS: map to strings or empty array
+    setSkills(
+      Array.isArray(importedResume?.skills)
+        ? importedResume.skills.map(s => (typeof s === "string" ? s : s?.name ?? "")).filter(Boolean)
+        : []
+    );
 
-  // EXPERIENCES: use import array or empty
-  setExperiences(
-    Array.isArray(importedResume?.experiences)
-      ? importedResume.experiences.map(exp => ({
+    // EXPERIENCES: use import array or empty
+    setExperiences(
+      Array.isArray(importedResume?.experiences)
+        ? importedResume.experiences.map(exp => ({
           position: exp?.title ?? exp?.position ?? "",
           company: exp?.company ?? "",
           location: exp?.location ?? "",
@@ -434,103 +434,103 @@ export default function ResumeEditor({ resume: propsResume}) {
               : "",
           achievements: Array.isArray(exp?.description) ? [...exp.description] : (Array.isArray(exp?.achievements) ? [...exp.achievements] : [])
         }))
-      : []
-  );
+        : []
+    );
 
-  // PROJECTS: prefer name, fallback to title; description -> array
-  setProjects(
-    Array.isArray(importedResume?.projects)
-      ? importedResume.projects.map(p => ({
+    // PROJECTS: prefer name, fallback to title; description -> array
+    setProjects(
+      Array.isArray(importedResume?.projects)
+        ? importedResume.projects.map(p => ({
           name: p?.name ?? p?.title ?? "",
           description: Array.isArray(p?.description) ? [...p.description] : (p?.description ? [p.description] : []),
           technologies: p?.technologies ?? "",
           duration: p?.duration ?? "",
           link: p?.link ?? ""
         }))
-      : []
-  );
+        : []
+    );
 
-  // EDUCATION
-  setEducationList(
-    Array.isArray(importedResume?.educationList)
-      ? importedResume.educationList.map(e => ({
+    // EDUCATION
+    setEducationList(
+      Array.isArray(importedResume?.educationList)
+        ? importedResume.educationList.map(e => ({
           degree: e?.degree ?? "",
           cgpa: e?.cgpa ?? e?.grade ?? "",
           university: e?.university ?? e?.institution ?? "",
           startDate: e?.startDate ?? e?.from ?? "",
           endDate: e?.endDate ?? e?.to ?? ""
         }))
-      : []
-  );
+        : []
+    );
 
-  // CERTIFICATIONS: normalize to simple objects (or strings if you prefer)
-  setCertifications(
-    Array.isArray(importedResume?.certifications)
-      ? importedResume.certifications.map(c => (typeof c === "string" ? c : c?.title ?? ""))
-      : []
-  );
+    // CERTIFICATIONS: normalize to simple objects (or strings if you prefer)
+    setCertifications(
+      Array.isArray(importedResume?.certifications)
+        ? importedResume.certifications.map(c => (typeof c === "string" ? c : c?.title ?? ""))
+        : []
+    );
 
-  // RESUME DETAILS (overwrite but keep structure)
-  setResumeDetails({
-    name: importedResume?.resumeDetails?.name ?? importedResume?.resumeDetails?.fullName ?? importedResume?.name ?? "",
-    title: importedResume?.resumeDetails?.title ?? importedResume?.title ?? "",
-    summary: importedResume?.resumeDetails?.summary ?? importedResume?.summary ?? "",
-    contact: {
-      phone: importedResume?.resumeDetails?.contact?.phone ?? importedResume?.contact?.phone ?? "",
-      email: importedResume?.resumeDetails?.contact?.email ?? importedResume?.contact?.email ?? "",
-      linkedin: importedResume?.resumeDetails?.contact?.linkedin ?? importedResume?.contact?.linkedin ?? "",
-      github: importedResume?.resumeDetails?.contact?.github ?? importedResume?.contact?.github ?? "",
-      location: importedResume?.resumeDetails?.contact?.location ?? importedResume?.contact?.location ?? ""
-    }
-  });
-
-}, [importedResume]);
-
-useEffect(() => {
-
-  if(!enhancedResume)return;
-  applyEnhancedResume(enhancedResume);
- 
-
-}, [enhancedResume]);
-
-
- 
-const applyEnhancedResume = (enhancedResume) => {
-  if (!enhancedResume) return;
-
-
-  // ---------------- Resume Details ----------------
-  if (enhancedResume.resumeDetails) {
-    setResumeDetails(prev => ({
-      ...prev,
-      // Only override non-empty values
-      ...Object.fromEntries(
-        Object.entries(enhancedResume.resumeDetails)
-          .filter(([_, value]) => value !== "" && value !== null && value !== undefined)
-      ),
+    // RESUME DETAILS (overwrite but keep structure)
+    setResumeDetails({
+      name: importedResume?.resumeDetails?.name ?? importedResume?.resumeDetails?.fullName ?? importedResume?.name ?? "",
+      title: importedResume?.resumeDetails?.title ?? importedResume?.title ?? "",
+      summary: importedResume?.resumeDetails?.summary ?? importedResume?.summary ?? "",
       contact: {
-        ...prev.contact,
-        ...Object.fromEntries(
-          Object.entries(enhancedResume.resumeDetails.contact || {})
-            .filter(([_, value]) => value !== "" && value !== null && value !== undefined)
-        )
+        phone: importedResume?.resumeDetails?.contact?.phone ?? importedResume?.contact?.phone ?? "",
+        email: importedResume?.resumeDetails?.contact?.email ?? importedResume?.contact?.email ?? "",
+        linkedin: importedResume?.resumeDetails?.contact?.linkedin ?? importedResume?.contact?.linkedin ?? "",
+        github: importedResume?.resumeDetails?.contact?.github ?? importedResume?.contact?.github ?? "",
+        location: importedResume?.resumeDetails?.contact?.location ?? importedResume?.contact?.location ?? ""
       }
-    }));
-  }
+    });
 
-  // ---------------- Skills ----------------
- setSkills(
-    Array.isArray(enhancedResume?.skills)
-      ? enhancedResume.skills.map(s => (typeof s === "string" ? s : s?.name ?? "")).filter(Boolean)
-      : []
-  );
+  }, [importedResume]);
 
-  // ---------------- Experiences ----------------
- 
-  setExperiences(
-    Array.isArray(enhancedResume?.experiences)
-      ? enhancedResume.experiences.map(exp => ({
+  useEffect(() => {
+
+    if (!enhancedResume) return;
+    applyEnhancedResume(enhancedResume);
+
+
+  }, [enhancedResume]);
+
+
+
+  const applyEnhancedResume = (enhancedResume) => {
+    if (!enhancedResume) return;
+
+
+    // ---------------- Resume Details ----------------
+    if (enhancedResume.resumeDetails) {
+      setResumeDetails(prev => ({
+        ...prev,
+        // Only override non-empty values
+        ...Object.fromEntries(
+          Object.entries(enhancedResume.resumeDetails)
+            .filter(([_, value]) => value !== "" && value !== null && value !== undefined)
+        ),
+        contact: {
+          ...prev.contact,
+          ...Object.fromEntries(
+            Object.entries(enhancedResume.resumeDetails.contact || {})
+              .filter(([_, value]) => value !== "" && value !== null && value !== undefined)
+          )
+        }
+      }));
+    }
+
+    // ---------------- Skills ----------------
+    setSkills(
+      Array.isArray(enhancedResume?.skills)
+        ? enhancedResume.skills.map(s => (typeof s === "string" ? s : s?.name ?? "")).filter(Boolean)
+        : []
+    );
+
+    // ---------------- Experiences ----------------
+
+    setExperiences(
+      Array.isArray(enhancedResume?.experiences)
+        ? enhancedResume.experiences.map(exp => ({
           position: exp?.title ?? exp?.position ?? "",
           company: exp?.company ?? "",
           location: exp?.location ?? "",
@@ -542,34 +542,31 @@ const applyEnhancedResume = (enhancedResume) => {
               : "",
           achievements: Array.isArray(exp?.description) ? [...exp.description] : (Array.isArray(exp?.achievements) ? [...exp.achievements] : [])
         }))
-      : []
-  );
+        : []
+    );
 
 
-  // ---------------- Projects ----------------
-  // Example for projects
-setProjects(prev =>
-  enhancedResume.projects.map((proj, i) => {
-    const prevProj = prev[i] || {};
-    return {
-      name: proj.name || prevProj.name || "",
-      duration: proj.duration || prevProj.duration || "",
-      technologies: proj.technologies || prevProj.technologies || "",
-      description: proj.description && proj.description.length > 0
-        ? [...proj.description]         // clone API array
-        : prevProj.description
-          ? [...prevProj.description]  // clone previous state array
-          : [""],
-      link: proj.link || prevProj.link || ""
-    };
-  })
-);
-
-  
-};
+    // ---------------- Projects ----------------
+    // Example for projects
+    setProjects(prev =>
+      enhancedResume.projects.map((proj, i) => {
+        const prevProj = prev[i] || {};
+        return {
+          name: proj.name || prevProj.name || "",
+          duration: proj.duration || prevProj.duration || "",
+          technologies: proj.technologies || prevProj.technologies || "",
+          description: proj.description && proj.description.length > 0
+            ? [...proj.description]         // clone API array
+            : prevProj.description
+              ? [...prevProj.description]  // clone previous state array
+              : [""],
+          link: proj.link || prevProj.link || ""
+        };
+      })
+    );
 
 
-
+  };
 
 
 
@@ -579,13 +576,16 @@ setProjects(prev =>
 
 
 
-  
-  
 
 
-  
-  
-    const [resumeDetails, setResumeDetails] = useState({
+
+
+
+
+
+
+
+  const [resumeDetails, setResumeDetails] = useState({
     name: "SUMIT HATEKAR",
     title: "Full Stack Developer",
     contact: {
@@ -597,7 +597,7 @@ setProjects(prev =>
     },
     summary: "Dedicated Java Developer with expertise in Java, Spring Boot, Hibernate/JPA, and RESTful APIs, specializing in building scalable backend systems. Skilled in database design, SQL optimization, and microservices architecture, with strong understanding of OOP and design patterns. Proficient in developing secure, high-performance enterprise applications and experienced in Agile/Scrum environments. Eager to contribute backend expertise while continuously growing as a Java professional.",
   });
-  
+
   const [skills, setSkills] = useState([
     "Programming Languages - Java, JavaScript (ES6+), SQL",
     "Databases - PostgreSQL, Oracle",
@@ -606,8 +606,8 @@ setProjects(prev =>
     "Cloud & Deployment - AWS (EC2, S3, RDS), Docker (basic)",
     "Soft Skills - Problem Solving, Communication, Agile Teamwork"
   ]);
-  
-  
+
+
   const [experiences, setExperiences] = useState([
     {
       position: "Software Engineer",
@@ -620,7 +620,7 @@ setProjects(prev =>
       ],
     },
   ]);
-  
+
   const [projects, setProjects] = useState([
     {
       name: "Resume Maker Pro",
@@ -649,7 +649,7 @@ setProjects(prev =>
       link: "https://github.com/sumithatekar/find-issue-app",
     }
   ]);
-  
+
   const [educationList, setEducationList] = useState([
     {
       degree: "Master of Science in Computer Applications",
@@ -666,28 +666,28 @@ setProjects(prev =>
       gpa: "7.52",
     },
   ]);
-  
+
   const [certifications, setCertifications] = useState([
     "Java Full Stack Development - QSpiders Wakad 2024",
     "Scrum Master Certified",
   ]);
-  
-   const [sectionTitles, setSectionTitles] = useState({
-      summary: "Summary",
-      skills: "Skills",
-      experience: "Experience",
-      projects: "Projects",
-      education: "Education",
-      certifications: "Certifications"
-    });
+
+  const [sectionTitles, setSectionTitles] = useState({
+    summary: "Summary",
+    skills: "Skills",
+    experience: "Experience",
+    projects: "Projects",
+    education: "Education",
+    certifications: "Certifications"
+  });
 
 
-  
 
-// AI-powered detailed analysis
 
-    
-    
+  // AI-powered detailed analysis
+
+
+
   const [saving, setSaving] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -702,19 +702,19 @@ setProjects(prev =>
 
 
 
-  
- function downloadResponse(response) {
-  const dataStr = JSON.stringify(response, null, 2); // pretty print
-  const blob = new Blob([dataStr], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
 
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "ai_response.json";
-  a.click();
+  function downloadResponse(response) {
+    const dataStr = JSON.stringify(response, null, 2); // pretty print
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
 
-  URL.revokeObjectURL(url);
-}
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "ai_response.json";
+    a.click();
+
+    URL.revokeObjectURL(url);
+  }
 
 
 
@@ -736,149 +736,149 @@ setProjects(prev =>
 
 
 
-useEffect(() => {
-  const fetchResume = async () => {
-    if (!resumeId) return;
+  useEffect(() => {
+    const fetchResume = async () => {
+      if (!resumeId) return;
 
-    setIsLoadingResume(true);
-    setFetchError("");
-
-    try {
-      // Always use main API_BASE_URL
-      const response = await fetch(`${API_BASE_URL}/my-resumes/getresume/${resumeId}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-      });
-
-      if (response.status === 404) {
-        setFetchError("Resume not found. It may have been deleted.");
-        setIsLoadingResume(false);
-        return;
-      }
-
-      if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log("Fetched resume data:", data);
-
-      
-
-      setResumeTitle(data.title || "");
-      setSelectedTemplate(data.templateId ? String(data.templateId) : "1");
-
-      setResumeDetails({
-        name: data.details?.name || "",
-        title: data.details?.title || "",
-        summary: data.details?.summary || "",
-        contact: {
-          phone: data.contact?.phone || "",
-          email: data.contact?.email || "",
-          linkedin: data.contact?.linkedin || "",
-          github: data.contact?.github || "",
-          location: data.contact?.location || ""
-        }
-      });
-
-      if (data.skills) {
-        let skillsArray = [];
-        if (Array.isArray(data.skills)) {
-          skillsArray = data.skills.map(s => (typeof s === 'string' ? s : s?.name || '')).filter(s => s !== '');
-        } else if (typeof data.skills === 'string') {
-          skillsArray = [data.skills];
-        }
-        setSkills(skillsArray.length > 0 ? skillsArray : [""]);
-      }
-
-      // === FIXED EXPERIENCE MAPPING ===
-      if (data.experiences && Array.isArray(data.experiences)) {
-        const mappedExperiences = data.experiences.map(exp => ({
-          position: exp.position || "",
-          company: exp.company || "",
-          location: exp.location || "",
-          duration: exp.duration || "",
-          achievements: Array.isArray(exp.achievements)
-            ? exp.achievements
-            : exp.achievements
-            ? [exp.achievements] // wrap string in array
-            : [] // ensure not null
-        }));
-        setExperiences(mappedExperiences);
-      }
-
-      if (data.projects && Array.isArray(data.projects)) {
-        const mappedProjects = data.projects.map(proj => ({
-          name: proj.name || "",
-          duration: proj.duration || "",
-          technologies: proj.technologies || "",
-          description: Array.isArray(proj.description) && proj.description.length > 0 ? proj.description : [""],
-          link: proj.link || ""
-        }));
-        setProjects(mappedProjects);
-      }
-
-      if (data.educationList && Array.isArray(data.educationList)) {
-        const mappedEducation = data.educationList.map(edu => ({
-          degree: edu.degree || "",
-          institution: edu.institution || "",
-          location: edu.location || "",
-          year: edu.year || "",
-          gpa: edu.gpa || ""
-        }));
-        setEducationList(mappedEducation);
-      }
-
-      if (data.certifications) {
-        let certsArray = [];
-        if (Array.isArray(data.certifications)) {
-          certsArray = data.certifications.map(c => (typeof c === 'string' ? c : c?.name || '')).filter(c => c !== '');
-        } else if (typeof data.certifications === 'string') {
-          certsArray = [data.certifications];
-        }
-        setCertifications(certsArray.length > 0 ? certsArray : [""]);
-      }
-
-      setShowSummary(data.showSummary !== undefined ? data.showSummary : true);
-      setShowSkills(data.showSkills !== undefined ? data.showSkills : true);
-      setShowExperience(data.showExperience !== undefined ? data.showExperience : true);
-      setShowProjects(data.showProjects !== undefined ? data.showProjects : true);
-      setShowEducation(data.showEducation !== undefined ? data.showEducation : true);
-      setShowCertifications(data.showCertifications !== undefined ? data.showCertifications : true);
-
-      if (data.customSections && Array.isArray(data.customSections)) {
-        setCustomSections(data.customSections);
-      }
-
-      if (data.sectionTitles) {
-        setSectionTitles({
-          summary: data.sectionTitles.summary || "Summary",
-          skills: data.sectionTitles.skills || "Skills",
-          experience: data.sectionTitles.experience || "Experience",
-          projects: data.sectionTitles.projects || "Projects",
-          education: data.sectionTitles.education || "Education",
-          certifications: data.sectionTitles.certifications || "Certifications"
-        });
-      }
-      setLocalResune(data);
-
+      setIsLoadingResume(true);
       setFetchError("");
-    } catch (err) {
-      console.error("Error fetching resume:", err);
-      setFetchError(`Failed to load resume: ${err.message}`);
-    } finally {
-      setIsLoadingResume(false);
-    }
-  };
 
-  fetchResume();
-}, [resumeId]);
+      try {
+        // Always use main API_BASE_URL
+        const response = await fetch(`${API_BASE_URL}/my-resumes/getresume/${resumeId}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+        });
+
+        if (response.status === 404) {
+          setFetchError("Resume not found. It may have been deleted.");
+          setIsLoadingResume(false);
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error(`Server error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("Fetched resume data:", data);
 
 
-  
+
+        setResumeTitle(data.title || "");
+        setSelectedTemplate(data.templateId ? String(data.templateId) : "1");
+
+        setResumeDetails({
+          name: data.details?.name || "",
+          title: data.details?.title || "",
+          summary: data.details?.summary || "",
+          contact: {
+            phone: data.contact?.phone || "",
+            email: data.contact?.email || "",
+            linkedin: data.contact?.linkedin || "",
+            github: data.contact?.github || "",
+            location: data.contact?.location || ""
+          }
+        });
+
+        if (data.skills) {
+          let skillsArray = [];
+          if (Array.isArray(data.skills)) {
+            skillsArray = data.skills.map(s => (typeof s === 'string' ? s : s?.name || '')).filter(s => s !== '');
+          } else if (typeof data.skills === 'string') {
+            skillsArray = [data.skills];
+          }
+          setSkills(skillsArray.length > 0 ? skillsArray : [""]);
+        }
+
+        // === FIXED EXPERIENCE MAPPING ===
+        if (data.experiences && Array.isArray(data.experiences)) {
+          const mappedExperiences = data.experiences.map(exp => ({
+            position: exp.position || "",
+            company: exp.company || "",
+            location: exp.location || "",
+            duration: exp.duration || "",
+            achievements: Array.isArray(exp.achievements)
+              ? exp.achievements
+              : exp.achievements
+                ? [exp.achievements] // wrap string in array
+                : [] // ensure not null
+          }));
+          setExperiences(mappedExperiences);
+        }
+
+        if (data.projects && Array.isArray(data.projects)) {
+          const mappedProjects = data.projects.map(proj => ({
+            name: proj.name || "",
+            duration: proj.duration || "",
+            technologies: proj.technologies || "",
+            description: Array.isArray(proj.description) && proj.description.length > 0 ? proj.description : [""],
+            link: proj.link || ""
+          }));
+          setProjects(mappedProjects);
+        }
+
+        if (data.educationList && Array.isArray(data.educationList)) {
+          const mappedEducation = data.educationList.map(edu => ({
+            degree: edu.degree || "",
+            institution: edu.institution || "",
+            location: edu.location || "",
+            year: edu.year || "",
+            gpa: edu.gpa || ""
+          }));
+          setEducationList(mappedEducation);
+        }
+
+        if (data.certifications) {
+          let certsArray = [];
+          if (Array.isArray(data.certifications)) {
+            certsArray = data.certifications.map(c => (typeof c === 'string' ? c : c?.name || '')).filter(c => c !== '');
+          } else if (typeof data.certifications === 'string') {
+            certsArray = [data.certifications];
+          }
+          setCertifications(certsArray.length > 0 ? certsArray : [""]);
+        }
+
+        setShowSummary(data.showSummary !== undefined ? data.showSummary : true);
+        setShowSkills(data.showSkills !== undefined ? data.showSkills : true);
+        setShowExperience(data.showExperience !== undefined ? data.showExperience : true);
+        setShowProjects(data.showProjects !== undefined ? data.showProjects : true);
+        setShowEducation(data.showEducation !== undefined ? data.showEducation : true);
+        setShowCertifications(data.showCertifications !== undefined ? data.showCertifications : true);
+
+        if (data.customSections && Array.isArray(data.customSections)) {
+          setCustomSections(data.customSections);
+        }
+
+        if (data.sectionTitles) {
+          setSectionTitles({
+            summary: data.sectionTitles.summary || "Summary",
+            skills: data.sectionTitles.skills || "Skills",
+            experience: data.sectionTitles.experience || "Experience",
+            projects: data.sectionTitles.projects || "Projects",
+            education: data.sectionTitles.education || "Education",
+            certifications: data.sectionTitles.certifications || "Certifications"
+          });
+        }
+        setLocalResune(data);
+
+        setFetchError("");
+      } catch (err) {
+        console.error("Error fetching resume:", err);
+        setFetchError(`Failed to load resume: ${err.message}`);
+      } finally {
+        setIsLoadingResume(false);
+      }
+    };
+
+    fetchResume();
+  }, [resumeId]);
+
+
+
   const addCustomSection = useCallback(() => {
     setCustomSections(prev => [...prev, {
       id: Date.now(),
@@ -940,10 +940,10 @@ useEffect(() => {
       showCertifications,
       customSections
     }),
-    [resumeDetails, skills, experiences, projects, educationList, certifications, 
-     showSummary, showSkills, showExperience, showProjects, showEducation, showCertifications, customSections]
+    [resumeDetails, skills, experiences, projects, educationList, certifications,
+      showSummary, showSkills, showExperience, showProjects, showEducation, showCertifications, customSections]
   );
-  
+
   const debouncedData = useDebounce(combinedData, 1500);
 
 
@@ -1141,7 +1141,7 @@ useEffect(() => {
     setSaveError("");
     try {
       const { pdf } = await import("@react-pdf/renderer");
-      
+
       const downloadData = {
         resumeDetails,
         skills,
@@ -1179,13 +1179,13 @@ useEffect(() => {
         case "6":
           doc = React.createElement(AcademicScholarDocument, downloadData);
           break;
-        case "7":  
+        case "7":
           doc = React.createElement(NewTemplate, downloadData);
           break;
         default:
           doc = React.createElement(CreativeBold, downloadData);
       }
-      
+
       const asPdf = pdf(doc);
       const blob = await asPdf.toBlob();
       const url = URL.createObjectURL(blob);
@@ -1206,172 +1206,172 @@ useEffect(() => {
   };
 
 
- 
-const uiEditor = () => {
-  const payload = buildResumePayload();
-  dispatch(setCurrentResume(payload));
-  navigate("/ui-editor");
-};
 
-
-
-  
-
-const buildResumePayload = () => {
-  return {
-    resumeDetails,
-    skills,
-    experiences,
-    projects,
-    educationList,
-    certifications,
-    sectionTitles,
+  const uiEditor = () => {
+    const payload = buildResumePayload();
+    dispatch(setCurrentResume(payload));
+    navigate("/ui-editor");
   };
-};
 
 
 
 
 
- 
-  
- const handleSaveAll = async () => {
-
-  if(userId==null){
-     window.showMessage('Please Login First.', 'warning');
-     return;
-  }
-  setSaving(true);
-  setMessage("Saving...");
-  setLoading(true);
-  setSaveError("");
-  setSuccessMessage("");
-  try {
-    const transformedSkills = skills.map(skill => ({ name: skill.trim() })).filter(skill => skill.name !== "");
-    const transformedCertifications = certifications.map(cert => ({ name: cert.trim() })).filter(cert => cert.name !== "");
-    
-    let title = resumeDetails.title;
-    
-    
-    if (!resumeId && !title) {
-      title = prompt("Enter the title for the resume");
-      if (!title) {
-        setSaving(false);
-        return;
-      }
-    }
-    
-    
-    
-    const payload = {
-      title,
-      templateId: Number(selectedTemplate),
-      userId : id ,
-      details: {
-        name: resumeDetails.name,
-        title: resumeDetails.title,
-        summary: resumeDetails.summary
-      },
-      contact: resumeDetails.contact,
-      skills: transformedSkills,
+  const buildResumePayload = () => {
+    return {
+      resumeDetails,
+      skills,
       experiences,
       projects,
       educationList,
-      certifications: transformedCertifications,
-      showSummary,
-      showSkills,
-      showExperience,
-      showProjects,
-      showEducation,
-      showCertifications,
-      customSections,
-      sectionTitles
+      certifications,
+      sectionTitles,
     };
+  };
 
 
-    console.log("=========================================================================");
-    
-    console.log(payload);
 
-    
-    
-    
-   
-    
-    const endpoint = currentResumeId 
-      ? `${API_BASE_URL}/update/${resumeId}`
-      : `${API_BASE_URL}/saveall`;
 
-    console.log(`The endpoint was ${endpoint}`);
-      
-    
-    const method = resumeId ? "PUT" : "POST";
-    
-    console.log(`Making ${method} request to:`, endpoint);
-    
-    const res = await fetch(endpoint, {
-      method,
-      headers: { 
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-      },
-      body: JSON.stringify(payload),
-    });
-    
-    console.log(res);
-    
-    
 
-    const message = localResumeId ? "Resume updated successfully!" : "Resume saved successfully!";
-    setSuccessMessage(message);
-    
-    // if (!resumeId && data.id) {
-    //   setTimeout(() => {
-    //     window.location.href = `/dashboard/resume-editor/${data.id}`;
-    //   }, 1500);
-    // }
 
-             // Check if the response is JSON
-   const contentType = res.headers.get("content-type");
-   if (!contentType || !contentType.includes("application/json")) {
-     const textResponse = await res.text();
-     console.error("Non-JSON response received:", textResponse);
-     throw new Error(`Server returned non-JSON response. Status: ${res.status}`);
-   }
-   
-   // If response not OK, throw an error
-   if (!res.ok) {
-     const errorData = await res.json().catch(() => null);
-     const errorMessage = errorData?.message || `Save failed with status ${res.status}`;
-     throw new Error(errorMessage);
-   }
-   
-   // Parse JSON
-   const data = await res.json(); // { message, resumeId }
-   console.log("Response data:", data);
-   
-   // If this is the first save, store the resumeId in Redux or state
-   if (!currentResumeId && data.resumeId) {
-     dispatch(setCurrentResumeId(data.resumeId));
-     setLocalResuneId(data.resumeId);
+
+  const handleSaveAll = async () => {
+
+    if (userId == null) {
+      window.showMessage('Please Login First.', 'warning');
+      return;
     }
+    setSaving(true);
+    setMessage("Saving...");
+    setLoading(true);
+    setSaveError("");
+    setSuccessMessage("");
+    try {
+      const transformedSkills = skills.map(skill => ({ name: skill.trim() })).filter(skill => skill.name !== "");
+      const transformedCertifications = certifications.map(cert => ({ name: cert.trim() })).filter(cert => cert.name !== "");
 
-    window.showMessage('Success', message, 'success', 1500);;
-
-    
+      let title = resumeDetails.title;
 
 
-    
-  } catch (err) {
-    console.error("Save error:", err);
-    setSaveError(`Failed to save resume: ${err.message}`);
-    window.showMessage('Error', 'Unable to save your resume', 'error', 1500);
-  } finally {
-    setSaving(false);
-    setLoading(false);
-    setMessage("Loading...");
-  }
-};
+      if (!resumeId && !title) {
+        title = prompt("Enter the title for the resume");
+        if (!title) {
+          setSaving(false);
+          return;
+        }
+      }
+
+
+
+      const payload = {
+        title,
+        templateId: Number(selectedTemplate),
+        userId: id,
+        details: {
+          name: resumeDetails.name,
+          title: resumeDetails.title,
+          summary: resumeDetails.summary
+        },
+        contact: resumeDetails.contact,
+        skills: transformedSkills,
+        experiences,
+        projects,
+        educationList,
+        certifications: transformedCertifications,
+        showSummary,
+        showSkills,
+        showExperience,
+        showProjects,
+        showEducation,
+        showCertifications,
+        customSections,
+        sectionTitles
+      };
+
+
+      console.log("=========================================================================");
+
+      console.log(payload);
+
+
+
+
+
+
+      const endpoint = currentResumeId
+        ? `${API_BASE_URL}/update/${resumeId}`
+        : `${API_BASE_URL}/saveall`;
+
+      console.log(`The endpoint was ${endpoint}`);
+
+
+      const method = resumeId ? "PUT" : "POST";
+
+      console.log(`Making ${method} request to:`, endpoint);
+
+      const res = await fetch(endpoint, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify(payload),
+      });
+
+      console.log(res);
+
+
+
+      const message = localResumeId ? "Resume updated successfully!" : "Resume saved successfully!";
+      setSuccessMessage(message);
+
+      // if (!resumeId && data.id) {
+      //   setTimeout(() => {
+      //     window.location.href = `/dashboard/resume-editor/${data.id}`;
+      //   }, 1500);
+      // }
+
+      // Check if the response is JSON
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const textResponse = await res.text();
+        console.error("Non-JSON response received:", textResponse);
+        throw new Error(`Server returned non-JSON response. Status: ${res.status}`);
+      }
+
+      // If response not OK, throw an error
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        const errorMessage = errorData?.message || `Save failed with status ${res.status}`;
+        throw new Error(errorMessage);
+      }
+
+      // Parse JSON
+      const data = await res.json(); // { message, resumeId }
+      console.log("Response data:", data);
+
+      // If this is the first save, store the resumeId in Redux or state
+      if (!currentResumeId && data.resumeId) {
+        dispatch(setCurrentResumeId(data.resumeId));
+        setLocalResuneId(data.resumeId);
+      }
+
+      window.showMessage('Success', message, 'success', 1500);;
+
+
+
+
+
+    } catch (err) {
+      console.error("Save error:", err);
+      setSaveError(`Failed to save resume: ${err.message}`);
+      window.showMessage('Error', 'Unable to save your resume', 'error', 1500);
+    } finally {
+      setSaving(false);
+      setLoading(false);
+      setMessage("Loading...");
+    }
+  };
 
 
   if (isLoadingResume) {
@@ -1393,14 +1393,14 @@ const buildResumePayload = () => {
           <h2 style={{ marginBottom: '1rem', color: '#e74c3c' }}>Failed to Load Resume</h2>
           <p style={{ marginBottom: '1.5rem', color: '#666' }}>{fetchError}</p>
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-            <button 
-              onClick={() => window.location.reload()} 
+            <button
+              onClick={() => window.location.reload()}
               style={{ padding: '0.75rem 1.5rem', backgroundColor: '#3498db', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '1rem' }}
             >
               Retry
             </button>
-            <button 
-              onClick={() => window.location.href = '/dashboard'} 
+            <button
+              onClick={() => window.location.href = '/dashboard'}
               style={{ padding: '0.75rem 1.5rem', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '1rem' }}
             >
               Go to Dashboard
@@ -1413,289 +1413,289 @@ const buildResumePayload = () => {
 
   return (
     <>
-     
-      
+
+
       <div className="resume-editor-container">
         <div className="template-selector-header">
-           <div className="template-selector-content">
+          <div className="template-selector-content">
 
-            
-             <h2 className="template-selector-title">
+
+            <h2 className="template-selector-title">
               {resumeId ? `Edit Resume: ${resumeTitle || 'Untitled'}` : 'Create New Resume'}
             </h2>
 
-            
 
 
-           </div>
 
-           
+          </div>
+
+
         </div>
 
         <div className="editor-page-container">
-            <LoadingAnimation message={message} show={loading}/>
+          <LoadingAnimation message={message} show={loading} />
 
-            <div className="analyze-container">
+          <div className="analyze-container">
 
-                    <ResumeAnalyzer
-                jobDescription={jobDescription}
-                resumeDetails={resumeDetails}
-                skills={skills}
-                experiences={experiences}
-                projects={projects}
-                educationList={educationList}
-                certifications={certifications}
-                customSections={customSections}
-                showSummary={true}
-                showSkills={true}
-                showExperience={true}
-                showProjects={true}
-                showEducation={true}
-                showCertifications={true}
-              />
+            <ResumeAnalyzer
+              jobDescription={jobDescription}
+              resumeDetails={resumeDetails}
+              skills={skills}
+              experiences={experiences}
+              projects={projects}
+              educationList={educationList}
+              certifications={certifications}
+              customSections={customSections}
+              showSummary={true}
+              showSkills={true}
+              showExperience={true}
+              showProjects={true}
+              showEducation={true}
+              showCertifications={true}
+            />
 
-           </div>  
+          </div>
 
 
-             <div className="sec-manager">
-                <h3>Manage Sections</h3>
-                <div className="section-toggle-grid">
-                  <div className="section-toggle-item">
-                    <input type="checkbox" id="toggle-summary" checked={showSummary} onChange={(e) => setShowSummary(e.target.checked)} />
-                    <label htmlFor="toggle-summary">Summary</label>
-                  </div>
-                  <div className="section-toggle-item">
-                    <input type="checkbox" id="toggle-skills" checked={showSkills} onChange={(e) => setShowSkills(e.target.checked)} />
-                    <label htmlFor="toggle-skills">Skills</label>
-                  </div>
-                  <div className="section-toggle-item">
-                    <input type="checkbox" id="toggle-experience" checked={showExperience} onChange={(e) => setShowExperience(e.target.checked)} />
-                    <label htmlFor="toggle-experience">Experience</label>
-                  </div>
-                  <div className="section-toggle-item">
-                    <input type="checkbox" id="toggle-projects" checked={showProjects} onChange={(e) => setShowProjects(e.target.checked)} />
-                    <label htmlFor="toggle-projects">Projects</label>
-                  </div>
-                  <div className="section-toggle-item">
-                    <input type="checkbox" id="toggle-education" checked={showEducation} onChange={(e) => setShowEducation(e.target.checked)} />
-                    <label htmlFor="toggle-education">Education</label>
-                  </div>
-                  <div className="section-toggle-item">
-                    <input type="checkbox" id="toggle-certifications" checked={showCertifications} onChange={(e) => setShowCertifications(e.target.checked)} />
-                    <label htmlFor="toggle-certifications">Certifications</label>
-                  </div>
-                </div>
-                <button type="button" className="add-btn" onClick={addCustomSection}>
-                  Add Custom Section
-                </button>
+          <div className="sec-manager">
+            <h3>Manage Sections</h3>
+            <div className="section-toggle-grid">
+              <div className="section-toggle-item">
+                <input type="checkbox" id="toggle-summary" checked={showSummary} onChange={(e) => setShowSummary(e.target.checked)} />
+                <label htmlFor="toggle-summary">Summary</label>
               </div>
+              <div className="section-toggle-item">
+                <input type="checkbox" id="toggle-skills" checked={showSkills} onChange={(e) => setShowSkills(e.target.checked)} />
+                <label htmlFor="toggle-skills">Skills</label>
+              </div>
+              <div className="section-toggle-item">
+                <input type="checkbox" id="toggle-experience" checked={showExperience} onChange={(e) => setShowExperience(e.target.checked)} />
+                <label htmlFor="toggle-experience">Experience</label>
+              </div>
+              <div className="section-toggle-item">
+                <input type="checkbox" id="toggle-projects" checked={showProjects} onChange={(e) => setShowProjects(e.target.checked)} />
+                <label htmlFor="toggle-projects">Projects</label>
+              </div>
+              <div className="section-toggle-item">
+                <input type="checkbox" id="toggle-education" checked={showEducation} onChange={(e) => setShowEducation(e.target.checked)} />
+                <label htmlFor="toggle-education">Education</label>
+              </div>
+              <div className="section-toggle-item">
+                <input type="checkbox" id="toggle-certifications" checked={showCertifications} onChange={(e) => setShowCertifications(e.target.checked)} />
+                <label htmlFor="toggle-certifications">Certifications</label>
+              </div>
+            </div>
+            <button type="button" className="add-btn" onClick={addCustomSection}>
+              Add Custom Section
+            </button>
+          </div>
 
 
 
-            
-
-            <div className="editor-preview-wrapper">
 
 
-              <div className="editor-panel">
-               <div className="ats-resume" ref={resumeRef}>
-              
-                  {successMessage && (
-                    <div className="success-message">
-                      <span>✓</span>
-                      <span>{successMessage}</span>
-                    </div>
-                  )}
-    
-                  {saveError && (
-                    <div className="error-message">
-                      <span>⚠</span>
-                      <span>{saveError}</span>
-                    </div>
-                  )}
-              
-                  <header className="header">
-                    <input className="name" value={resumeDetails.name} onChange={(e) => handleResumeDetailChange("name", e.target.value)} placeholder="Full Name" />
-                    <input className="title" value={resumeDetails.title} onChange={(e) => handleResumeDetailChange("title", e.target.value)} placeholder="Professional Title" />
-                    <div className="contact">
-                      <input value={resumeDetails.contact.phone} onChange={(e) => handleResumeDetailChange("phone", e.target.value)} placeholder="Phone" />
-                      <span className="separator">|</span>
-                      <input value={resumeDetails.contact.email} onChange={(e) => handleResumeDetailChange("email", e.target.value)} placeholder="Email" />
-                      <span className="separator">|</span>
-                      <input value={resumeDetails.contact.linkedin} onChange={(e) => handleResumeDetailChange("linkedin", e.target.value)} placeholder="LinkedIn" />
-                      <span className="separator">|</span>
-                      <input value={resumeDetails.contact.github} onChange={(e) => handleResumeDetailChange("github", e.target.value)} placeholder="GitHub" />
-                      <span className="separator">|</span>
-                      <input value={resumeDetails.contact.location} onChange={(e) => handleResumeDetailChange("location", e.target.value)} placeholder="Location" />
-                    </div>
-                  </header>
+          <div className="editor-preview-wrapper">
 
-              
-    
-                  
-    
-                  {showSummary && (
-                    <section className="section">  
-                      <div className="section-title">
-                        <input className="sec-inputs" type="text" value={sectionTitles.summary} onChange={(e) => {
-                          setSectionTitles({...sectionTitles, summary: e.target.value})
-                        }} />
-                      </div>
-                      <textarea className="summary" value={resumeDetails.summary} onChange={(e) => handleResumeDetailChange("summary", e.target.value)} />
-                    </section>
-                  )}
-    
-                  {showSkills && (
-                    <section className="section">
-                      <div className="section-title">
-                        <input type="text" className="sec-inputs" value={sectionTitles.skills} onChange={(e) => {
-                          setSectionTitles({...sectionTitles, skills: e.target.value})
-                        }} />
-                      </div>
-                      {Array.isArray(skills) && skills.map((skill, i) => (
-                        <div className="skill" key={`skill-${i}`}>
-                          <span className="bullet">•</span>
-                          <input className="skill-text" value={skill || ""} onChange={(e) => handleSkillChange(i, e.target.value)} placeholder="Skill name" />
-                          <button type="button" className="remove-small-btn" onClick={(e) => { e.preventDefault(); removeSkill(i); }}>×</button>
-                        </div>
-                      ))}
-                      <button type="button" className="add-btn" onClick={addSkill}>Add Skill</button>
-                    </section>
-                  )}
-    
-                  {showExperience && (
-                    <section className="section"> 
-                      <div className="section-title">
-                        <input type="text" value={sectionTitles.experience} className="sec-inputs"
-                        onChange={(e) => {
-                         setSectionTitles({...sectionTitles, experience: e.target.value})
-                        }} />
-                      </div>
-                      {Array.isArray(experiences) && experiences.map((exp, i) => (
-                        <div className="experience" key={`exp-${i}`}>
-                          <div className="exp-header">
-                            <input className="position" value={exp?.position || ""} onChange={(e) => handleExperienceChange(i, "position", e.target.value)} placeholder="Position" />
-                            <input className="company" value={exp?.company || ""} onChange={(e) => handleExperienceChange(i, "company", e.target.value)} placeholder="Company" />
-                            <input className="duration" value={exp?.duration || ""} onChange={(e) => handleExperienceChange(i, "duration", e.target.value)} placeholder="Duration" />
-                            <button type="button" className="remove-small-btn" onClick={(e) => { e.preventDefault(); removeExperience(i); }}>Remove</button>
-                          </div>
-                          <input className="location" value={exp?.location || ""} onChange={(e) => handleExperienceChange(i, "location", e.target.value)} placeholder="Location" />
-                          {Array.isArray(exp?.achievements) && exp.achievements.map((ach, j) => (
-                            <div className="achievement" key={`ach-${i}-${j}`}>
-                              <span className="bullet">•</span>
-                              <input className="achievement-text" value={ach || ""} onChange={(e) => handleExperienceChange(i, "achievements", e.target.value, j)} placeholder="Achievement description" />
-                              <button type="button" className="remove-small-btn" onClick={(e) => { e.preventDefault(); removeAchievement(i, j); }}>×</button>
-                            </div>
-                          ))}
-                          <button type="button" className="add-small-btn" onClick={(e) => { e.preventDefault(); addAchievement(i); }}>Add Achievement</button>
-                        </div>
-                      ))}
-                      <button type="button" className="add-btn" onClick={addExperience}>Add Experience</button>
-                    </section>
-                  )}
-    
-                  {showProjects && (
-                    <section className="section">
-                      <div className="section-title">
-                        <input className="sec-inputs" type="text" value={sectionTitles.projects} onChange={(e) => {
-                            setSectionTitles({...sectionTitles, projects: e.target.value})
-                          }
-                        } />
-                      </div>
-                      {Array.isArray(projects) && projects.map((proj, i) => (
-                        <div className="project" key={`proj-${i}`}>
-                          <div className="project-header">
-                            <input className="project-name" value={proj?.name || ""} onChange={(e) => handleProjectChange(i, "name", e.target.value)} placeholder="Project Name" />
-                            <input className="project-duration" value={proj?.duration || ""} onChange={(e) => handleProjectChange(i, "duration", e.target.value)} placeholder="Duration" />
-                            <button type="button" className="remove-small-btn" onClick={(e) => { e.preventDefault(); removeProject(i); }}>Remove</button>
-                          </div>
-                          <input className="technologies" value={proj?.technologies || ""} onChange={(e) => handleProjectChange(i, "technologies", e.target.value)} placeholder="Technologies used" />
-                          <input className="project-link" value={proj?.link || ""} onChange={(e) => handleProjectChange(i, "link", e.target.value)} placeholder="Project Link (optional)" />
-                          {Array.isArray(proj?.description) && proj.description.map((desc, j) => (
-                            <div className="description" key={`desc-${i}-${j}`}>
-                              <span className="bullet">•</span>
-                              <input className="description-text" value={desc || ""} onChange={(e) => handleProjectChange(i, "description", e.target.value, j)} placeholder="Project description point" />
-                              <button type="button" className="remove-small-btn" onClick={(e) => { e.preventDefault(); removeProjectPoint(i, j); }}>×</button>
-                            </div>
-                          ))}
-                          <button type="button" className="add-small-btn" onClick={(e) => { e.preventDefault(); addProjectPoint(i); }}>Add Description Point</button>
-                        </div>
-                      ))}
-                      <button type="button" className="add-btn" onClick={addProject}>Add Project</button>
-                    </section>
-                  )}
 
-                           {showEducation && (
-                <section className="section">
-                  <div className="section-title">
-                    <input type="text" className="sec-inputs" value={sectionTitles.education} onChange={(e) => {
-                      setSectionTitles({...sectionTitles, education: e.target.value})
-                    }} />
+            <div className="editor-panel">
+              <div className="ats-resume" ref={resumeRef}>
+
+                {successMessage && (
+                  <div className="success-message">
+                    <span>✓</span>
+                    <span>{successMessage}</span>
                   </div>
-                  {Array.isArray(educationList) && educationList.map((edu, i) => (
-                    <div className="education" key={`edu-${i}`}>
-                      <div className="edu-header">
-                        <div className="edu-fields-wrapper">
-                          <div className="edu-fields-row">
-                            <input className="degree" value={edu?.degree || ""} onChange={(e) => handleEducationChange(i, "degree", e.target.value)} placeholder="Degree" />
-                            <input className="year" value={edu?.year || ""} onChange={(e) => handleEducationChange(i, "year", e.target.value)} placeholder="Year" />
-                          </div>
-                          <input className="institution" value={edu?.institution || ""} onChange={(e) => handleEducationChange(i, "institution", e.target.value)} placeholder="Institution" />
-                          <input className="edu-location" value={edu?.location || ""} onChange={(e) => handleEducationChange(i, "location", e.target.value)} placeholder="Location" />
-                          <input className="gpa" value={edu?.gpa || ""} onChange={(e) => handleEducationChange(i, "gpa", e.target.value)} placeholder="GPA/Score (optional)" />
-                        </div>
-                        <button type="button" className="remove-btn" onClick={(e) => { e.preventDefault(); removeEducation(i); }}>Remove</button>
-                      </div>
-                    </div>
-                  ))}
-                  <button type="button" className="add-btn" onClick={addEducation}>Add Education</button>
-                </section>
                 )}
 
-              {showCertifications && (
-                <section className="section">
-                  <div className="section-title">
-                    <input type="text" className="sec-inputs" value={sectionTitles.certifications} onChange={(e) => {
-                      setSectionTitles({...sectionTitles, certifications: e.target.value})
-                    }} />
+                {saveError && (
+                  <div className="error-message">
+                    <span>⚠</span>
+                    <span>{saveError}</span>
                   </div>
-                  {Array.isArray(certifications) && certifications.map((cert, i) => (
-                    <div className="certification" key={`cert-${i}`}>
-                      <input className="cert-text" value={cert || ""} onChange={(e) => handleCertificationChange(i, e.target.value)} placeholder="Certification Name" />
-                      <button type="button" className="remove-small-btn" onClick={(e) => { e.preventDefault(); removeCertification(i); }}>Remove</button>
-                    </div>
-                  ))}
-                  <button type="button" className="add-btn" onClick={addCertification}>Add Certification</button>
-                </section>
-              )}
+                )}
 
-              {customSections.map((section) => (
-                <div key={section.id} className="custom-section-container">
-                  <div className="custom-section-header">
-                    <input type="text" className="custom-section-title-input" value={section.title} onChange={(e) => updateCustomSectionTitle(section.id, e.target.value)} placeholder="Section Title" />
-                    <button type="button" className="remove-small-btn" onClick={() => removeCustomSection(section.id)}>Remove Section</button>
+                <header className="header">
+                  <input className="name" value={resumeDetails.name} onChange={(e) => handleResumeDetailChange("name", e.target.value)} placeholder="Full Name" />
+                  <input className="title" value={resumeDetails.title} onChange={(e) => handleResumeDetailChange("title", e.target.value)} placeholder="Professional Title" />
+                  <div className="contact">
+                    <input value={resumeDetails.contact.phone} onChange={(e) => handleResumeDetailChange("phone", e.target.value)} placeholder="Phone" />
+                    <span className="separator">|</span>
+                    <input value={resumeDetails.contact.email} onChange={(e) => handleResumeDetailChange("email", e.target.value)} placeholder="Email" />
+                    <span className="separator">|</span>
+                    <input value={resumeDetails.contact.linkedin} onChange={(e) => handleResumeDetailChange("linkedin", e.target.value)} placeholder="LinkedIn" />
+                    <span className="separator">|</span>
+                    <input value={resumeDetails.contact.github} onChange={(e) => handleResumeDetailChange("github", e.target.value)} placeholder="GitHub" />
+                    <span className="separator">|</span>
+                    <input value={resumeDetails.contact.location} onChange={(e) => handleResumeDetailChange("location", e.target.value)} placeholder="Location" />
                   </div>
-                  {section.items.map((item, idx) => (
-                    <div key={idx} className="skill" style={{ marginBottom: '0.5rem' }}>
-                      <span className="bullet">•</span>
-                      <input className="skill-text" value={item} onChange={(e) => updateCustomSectionItem(section.id, idx, e.target.value)} placeholder="Item content" />
-                      <button type="button" className="remove-small-btn" onClick={() => removeCustomSectionItem(section.id, idx)}>×</button>
+                </header>
+
+
+
+
+
+                {showSummary && (
+                  <section className="section">
+                    <div className="section-title">
+                      <input className="sec-inputs" type="text" value={sectionTitles.summary} onChange={(e) => {
+                        setSectionTitles({ ...sectionTitles, summary: e.target.value })
+                      }} />
                     </div>
-                  ))}
-                  <button type="button" className="add-small-btn" onClick={() => addCustomSectionItem(section.id)}>Add Item</button>
+                    <textarea className="summary" value={resumeDetails.summary} onChange={(e) => handleResumeDetailChange("summary", e.target.value)} />
+                  </section>
+                )}
+
+                {showSkills && (
+                  <section className="section">
+                    <div className="section-title">
+                      <input type="text" className="sec-inputs" value={sectionTitles.skills} onChange={(e) => {
+                        setSectionTitles({ ...sectionTitles, skills: e.target.value })
+                      }} />
+                    </div>
+                    {Array.isArray(skills) && skills.map((skill, i) => (
+                      <div className="skill" key={`skill-${i}`}>
+                        <span className="bullet">•</span>
+                        <input className="skill-text" value={skill || ""} onChange={(e) => handleSkillChange(i, e.target.value)} placeholder="Skill name" />
+                        <button type="button" className="remove-small-btn" onClick={(e) => { e.preventDefault(); removeSkill(i); }}>×</button>
+                      </div>
+                    ))}
+                    <button type="button" className="add-btn" onClick={addSkill}>Add Skill</button>
+                  </section>
+                )}
+
+                {showExperience && (
+                  <section className="section">
+                    <div className="section-title">
+                      <input type="text" value={sectionTitles.experience} className="sec-inputs"
+                        onChange={(e) => {
+                          setSectionTitles({ ...sectionTitles, experience: e.target.value })
+                        }} />
+                    </div>
+                    {Array.isArray(experiences) && experiences.map((exp, i) => (
+                      <div className="experience" key={`exp-${i}`}>
+                        <div className="exp-header">
+                          <input className="position" value={exp?.position || ""} onChange={(e) => handleExperienceChange(i, "position", e.target.value)} placeholder="Position" />
+                          <input className="company" value={exp?.company || ""} onChange={(e) => handleExperienceChange(i, "company", e.target.value)} placeholder="Company" />
+                          <input className="duration" value={exp?.duration || ""} onChange={(e) => handleExperienceChange(i, "duration", e.target.value)} placeholder="Duration" />
+                          <button type="button" className="remove-small-btn" onClick={(e) => { e.preventDefault(); removeExperience(i); }}>Remove</button>
+                        </div>
+                        <input className="location" value={exp?.location || ""} onChange={(e) => handleExperienceChange(i, "location", e.target.value)} placeholder="Location" />
+                        {Array.isArray(exp?.achievements) && exp.achievements.map((ach, j) => (
+                          <div className="achievement" key={`ach-${i}-${j}`}>
+                            <span className="bullet">•</span>
+                            <input className="achievement-text" value={ach || ""} onChange={(e) => handleExperienceChange(i, "achievements", e.target.value, j)} placeholder="Achievement description" />
+                            <button type="button" className="remove-small-btn" onClick={(e) => { e.preventDefault(); removeAchievement(i, j); }}>×</button>
+                          </div>
+                        ))}
+                        <button type="button" className="add-small-btn" onClick={(e) => { e.preventDefault(); addAchievement(i); }}>Add Achievement</button>
+                      </div>
+                    ))}
+                    <button type="button" className="add-btn" onClick={addExperience}>Add Experience</button>
+                  </section>
+                )}
+
+                {showProjects && (
+                  <section className="section">
+                    <div className="section-title">
+                      <input className="sec-inputs" type="text" value={sectionTitles.projects} onChange={(e) => {
+                        setSectionTitles({ ...sectionTitles, projects: e.target.value })
+                      }
+                      } />
+                    </div>
+                    {Array.isArray(projects) && projects.map((proj, i) => (
+                      <div className="project" key={`proj-${i}`}>
+                        <div className="project-header">
+                          <input className="project-name" value={proj?.name || ""} onChange={(e) => handleProjectChange(i, "name", e.target.value)} placeholder="Project Name" />
+                          <input className="project-duration" value={proj?.duration || ""} onChange={(e) => handleProjectChange(i, "duration", e.target.value)} placeholder="Duration" />
+                          <button type="button" className="remove-small-btn" onClick={(e) => { e.preventDefault(); removeProject(i); }}>Remove</button>
+                        </div>
+                        <input className="technologies" value={proj?.technologies || ""} onChange={(e) => handleProjectChange(i, "technologies", e.target.value)} placeholder="Technologies used" />
+                        <input className="project-link" value={proj?.link || ""} onChange={(e) => handleProjectChange(i, "link", e.target.value)} placeholder="Project Link (optional)" />
+                        {Array.isArray(proj?.description) && proj.description.map((desc, j) => (
+                          <div className="description" key={`desc-${i}-${j}`}>
+                            <span className="bullet">•</span>
+                            <input className="description-text" value={desc || ""} onChange={(e) => handleProjectChange(i, "description", e.target.value, j)} placeholder="Project description point" />
+                            <button type="button" className="remove-small-btn" onClick={(e) => { e.preventDefault(); removeProjectPoint(i, j); }}>×</button>
+                          </div>
+                        ))}
+                        <button type="button" className="add-small-btn" onClick={(e) => { e.preventDefault(); addProjectPoint(i); }}>Add Description Point</button>
+                      </div>
+                    ))}
+                    <button type="button" className="add-btn" onClick={addProject}>Add Project</button>
+                  </section>
+                )}
+
+                {showEducation && (
+                  <section className="section">
+                    <div className="section-title">
+                      <input type="text" className="sec-inputs" value={sectionTitles.education} onChange={(e) => {
+                        setSectionTitles({ ...sectionTitles, education: e.target.value })
+                      }} />
+                    </div>
+                    {Array.isArray(educationList) && educationList.map((edu, i) => (
+                      <div className="education" key={`edu-${i}`}>
+                        <div className="edu-header">
+                          <div className="edu-fields-wrapper">
+                            <div className="edu-fields-row">
+                              <input className="degree" value={edu?.degree || ""} onChange={(e) => handleEducationChange(i, "degree", e.target.value)} placeholder="Degree" />
+                              <input className="year" value={edu?.year || ""} onChange={(e) => handleEducationChange(i, "year", e.target.value)} placeholder="Year" />
+                            </div>
+                            <input className="institution" value={edu?.institution || ""} onChange={(e) => handleEducationChange(i, "institution", e.target.value)} placeholder="Institution" />
+                            <input className="edu-location" value={edu?.location || ""} onChange={(e) => handleEducationChange(i, "location", e.target.value)} placeholder="Location" />
+                            <input className="gpa" value={edu?.gpa || ""} onChange={(e) => handleEducationChange(i, "gpa", e.target.value)} placeholder="GPA/Score (optional)" />
+                          </div>
+                          <button type="button" className="remove-btn" onClick={(e) => { e.preventDefault(); removeEducation(i); }}>Remove</button>
+                        </div>
+                      </div>
+                    ))}
+                    <button type="button" className="add-btn" onClick={addEducation}>Add Education</button>
+                  </section>
+                )}
+
+                {showCertifications && (
+                  <section className="section">
+                    <div className="section-title">
+                      <input type="text" className="sec-inputs" value={sectionTitles.certifications} onChange={(e) => {
+                        setSectionTitles({ ...sectionTitles, certifications: e.target.value })
+                      }} />
+                    </div>
+                    {Array.isArray(certifications) && certifications.map((cert, i) => (
+                      <div className="certification" key={`cert-${i}`}>
+                        <input className="cert-text" value={cert || ""} onChange={(e) => handleCertificationChange(i, e.target.value)} placeholder="Certification Name" />
+                        <button type="button" className="remove-small-btn" onClick={(e) => { e.preventDefault(); removeCertification(i); }}>Remove</button>
+                      </div>
+                    ))}
+                    <button type="button" className="add-btn" onClick={addCertification}>Add Certification</button>
+                  </section>
+                )}
+
+                {customSections.map((section) => (
+                  <div key={section.id} className="custom-section-container">
+                    <div className="custom-section-header">
+                      <input type="text" className="custom-section-title-input" value={section.title} onChange={(e) => updateCustomSectionTitle(section.id, e.target.value)} placeholder="Section Title" />
+                      <button type="button" className="remove-small-btn" onClick={() => removeCustomSection(section.id)}>Remove Section</button>
+                    </div>
+                    {section.items.map((item, idx) => (
+                      <div key={idx} className="skill" style={{ marginBottom: '0.5rem' }}>
+                        <span className="bullet">•</span>
+                        <input className="skill-text" value={item} onChange={(e) => updateCustomSectionItem(section.id, idx, e.target.value)} placeholder="Item content" />
+                        <button type="button" className="remove-small-btn" onClick={() => removeCustomSectionItem(section.id, idx)}>×</button>
+                      </div>
+                    ))}
+                    <button type="button" className="add-small-btn" onClick={() => addCustomSectionItem(section.id)}>Add Item</button>
+                  </div>
+                ))}
+
+                <div className="action-buttons">
+                  <button className="btn-primary" onClick={handleSaveAll} disabled={saving}>
+                    {saving ? "Saving..." : localResumeId ? "Update Resume" : "Save Resume"}
+                  </button>
+                  <button className="btn-secondary" onClick={downloadPDF} disabled={downloading}>
+                    {downloading ? "Generating..." : "Download PDF"}
+                  </button>
                 </div>
-              ))}
-
-              <div className="action-buttons">
-                <button className="btn-primary" onClick={handleSaveAll} disabled={saving}>
-                  {saving ? "Saving..." : localResumeId ? "Update Resume" : "Save Resume"}
-                </button>
-                <button className="btn-secondary" onClick={downloadPDF} disabled={downloading}>
-                  {downloading ? "Generating..." : "Download PDF"}
-                </button>
               </div>
             </div>
-          </div>
 
 
 
@@ -1703,73 +1703,73 @@ const buildResumePayload = () => {
 
 
 
-          
-          <div className="preview-panel">
 
-            <div className="preview-header">
-              <div className="preview-header-title-container">
+            <div className="preview-panel">
+
+              <div className="preview-header">
+                <div className="preview-header-title-container">
                   <h3>Live Preview</h3>
-                   <h3><button onClick={uiEditor} >Advanced Editor</button></h3>
+                  <h3><button onClick={uiEditor} >Advanced Editor</button></h3>
+                </div>
+
+                <div className="template-selector-controls">
+                  <label className="template-label">Choose Template:</label>
+                  <select value={selectedTemplate} onChange={(e) => handleTemplateChange(e.target.value)} className="template-select">
+                    <option value="1">Classic Template</option>
+                    <option value="2">Modern Template</option>
+                    <option value="3">ATS-Friendly Template</option>
+                    <option value="4">Executive Elite</option>
+                    <option value="5">Tech Innovator</option>
+                    <option value="6">Academic Scholar</option>
+                    <option value="7">New ATS-Friendly Template</option>
+                    <option value="8">Creative Bold</option>
+                  </select>
+                  {(isTemplateLoading || generatingPreview) && (
+                    <span className="template-loading">
+                      {isTemplateLoading ? "Loading template..." : "Generating preview..."}
+                    </span>
+                  )}
+                </div>
               </div>
-            
-              <div className="template-selector-controls">
-              <label className="template-label">Choose Template:</label>
-              <select value={selectedTemplate} onChange={(e) => handleTemplateChange(e.target.value)} className="template-select">
-                <option value="1">Classic Template</option>
-                <option value="2">Modern Template</option>
-                <option value="3">ATS-Friendly Template</option>
-                <option value="4">Executive Elite</option>
-                <option value="5">Tech Innovator</option>
-                <option value="6">Academic Scholar</option>
-                <option value="7">New ATS-Friendly Template</option>
-                <option value="8">Creative Bold</option>
-              </select>
-              {(isTemplateLoading || generatingPreview) && (
-                <span className="template-loading">
-                  {isTemplateLoading ? "Loading template..." : "Generating preview..."}
-                </span>
-              )}
-            </div>
+
+
+              <div className="preview-content">
+                <ErrorBoundary>
+                  <FatbricPDF pdfBlob={pdfBlob} />
+                </ErrorBoundary>
+              </div>
+
+
             </div>
 
-            
-            <div className="preview-content">
-              <ErrorBoundary>
-                 <FatbricPDF pdfBlob={pdfBlob}/>
-              </ErrorBoundary>
-            </div>
+
 
 
           </div>
 
 
 
-              
-            </div>
 
 
-              
-
-
-
-      </div>
-
-        
-       
-        
-
-        
-
-
-        <div className="resume-editor-main">
-          
-          
-          
 
         </div>
 
 
-        
+
+
+
+
+
+
+        <div className="resume-editor-main">
+
+
+
+
+        </div>
+
+
+
       </div>
     </>
   );

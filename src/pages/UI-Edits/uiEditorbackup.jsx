@@ -9,19 +9,594 @@ import { defaultResumeData } from "./Utils";
 import "./UIEditor.css";
 
 
-
 import { Stage, Layer, Image as KonvaImage, Line, Rect, Transformer, Text } from 'react-konva';
-import { Phone, Mail, Linkedin, Github, MapPin, Globe } from "lucide-react";
 
-const contactIconMap = {
-  phone: Phone,
-  email: Mail,
-  linkedin: Linkedin,
-  github: Github,
-  location: MapPin,
-  website: Globe
-};
 
+// const FlexibleContainer = ({ children, config }) => {
+//   return (
+//     <div style={{
+//       width: config.width || "fit-content",
+//       maxWidth: config.maxWidth || "100%",
+//       padding: config.padding || "10px",
+//       margin: config.margin || "0",
+//       backgroundColor: config.backgroundColor || "#FFFFFF",
+//       fontFamily: config.fontFamily || "Arial",
+//       color: config.color || "#000000",
+//       boxSizing: "border-box",
+//       overflow: config.overflow || "hidden",
+//       border: config.border || "none",
+//       borderRadius: config.borderRadius || "0",
+//       boxShadow: config.boxShadow || "none",
+//     }}>
+//       {children}
+//     </div>
+//   );
+// };
+
+// /**
+//  * Flexible Section Header - Can render any section title with full config
+//  */
+// const FlexibleSectionHeader = ({ title, config }) => {
+//   return (
+//     <div style={{
+//       fontSize: config.fontSize || "14px",
+//       fontWeight: config.fontWeight || "bold",
+//       color: config.color || "#000000",
+//       marginBottom: config.marginBottom || "8px",
+//       marginTop: config.marginTop || "0",
+//       paddingBottom: config.paddingBottom || "3px",
+//       paddingTop: config.paddingTop || "0",
+//       borderBottom: config.borderBottom || "none",
+//       borderTop: config.borderTop || "none",
+//       textTransform: config.textTransform || "none",
+//       letterSpacing: config.letterSpacing || "0",
+//       textAlign: config.textAlign || "left",
+//       display: config.display || "block",
+//       background: config.background || "transparent",
+//       padding: config.padding,
+//     }}>
+//       {config.icon && <span style={{ marginRight: "8px" }}>{config.icon}</span>}
+//       {title}
+//     </div>
+//   );
+// };
+
+// /**
+//  * Flexible Layout Container - Handles flex/grid layouts
+//  */
+// const FlexibleLayout = ({ children, config }) => {
+//   const isGrid = config.display === "grid";
+
+//   return (
+//     <div style={{
+//       display: config.display || "flex",
+//       flexDirection: config.flexDirection || "row",
+//       justifyContent: config.justifyContent || "flex-start",
+//       alignItems: config.alignItems || "stretch",
+//       flexWrap: config.flexWrap || "nowrap",
+//       gap: config.gap || "0",
+//       gridTemplateColumns: isGrid ? config.gridTemplateColumns : undefined,
+//       gridTemplateRows: isGrid ? config.gridTemplateRows : undefined,
+//       padding: config.padding,
+//       margin: config.margin,
+//     }}>
+//       {children}
+//     </div>
+//   );
+// };
+
+// /**
+//  * Flexible Text Block - For any text content
+//  */
+// const FlexibleText = ({ children, config }) => {
+//   return (
+//     <div style={{
+//       fontSize: config.fontSize || "10px",
+//       fontWeight: config.fontWeight || "normal",
+//       fontStyle: config.fontStyle || "normal",
+//       color: config.color || "#000000",
+//       lineHeight: config.lineHeight || "1.4",
+//       textAlign: config.textAlign || "left",
+//       marginBottom: config.marginBottom || "0",
+//       marginTop: config.marginTop || "0",
+//       padding: config.padding,
+//       textTransform: config.textTransform || "none",
+//       letterSpacing: config.letterSpacing || "0",
+//       wordWrap: config.wordWrap || "break-word",
+//       whiteSpace: config.whiteSpace || "normal",
+//       textDecoration: config.textDecoration || "none",
+//       background: config.background || "transparent",
+//       border: config.border,
+//       borderRadius: config.borderRadius,
+//       display: config.display || "block",
+//       flex: config.flex,
+//       width: config.width,
+//       maxWidth: config.maxWidth,
+//     }}>
+//       {children}
+//     </div>
+//   );
+// };
+
+// /**
+//  * Flexible Bullet List - Configurable bullet points
+//  */
+// // const FlexibleBulletList = ({ items, config }) => {
+// //   if (!items || items.length === 0) return null;
+
+// //   return (
+// //     <div style={{ marginTop: config.containerMarginTop || "0" }}>
+// //       {items.filter(item => item?.trim()).map((item, index) => (
+// //         <div key={index} style={{
+// //           display: "flex",
+// //           marginBottom: config.itemMarginBottom || "3px",
+// //           alignItems: config.alignItems || "flex-start",
+// //         }}>
+// //           <div style={{
+// //             width: config.bulletWidth || "10px",
+// //             minWidth: config.bulletWidth || "10px",
+// //             color: config.bulletColor || "#000000",
+// //             fontSize: config.bulletSize || "10px",
+// //             flexShrink: 0,
+// //             marginRight: config.bulletMarginRight || "0",
+// //             marginTop: config.bulletMarginTop || "0",
+// //           }}>
+// //             {config.bulletStyle || "•"}
+// //           </div>
+// //           <FlexibleText config={{
+// //             fontSize: config.textSize || "10px",
+// //             color: config.textColor || "#000000",
+// //             lineHeight: config.lineHeight || "1.4",
+// //             flex: 1,
+// //           }}>
+// //             {item}
+// //           </FlexibleText>
+// //         </div>
+// //       ))}
+// //     </div>
+// //   );
+// // };
+
+
+// // ========== FLEXIBLE BULLET LIST ==========
+// const FlexibleBulletList = ({ items = [], styleConfig = {} }) => {
+//   const config = styleConfig;
+
+//   return (
+//     <div
+//       style={{
+//         display: "flex",
+//         flexDirection: "column",
+//         gap: config.bulletGap || "4px",
+//         width: "100%",
+//       }}
+//     >
+//       {items.map((item, index) => (
+//         <div
+//           key={index}
+//           style={{
+//             display: "flex",
+//             flexDirection: "row",
+//             alignItems: "flex-start",
+//             width: "100%",
+//           }}
+//         >
+//           {/* Bullet */}
+//           <div
+//             style={{
+//               marginTop: "2px",
+//               width: "10px",
+//               minWidth: "10px",
+//               fontSize: config.bulletSize || "12px",
+//               color: config.textColor || "#000000",
+//               lineHeight: config.lineHeight || "1.4",
+//               userSelect: "none",
+//             }}
+//           >
+//             •
+//           </div>
+
+//           {/* Text */}
+//           <div
+//             style={{
+//               flex: 1,
+//               minWidth: 0, // 💥 REQUIRED so bullets don’t break line
+//               fontSize: config.textSize || "10px",
+//               color: config.textColor || "#000000",
+//               lineHeight: config.lineHeight || "1.4",
+//               whiteSpace: "normal",
+//               wordBreak: "normal",
+//               overflowWrap: "anywhere", // 💥 best for resumes
+//             }}
+//           >
+//             {item}
+//           </div>
+//         </div>
+//       ))}
+//     </div>
+//   );
+// };
+
+
+// // ========== FLEXIBLE SECTION COMPONENTS ==========
+
+// /**
+//  * HEADER SECTION - Fully Flexible
+//  */
+// export const FlexibleHeaderSection = ({ resumeDetails, styleConfig }) => {
+//   const config = styleConfig.header;
+
+//   return (
+//     <FlexibleContainer config={config.container}>
+//       <FlexibleLayout config={config.mainLayout}>
+//         {/* Name Section */}
+//         <FlexibleLayout config={config.nameSection}>
+//           <FlexibleText config={config.nameStyle}>
+//             {resumeDetails.name || "Your Name"}
+//           </FlexibleText>
+//           {config.showTitle && (
+//             <FlexibleText config={config.titleStyle}>
+//               {resumeDetails.title || "Your Title"}
+//             </FlexibleText>
+//           )}
+//         </FlexibleLayout>
+
+//         {/* Contact Section */}
+//         {config.showContact && (
+//           <FlexibleLayout config={config.contactLayout}>
+//             {config.contactOrder.map((contactType, idx) => {
+//               const value = resumeDetails.contact?.[contactType];
+//               if (!value) return null;
+
+//               return (
+//                 <FlexibleText key={idx} config={config.contactItemStyle}>
+//                   {config.showContactIcons && config.contactIcons?.[contactType] && (
+//                     <span style={{ marginRight: "4px" }}>{config.contactIcons[contactType]}</span>
+//                   )}
+//                   {value}
+//                 </FlexibleText>
+//               );
+//             })}
+//           </FlexibleLayout>
+//         )}
+//       </FlexibleLayout>
+
+//       {config.showDivider && (
+//         <div style={{
+//           borderBottom: config.dividerStyle || "1px solid #000",
+//           marginTop: config.dividerMarginTop || "8px",
+//           marginBottom: config.dividerMarginBottom || "8px",
+//         }} />
+//       )}
+//     </FlexibleContainer>
+//   );
+// };
+
+// /**
+//  * SUMMARY SECTION - Fully Flexible
+//  */
+// export const FlexibleSummarySection = ({ summary, styleConfig }) => {
+//   const config = styleConfig.summary;
+
+//   return (
+//     <FlexibleContainer config={config.container}>
+//       {config.showTitle && (
+//         <FlexibleSectionHeader title="SUMMARY" config={config.titleStyle} />
+//       )}
+//       <FlexibleText config={config.bodyStyle}>
+//         {summary}
+//       </FlexibleText>
+//     </FlexibleContainer>
+//   );
+// };
+
+// /**
+//  * SKILLS SECTION - Fully Flexible
+//  */
+// export const FlexibleSkillsSection = ({ skills, styleConfig }) => {
+//   const config = styleConfig.skills;
+
+//   // Parse skills (grouped vs flat)
+//   const groupedSkills = {};
+//   const ungroupedSkills = [];
+
+//   if (skills && Array.isArray(skills)) {
+//     skills.forEach(skill => {
+//       if (skill && skill.includes(" - ")) {
+//         const [cat, val] = skill.split(" - ");
+//         groupedSkills[cat.trim()] = val.trim();
+//       } else if (skill?.trim()) {
+//         ungroupedSkills.push(skill.trim());
+//       }
+//     });
+//   }
+
+//   return (
+//     <FlexibleContainer config={config.container}>
+//       {config.showTitle && (
+//         <FlexibleSectionHeader title="SKILLS" config={config.titleStyle} />
+//       )}
+
+//       <FlexibleLayout config={config.contentLayout}>
+//         {/* Grouped Skills */}
+//         {Object.entries(groupedSkills).map(([category, value], idx) => (
+//           <div key={idx} style={{ marginBottom: config.itemMarginBottom || "8px" }}>
+//             {config.showCategories && (
+//               <FlexibleText config={config.categoryStyle}>
+//                 {category}
+//               </FlexibleText>
+//             )}
+//             <FlexibleText config={config.valueStyle}>
+//               {value}
+//             </FlexibleText>
+//           </div>
+//         ))}
+
+//         {/* Ungrouped Skills */}
+//         {ungroupedSkills.length > 0 && (
+//           <div style={{ marginBottom: config.itemMarginBottom || "8px" }}>
+//             {config.showCategories && (
+//               <FlexibleText config={config.categoryStyle}>
+//                 Other
+//               </FlexibleText>
+//             )}
+//             {config.displayType === "list" ? (
+//               <FlexibleBulletList items={ungroupedSkills} config={config.bulletConfig} />
+//             ) : (
+//               <FlexibleText config={config.valueStyle}>
+//                 {ungroupedSkills.join(config.separator || ", ")}
+//               </FlexibleText>
+//             )}
+//           </div>
+//         )}
+//       </FlexibleLayout>
+//     </FlexibleContainer>
+//   );
+// };
+
+// /**
+//  * EXPERIENCE SECTION - Fully Flexible
+//  */
+// export const FlexibleExperienceSection = ({ experiences, styleConfig }) => {
+//   const config = styleConfig.experience;
+
+//   return (
+//     <FlexibleContainer config={config.container}>
+//       {config.showTitle && (
+//         <FlexibleSectionHeader title="EXPERIENCE" config={config.titleStyle} />
+//       )}
+
+//       {experiences.map((exp, idx) => (
+//         <div key={idx} style={{ marginBottom: config.itemMarginBottom || "12px" }}>
+//           <FlexibleLayout config={config.headerLayout}>
+//             {/* Position/Company layout controlled by config */}
+//             {config.positionFirst ? (
+//               <>
+//                 <FlexibleText config={config.positionStyle}>
+//                   {exp.position}
+//                 </FlexibleText>
+//                 <FlexibleText config={config.durationStyle}>
+//                   {exp.duration}
+//                 </FlexibleText>
+//               </>
+//             ) : (
+//               <>
+//                 <FlexibleText config={config.companyStyle}>
+//                   {exp.company}
+//                 </FlexibleText>
+//                 <FlexibleText config={config.durationStyle}>
+//                   {exp.duration}
+//                 </FlexibleText>
+//               </>
+//             )}
+//           </FlexibleLayout>
+
+//           <FlexibleLayout config={config.subHeaderLayout}>
+//             <FlexibleText config={config.companyStyle}>
+//               {config.positionFirst ? exp.company : exp.position}
+//               {exp.location && config.showLocation ? `, ${exp.location}` : ""}
+//             </FlexibleText>
+//           </FlexibleLayout>
+
+//           {/* Achievements */}
+//           {config.showAchievements && exp.achievements && (
+//             <FlexibleBulletList items={exp.achievements} config={config.bulletConfig} />
+//           )}
+//         </div>
+//       ))}
+//     </FlexibleContainer>
+//   );
+// };
+
+// /**
+//  * PROJECTS SECTION - Fully Flexible
+//  */
+// export const FlexibleProjectsSection = ({ projects, styleConfig }) => {
+//   const config = styleConfig.projects;
+
+//   return (
+//     <FlexibleContainer config={config.container}>
+//       {config.showTitle && (
+//         <FlexibleSectionHeader title="PROJECTS" config={config.titleStyle} />
+//       )}
+
+//       {projects.map((proj, idx) => (
+//         <div key={idx} style={{ marginBottom: config.itemMarginBottom || "12px" }}>
+//           <FlexibleLayout config={config.headerLayout}>
+//             <FlexibleText config={config.nameStyle}>
+//               {proj.name}
+//             </FlexibleText>
+//             {proj.duration && config.showDuration && (
+//               <FlexibleText config={config.durationStyle}>
+//                 {proj.duration}
+//               </FlexibleText>
+//             )}
+//           </FlexibleLayout>
+
+//           {proj.technologies && config.showTechnologies && (
+//             <FlexibleText config={config.techStyle}>
+//               {proj.technologies}
+//             </FlexibleText>
+//           )}
+
+//           {config.showDescription && proj.description && (
+//             <FlexibleBulletList items={proj.description} config={config.bulletConfig} />
+//           )}
+//         </div>
+//       ))}
+//     </FlexibleContainer>
+//   );
+// };
+
+// /**
+//  * EDUCATION SECTION - Fully Flexible
+//  */
+// export const FlexibleEducationSection = ({ educationList, styleConfig }) => {
+//   const config = styleConfig.education;
+
+//   return (
+//     <FlexibleContainer config={config.container}>
+//       {config.showTitle && (
+//         <FlexibleSectionHeader title="EDUCATION" config={config.titleStyle} />
+//       )}
+
+//       {educationList.map((edu, idx) => (
+//         <div key={idx} style={{ marginBottom: config.itemMarginBottom || "10px" }}>
+//           <FlexibleText config={config.degreeStyle}>
+//             {edu.degree}
+//           </FlexibleText>
+
+//           {edu.institution && config.showInstitution && (
+//             <FlexibleText config={config.institutionStyle}>
+//               {edu.institution}
+//             </FlexibleText>
+//           )}
+
+//           <FlexibleLayout config={config.detailsLayout}>
+//             {edu.year && (
+//               <FlexibleText config={config.detailsStyle}>
+//                 {edu.year}
+//               </FlexibleText>
+//             )}
+//             {edu.gpa && config.showGpa && (
+//               <FlexibleText config={config.detailsStyle}>
+//                 {config.gpaPrefix || "GPA: "}{edu.gpa}
+//               </FlexibleText>
+//             )}
+//             {edu.location && config.showLocation && (
+//               <FlexibleText config={config.detailsStyle}>
+//                 {edu.location}
+//               </FlexibleText>
+//             )}
+//           </FlexibleLayout>
+//         </div>
+//       ))}
+//     </FlexibleContainer>
+//   );
+// };
+
+// /**
+//  * CERTIFICATIONS SECTION - Fully Flexible
+//  */
+// export const FlexibleCertificationsSection = ({ certifications, styleConfig }) => {
+//   const config = styleConfig.certifications;
+
+//   return (
+//     <FlexibleContainer config={config.container}>
+//       {config.showTitle && (
+//         <FlexibleSectionHeader title="CERTIFICATIONS" config={config.titleStyle} />
+//       )}
+
+//       {config.displayType === "list" ? (
+//         <FlexibleBulletList items={certifications} config={config.bulletConfig} />
+//       ) : (
+//         certifications.filter(cert => cert?.trim()).map((cert, idx) => (
+//           <FlexibleText key={idx} config={config.itemStyle}>
+//             {cert}
+//           </FlexibleText>
+//         ))
+//       )}
+//     </FlexibleContainer>
+//   );
+// };
+
+
+// ========== ENHANCED BASE COMPONENTS ==========
+
+/**
+ * Universal Style Applicator - Applies any CSS property
+ * Filters out non-CSS properties and nested objects
+ */
+
+
+// const applyStyles = (baseStyle, configStyle) => {
+//   if (!configStyle) return baseStyle;
+
+//   const validStyles = {};
+//   const validCSSProps = new Set([
+//     'alignContent', 'alignItems', 'alignSelf', 'animation', 'animationDelay', 
+//     'animationDirection', 'animationDuration', 'animationFillMode', 
+//     'animationIterationCount', 'animationName', 'animationPlayState', 
+//     'animationTimingFunction', 'backfaceVisibility', 'background', 
+//     'backgroundAttachment', 'backgroundBlendMode', 'backgroundClip', 
+//     'backgroundColor', 'backgroundImage', 'backgroundOrigin', 'backgroundPosition', 
+//     'backgroundRepeat', 'backgroundSize', 'border', 'borderBottom', 
+//     'borderBottomColor', 'borderBottomLeftRadius', 'borderBottomRightRadius', 
+//     'borderBottomStyle', 'borderBottomWidth', 'borderCollapse', 'borderColor', 
+//     'borderImage', 'borderImageOutset', 'borderImageRepeat', 'borderImageSlice', 
+//     'borderImageSource', 'borderImageWidth', 'borderLeft', 'borderLeftColor', 
+//     'borderLeftStyle', 'borderLeftWidth', 'borderRadius', 'borderRight', 
+//     'borderRightColor', 'borderRightStyle', 'borderRightWidth', 'borderSpacing', 
+//     'borderStyle', 'borderTop', 'borderTopColor', 'borderTopLeftRadius', 
+//     'borderTopRightRadius', 'borderTopStyle', 'borderTopWidth', 'borderWidth', 
+//     'bottom', 'boxDecorationBreak', 'boxShadow', 'boxSizing', 'breakAfter', 
+//     'breakBefore', 'breakInside', 'captionSide', 'caretColor', 'clear', 'clip', 
+//     'clipPath', 'color', 'columnCount', 'columnFill', 'columnGap', 'columnRule', 
+//     'columnRuleColor', 'columnRuleStyle', 'columnRuleWidth', 'columnSpan', 
+//     'columnWidth', 'columns', 'content', 'counterIncrement', 'counterReset', 
+//     'cursor', 'direction', 'display', 'emptyCells', 'filter', 'flex', 
+//     'flexBasis', 'flexDirection', 'flexFlow', 'flexGrow', 'flexShrink', 
+//     'flexWrap', 'float', 'font', 'fontFamily', 'fontFeatureSettings', 
+//     'fontKerning', 'fontSize', 'fontSizeAdjust', 'fontStretch', 'fontStyle', 
+//     'fontSynthesis', 'fontVariant', 'fontVariantCaps', 'fontVariantLigatures', 
+//     'fontVariantNumeric', 'fontVariantPosition', 'fontWeight', 'gap', 'grid', 
+//     'gridArea', 'gridAutoColumns', 'gridAutoFlow', 'gridAutoRows', 'gridColumn', 
+//     'gridColumnEnd', 'gridColumnGap', 'gridColumnStart', 'gridGap', 'gridRow', 
+//     'gridRowEnd', 'gridRowGap', 'gridRowStart', 'gridTemplate', 'gridTemplateAreas', 
+//     'gridTemplateColumns', 'gridTemplateRows', 'height', 'hyphens', 'imageRendering', 
+//     'isolation', 'justifyContent', 'justifyItems', 'justifySelf', 'left', 
+//     'letterSpacing', 'lineBreak', 'lineHeight', 'listStyle', 'listStyleImage', 
+//     'listStylePosition', 'listStyleType', 'margin', 'marginBottom', 'marginLeft', 
+//     'marginRight', 'marginTop', 'mask', 'maskClip', 'maskComposite', 'maskImage', 
+//     'maskMode', 'maskOrigin', 'maskPosition', 'maskRepeat', 'maskSize', 'maskType', 
+//     'maxHeight', 'maxWidth', 'minHeight', 'minWidth', 'mixBlendMode', 'objectFit', 
+//     'objectPosition', 'opacity', 'order', 'orphans', 'outline', 'outlineColor', 
+//     'outlineOffset', 'outlineStyle', 'outlineWidth', 'overflow', 'overflowWrap', 
+//     'overflowX', 'overflowY', 'padding', 'paddingBottom', 'paddingLeft', 
+//     'paddingRight', 'paddingTop', 'pageBreakAfter', 'pageBreakBefore', 
+//     'pageBreakInside', 'perspective', 'perspectiveOrigin', 'placeContent', 
+//     'placeItems', 'placeSelf', 'pointerEvents', 'position', 'quotes', 'resize', 
+//     'right', 'rowGap', 'scrollBehavior', 'tabSize', 'tableLayout', 'textAlign', 
+//     'textAlignLast', 'textCombineUpright', 'textDecoration', 'textDecorationColor', 
+//     'textDecorationLine', 'textDecorationStyle', 'textIndent', 'textJustify', 
+//     'textOrientation', 'textOverflow', 'textShadow', 'textTransform', 
+//     'textUnderlinePosition', 'top', 'transform', 'transformOrigin', 'transformStyle', 
+//     'transition', 'transitionDelay', 'transitionDuration', 'transitionProperty', 
+//     'transitionTimingFunction', 'unicodeBidi', 'userSelect', 'verticalAlign', 
+//     'visibility', 'whiteSpace', 'widows', 'width', 'willChange', 'wordBreak', 
+//     'wordSpacing', 'wordWrap', 'writingMode', 'zIndex'
+//   ]);
+
+//   Object.keys(configStyle).forEach(key => {
+//     const value = configStyle[key];
+//     // Only include valid CSS properties with primitive values
+//     if (validCSSProps.has(key) && (typeof value === 'string' || typeof value === 'number')) {
+//       validStyles[key] = value;
+//     }
+//   });
+
+//   return { ...baseStyle, ...validStyles };
+// };
 
 
 const applyStyles = (baseStyle, configStyle) => {
@@ -119,30 +694,18 @@ const applyStyles = (baseStyle, configStyle) => {
  * Enhanced Flexible Container
  */
 const FlexibleContainer = ({ children, config = {} }) => {
-  // Debug logging for background color issue
-  const finalStyles = applyStyles({
-    width: "fit-content",
-    maxWidth: "100%",
-    padding: "10px",
-    margin: "0",
-    backgroundColor: "transparent",  // Changed from #FFFFFF to transparent
-    fontFamily: "Arial",
-    color: "#000000",
-    boxSizing: "border-box",
-    overflow: "hidden",
-  }, config);
-
-  // Log background color for debugging
-  if (config.backgroundColor !== undefined || finalStyles.backgroundColor !== "transparent") {
-    console.log("[FlexibleContainer] Background Debug:", {
-      configBg: config.backgroundColor,
-      finalBg: finalStyles.backgroundColor,
-      allConfig: config
-    });
-  }
-
   return (
-    <div style={finalStyles}>
+    <div style={applyStyles({
+      width: "fit-content",
+      maxWidth: "100%",
+      padding: "10px",
+      margin: "0",
+      backgroundColor: "#FFFFFF",
+      fontFamily: "Arial",
+      color: "#000000",
+      boxSizing: "border-box",
+      overflow: "hidden",
+    }, config)}>
       {children}
     </div>
   );
@@ -281,14 +844,97 @@ const FlexibleBulletList = ({ items = [], styleConfig = {} }) => {
   );
 };
 
+// ========== FLEXIBLE SECTION COMPONENTS (KEEPING ORIGINAL NAMES) ==========
+
+/**
+ * HEADER SECTION - Enhanced with backward compatibility
+ */
+// export const FlexibleHeaderSection = ({ resumeDetails, styleConfig }) => {
+//   const config = styleConfig.header;
+
+//   return (
+//     <FlexibleContainer config={config.container}>
+//       {/* Main Header Layout */}
+//       <FlexibleLayout config={config.mainLayout}>
+
+//         {/* Name Section - Enhanced */}
+//         <FlexibleLayout config={config.nameSection}>
+//           <FlexibleText 
+//             config={config.nameConfig || config.nameStyle}
+//             as={config.nameElement || "h1"}
+//           >
+//             {resumeDetails.name || "Your Name"}
+//           </FlexibleText>
+
+//           {config.showTitle && (
+//             <FlexibleText 
+//               config={config.titleConfig || config.titleStyle}
+//               as={config.titleElement || "div"}
+//             >
+//               {resumeDetails.title || "Your Title"}
+//             </FlexibleText>
+//           )}
+//         </FlexibleLayout>
+
+//         {/* Contact Section - Enhanced with per-item styling */}
+//         {config.showContact && (
+//           <FlexibleLayout config={config.contactLayout}>
+//             {config.contactOrder?.map((contactType, idx) => {
+//               const value = resumeDetails.contact?.[contactType];
+//               if (!value) return null;
+
+//               // Get specific config for this contact type (NEW)
+//               const itemConfig = config.contactStyles?.[contactType] || config.contactItemStyle || {};
+//               const iconConfig = config.contactIconStyles?.[contactType] || config.contactIconStyle || {};
+
+//               return (
+//                 <FlexibleLayout 
+//                   key={idx} 
+//                   config={{ 
+//                     display: "flex", 
+//                     alignItems: "center",
+//                     gap: "0px"
+//                   }}
+//                 >
+//                   {config.showContactIcons && (
+//                     <div style={applyStyles({
+//                       width: "5px",
+//                       height: "5px",
+//                       backgroundColor: "#E74C3C",
+//                       borderRadius: "50%",
+//                       marginRight: "8px",
+//                     }, iconConfig)} />
+//                   )}
+//                   <FlexibleText config={itemConfig}>
+//                     {config.contactIcons?.[contactType] && (
+//                       <span style={{ marginRight: "4px" }}>{config.contactIcons[contactType]}</span>
+//                     )}
+//                     {value}
+//                   </FlexibleText>
+//                 </FlexibleLayout>
+//               );
+//             })}
+//           </FlexibleLayout>
+//         )}
+//       </FlexibleLayout>
+
+//       {/* Optional Divider */}
+//       {config.showDivider && (
+//         <div style={applyStyles({
+//           borderBottom: config.dividerStyle || "1px solid #000",
+//           marginTop: config.dividerMarginTop || "8px",
+//           marginBottom: config.dividerMarginBottom || "8px",
+//         }, typeof config.dividerStyle === 'object' ? config.dividerStyle : {})} />
+//       )}
+//     </FlexibleContainer>
+//   );
+// };
 
 export const FlexibleHeaderSection = ({ resumeDetails, styleConfig }) => {
   const config = styleConfig.header;
 
   // Helper function to render sections based on order
   const renderSection = (sectionType) => {
-
-
     switch (sectionType) {
       case 'name':
         return (
@@ -370,11 +1016,11 @@ export const FlexibleHeaderSection = ({ resumeDetails, styleConfig }) => {
               padding: config.contactPadding || "0px",
               width: config.contactWidth || "auto",
               flex: config.contactFlex || "initial",
-              order: typeof config.contactOrder === 'number' ? config.contactOrder : 3,
+              order: config.contactOrder ?? 3,
               ...config.contactZone,
             }}
           >
-            {(config.contactItems || config.contactOrder)?.map((type, idx) => {
+            {config.contactItems?.map((type, idx) => {
               const value = resumeDetails.contact?.[type];
               if (!value) return null;
 
@@ -393,27 +1039,14 @@ export const FlexibleHeaderSection = ({ resumeDetails, styleConfig }) => {
                   {config.showContactIcons && (
                     <div
                       style={{
+                        width: config.contactIconSize || "5px",
+                        height: config.contactIconSize || "5px",
+                        borderRadius: config.contactIconBorderRadius || "50%",
+                        backgroundColor: config.contactIconColor || "#E74C3C",
                         marginRight: config.contactIconMarginRight || "8px",
                         marginLeft: config.contactIconMarginLeft || "0px",
-                        display: "flex",
-                        alignItems: "center"
                       }}
-                    >
-                      {(() => {
-                        const IconComponent = contactIconMap[type] || Globe;
-                        // Determine size: if it looks like a "dot" size (<=6), use a default icon size
-                        const rawSize = config.contactIconSize;
-                        const sizeNum = parseInt(rawSize) || 0;
-                        const iconSize = (sizeNum > 6) ? rawSize : 14;
-
-                        return (
-                          <IconComponent
-                            size={iconSize}
-                            color={config.contactIconColor || "#000000"}
-                          />
-                        );
-                      })()}
-                    </div>
+                    />
                   )}
 
                   <FlexibleText config={config.contactItemStyle}>
@@ -677,13 +1310,6 @@ export const FlexibleExperienceSection = ({ experiences, styleConfig }) => {
 export const FlexibleProjectsSection = ({ projects, styleConfig }) => {
   const config = styleConfig.projects;
 
-  // Debug: Log projects section background config
-  console.log("[Projects Section] Container config:", {
-    containerBg: config.container?.backgroundColor,
-    itemStyleBg: config.itemStyle?.backgroundColor,
-    fullContainer: config.container
-  });
-
   return (
     <FlexibleContainer config={config.container}>
       {config.showTitle && (
@@ -748,13 +1374,6 @@ export const FlexibleProjectsSection = ({ projects, styleConfig }) => {
  */
 export const FlexibleEducationSection = ({ educationList, styleConfig }) => {
   const config = styleConfig.education;
-
-  // Debug: Log education section background config
-  console.log("[Education Section] Container config:", {
-    containerBg: config.container?.backgroundColor,
-    itemStyleBg: config.itemStyle?.backgroundColor,
-    fullContainer: config.container
-  });
 
   return (
     <FlexibleContainer config={config.container}>
@@ -862,53 +1481,6 @@ export const FlexibleCertificationsSection = ({ certifications, styleConfig }) =
 
 
 
-/**
- * CONTACT SECTION - Fully Flexible
- */
-export const FlexibleContactSection = ({ resumeDetails, styleConfig }) => {
-  const config = styleConfig.contact;
-
-  if (!config) return null;
-
-  return (
-    <FlexibleContainer config={config.container}>
-      {config.showTitle && (
-        <FlexibleSectionHeader title="CONTACT" config={config.titleStyle} />
-      )}
-
-      <FlexibleLayout config={config.contactLayout}>
-        {config.contactOrder.map((contactType, idx) => {
-          const value = resumeDetails.contact?.[contactType];
-          if (!value) return null;
-
-          return (
-            <div key={idx} style={{
-              display: 'flex',
-              alignItems: 'center',
-              marginBottom: config.itemMarginBottom || '0'
-            }}>
-              {config.showContactIcons && contactIconMap[contactType] && (
-                <span style={{
-                  marginRight: "6px",
-                  color: config.contactItemStyle?.color || "#000",
-                  display: "flex",
-                  alignItems: "center"
-                }}>
-                  {React.createElement(contactIconMap[contactType], { size: 12 })}
-                </span>
-              )}
-              <FlexibleText config={config.contactItemStyle}>
-                {value}
-              </FlexibleText>
-            </div>
-          );
-        })}
-      </FlexibleLayout>
-    </FlexibleContainer>
-  );
-};
-
-
 // ==================== MAIN UI EDITOR COMPONENT ====================
 
 const UIEditor = () => {
@@ -916,7 +1488,6 @@ const UIEditor = () => {
   const stageRef = useRef(null);
   const stage2Ref = useRef(null);
   const sectionRefs = useRef({});
-
 
   // State
   const [selectedLine, setSelectedLine] = useState(null);
@@ -938,20 +1509,6 @@ const UIEditor = () => {
   const currentResume = useSelector((state) => state.resume.currentResume);
 
   const [resumeDetails, setResumeDetails] = useState(defaultResumeData);
-
-  // Mobile responsiveness state
-  const [isMobile, setIsMobile] = useState(false);
-  const [activeTab, setActiveTab] = useState('controls'); // 'controls' | 'properties'
-
-  // Mobile detection effect
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   useEffect(() => {
     if (!currentResume) return;
@@ -991,7 +1548,6 @@ const UIEditor = () => {
 
     setTemplateComponents({
       header: FlexibleHeaderSection,
-      contact: FlexibleContactSection,
       summary: FlexibleSummarySection,
       skills: FlexibleSkillsSection,
       experience: FlexibleExperienceSection,
@@ -1001,7 +1557,7 @@ const UIEditor = () => {
     });
 
     // Initialize section refs
-    const sections = ['header', 'contact', 'summary', 'skills', 'experience', 'education', 'projects', 'certifications'];
+    const sections = ['header', 'summary', 'skills', 'experience', 'education', 'projects', 'certifications'];
     sections.forEach(section => {
       if (!sectionRefs.current[section]) {
         sectionRefs.current[section] = React.createRef();
@@ -1203,7 +1759,7 @@ const UIEditor = () => {
   const downloadResume = () => {
     if (!stageRef.current) return;
 
-    const uri1 = stageRef.current.toDataURL({ pixelRatio: 5 });
+    const uri1 = stageRef.current.toDataURL({ pixelRatio: 3 });
     const link1 = document.createElement('a');
     link1.download = 'resume-page1.png';
     link1.href = uri1;
@@ -1211,7 +1767,7 @@ const UIEditor = () => {
 
     if (showPage2 && stage2Ref.current) {
       setTimeout(() => {
-        const uri2 = stage2Ref.current.toDataURL({ pixelRatio: 5 });
+        const uri2 = stage2Ref.current.toDataURL({ pixelRatio: 3 });
         const link2 = document.createElement('a');
         link2.download = 'resume-page2.png';
         link2.href = uri2;
@@ -1524,15 +2080,10 @@ const UIEditor = () => {
     }
   };
 
-  // Auto-flow sections - WITH PAGINATION
+  // Auto-flow sections
   const autoFlowSections = () => {
     let currentY = 50;
     const spacing = 20;
-    const PAGE_HEIGHT = 842;
-    const PAGE_MARGIN = 50;
-    let currentPage = 1;
-
-    // Sort by current Y position to maintain relative order
     const sortedSections = Object.keys(sectionPositions).sort((a, b) => {
       const posA = sectionPositions[a];
       const posB = sectionPositions[b];
@@ -1544,18 +2095,9 @@ const UIEditor = () => {
     sortedSections.forEach(sectionName => {
       const img = sectionImages[sectionName];
       const height = img ? img.height : 100;
-      const currentX = sectionPositions[sectionName]?.x || 40;
-
-      // Check if we need to break to next page
-      // If currentY + height exceeds page boundary
-      if (currentPage === 1 && (currentY + height) > (PAGE_HEIGHT - PAGE_MARGIN)) {
-        currentPage = 2;
-        currentY = PAGE_HEIGHT + PAGE_MARGIN; // Start at Page 2 top (842 + 50)
-        setShowPage2(true);
-      }
 
       newPositions[sectionName] = {
-        x: currentX, // Keep X position (respect columns)
+        x: sectionPositions[sectionName]?.x || 40,
         y: currentY
       };
 
@@ -1776,99 +2318,306 @@ const UIEditor = () => {
   // ==================== USE EFFECTS ====================
 
   // Initialize template components
+  useEffect(() => {
+    console.log('Initializing template components...');
+
+    setTemplateComponents({
+      header: FlexibleHeaderSection,
+      summary: FlexibleSummarySection,
+      skills: FlexibleSkillsSection,
+      experience: FlexibleExperienceSection,
+      education: FlexibleEducationSection,
+      projects: FlexibleProjectsSection,
+      certifications: FlexibleCertificationsSection
+    });
+
+    // Initialize section refs
+    const sections = ['header', 'summary', 'skills', 'experience', 'education', 'projects', 'certifications'];
+    sections.forEach(section => {
+      if (!sectionRefs.current[section]) {
+        sectionRefs.current[section] = React.createRef();
+      }
+    });
+
+    console.log('Template components initialized');
+  }, []);
+
+
+
 
 
   useEffect(() => {
     if (!TemplateComponents || !resumeData) return;
 
-    const renderSectionToImage = async (sectionName) => {
+    const wrapText = (ctx, text, x, y, maxWidth, lineHeight) => {
+      const words = text.split(' ');
+      let line = '';
+      words.forEach((word) => {
+        const testLine = line + word + ' ';
+        if (ctx.measureText(testLine).width > maxWidth && line !== '') {
+          ctx.fillText(line.trim(), x, y);
+          line = word + ' ';
+          y += lineHeight;
+        } else {
+          line = testLine;
+        }
+      });
+      ctx.fillText(line.trim(), x, y);
+      return y;
+    };
+
+    const renderSectionToImage = (sectionName) => {
       const ref = sectionRefs.current[sectionName];
-      if (!ref?.current) {
-        console.warn(`No ref found for ${sectionName}`);
-        return;
-      }
+      if (!ref?.current) return;
 
       const element = ref.current;
+      const width = element.offsetWidth || 515;
+      const height = element.offsetHeight || 120;
+      const scale = 6; // high-quality scale
 
-      try {
-        // Wait for fonts to load
-        await document.fonts.ready;
+      const canvas = document.createElement('canvas');
+      canvas.width = width * scale;
+      canvas.height = height * scale;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(scale, scale);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
 
-        // Force layout recalculation
-        element.offsetHeight; // Trigger reflow
+      // -------------------- BACKGROUND COLOR --------------------
+      const bgColor = styleConfig[sectionName]?.container?.backgroundColor || '#FFFFFF';
+      if (bgColor && bgColor !== 'transparent') {
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, width, height);
+      }
 
-        // Small delay to ensure all styles are applied
-        await new Promise(resolve => setTimeout(resolve, 100));
+      // -------------------- SHAPES --------------------
+      const shapes = TemplateComponents.shapes || [];
+      shapes.forEach(shape => {
+        if (shape.section === sectionName || shape.section === 'all') {
+          ctx.fillStyle = shape.color || '#000';
+          ctx.fillRect(shape.x || 0, shape.y || 0, shape.width || width, shape.height || height);
+        }
+      });
 
-        // Capture with proper options
-        const canvas = await html2canvas(element, {
-          backgroundColor: null,
-          scale: (window.devicePixelRatio || 1) * 10, // Improved quality as requested
-          logging: false,
-          useCORS: true,
-          allowTaint: true,
-          height: element.offsetHeight,
+      // -------------------- SECTION CONTENT --------------------
+      const fontSize = parseInt(styleConfig[sectionName]?.bodyStyle?.fontSize) || 10;
+      const titleFontSize = parseInt(styleConfig[sectionName]?.titleStyle?.fontSize) || 14;
+      const lineHeight = fontSize + 6;
+      const padding = 12;
+      let y = padding + titleFontSize;
 
-          letterRendering: true,
-          imageTimeout: 0,
+      const sectionData = resumeData[sectionName] || resumeData?.resumeDetails;
 
-          onclone: (clonedDoc) => {
-            const clonedElement = clonedDoc.querySelector(`[data-section="${sectionName}"]`);
-            if (clonedElement) {
-              clonedElement.style.opacity = '1';
-              clonedElement.style.visibility = 'visible';
-              clonedElement.style.display = 'block';
-            }
-          }
+      // -------------------- HEADER --------------------
+      if (sectionName === 'header') {
+        ctx.fillStyle = styleConfig.header?.nameStyle?.color || '#fff';
+        ctx.font = `bold ${parseInt(styleConfig.header?.nameStyle?.fontSize) || 20}px Arial`;
+        ctx.fillText(sectionData.name || '', padding, y);
+        y += lineHeight + 4;
+
+        ctx.fillStyle = styleConfig.header?.titleStyle?.color || '#fff';
+        ctx.font = `${parseInt(styleConfig.header?.titleStyle?.fontSize) || 14}px Arial`;
+        ctx.fillText(sectionData.title || '', padding, y);
+        y += lineHeight + 2;
+
+        const contact = sectionData.contact || {};
+        ctx.font = `${fontSize}px Arial`;
+        ctx.fillStyle = styleConfig.header?.contactItemStyle?.color || '#ccc';
+        const contactLine = [contact.phone, contact.email, contact.location].filter(Boolean).join(' • ');
+        ctx.fillText(contactLine, padding, y);
+        y += lineHeight;
+        if (contact.linkedin) { ctx.fillText(contact.linkedin, padding, y); y += lineHeight; }
+        if (contact.github) { ctx.fillText(contact.github, padding, y); y += lineHeight; }
+
+        // -------------------- SKILLS --------------------
+      } else if (sectionName === 'skills') {
+        ctx.fillStyle = styleConfig.skills?.titleStyle?.color || '#fff';
+        ctx.font = `bold ${titleFontSize}px Arial`;
+        ctx.fillText('SKILLS', padding, y);
+        y += lineHeight + 4;
+
+        const skills = resumeData.skills || [];
+        ctx.font = `${fontSize}px Arial`;
+        ctx.fillStyle = styleConfig.skills?.valueStyle?.color || '#ccc';
+        skills.forEach(skill => {
+          ctx.fillText('•', padding, y);
+          y = wrapText(ctx, skill, padding + 12, y, width - padding * 2 - 12, lineHeight) + lineHeight;
         });
 
-        // Convert canvas to image
-        const img = new Image();
-        img.width = element.offsetWidth;
-        img.height = element.offsetHeight;
+        // -------------------- EXPERIENCE --------------------
+      } else if (sectionName === 'experience') {
+        ctx.fillStyle = styleConfig.experience?.titleStyle?.color || '#000';
+        ctx.font = `bold ${titleFontSize}px Arial`;
+        ctx.fillText('EXPERIENCE', padding, y);
+        y += lineHeight + 6;
 
-        img.onload = () => {
-          console.log(`✓ Rendered ${sectionName}: ${img.width}x${img.height}`);
-          setSectionImages(prev => ({ ...prev, [sectionName]: img }));
-        };
+        const experiences = resumeData.experiences || [];
+        experiences.forEach(exp => {
+          ctx.font = `bold ${fontSize + 1}px Arial`;
+          ctx.fillStyle = styleConfig.experience?.positionStyle?.color || '#000';
+          ctx.fillText(exp.position || exp.title || '', padding, y);
+          y += lineHeight;
 
-        img.onerror = (err) => {
-          console.error(`Failed to render ${sectionName}:`, err);
-        };
+          ctx.font = `${fontSize}px Arial`;
+          ctx.fillStyle = styleConfig.experience?.companyStyle?.color || '#666';
+          ctx.fillText(`${exp.company}${exp.duration ? ' • ' + exp.duration : ''}`, padding, y);
+          y += lineHeight;
 
-        img.src = canvas.toDataURL('image/png', 1.0);
+          if (exp.location) { ctx.fillText(exp.location, padding, y); y += lineHeight; }
 
-      } catch (error) {
-        console.error(`Error rendering ${sectionName}:`, error);
+          const achievements = exp.achievements || exp.description || [];
+          achievements.forEach(ach => {
+            ctx.fillStyle = styleConfig.experience?.bulletConfig?.bulletColor || '#000';
+            ctx.fillText('•', padding, y);
+            y = wrapText(ctx, ach, padding + 12, y, width - padding * 2 - 12, lineHeight) + lineHeight;
+          });
+          y += 6;
+        });
+
+        // -------------------- PROJECTS --------------------
+      } else if (sectionName === 'projects') {
+        ctx.fillStyle = styleConfig.projects?.titleStyle?.color || '#000';
+        ctx.font = `bold ${titleFontSize}px Arial`;
+        ctx.fillText('PROJECTS', padding, y);
+        y += lineHeight + 6;
+
+        const projects = resumeData.projects || [];
+        projects.forEach(proj => {
+          ctx.fillStyle = styleConfig.projects?.nameStyle?.color || '#000';
+          ctx.font = `bold ${fontSize + 1}px Arial`;
+          ctx.fillText(proj.name, padding, y);
+          y += lineHeight;
+
+          if (proj.duration || proj.date) {
+            ctx.font = `${fontSize}px Arial`;
+            ctx.fillStyle = styleConfig.projects?.durationStyle?.color || '#666';
+            ctx.fillText(proj.duration || proj.date, padding, y);
+            y += lineHeight;
+          }
+
+          if (proj.technologies) {
+            ctx.font = `italic ${fontSize}px Arial`;
+            ctx.fillStyle = styleConfig.projects?.techStyle?.color || '#666';
+            ctx.fillText(proj.technologies, padding, y);
+            y += lineHeight;
+          }
+
+          const descriptions = Array.isArray(proj.description) ? proj.description : [proj.description];
+          descriptions.filter(Boolean).forEach(desc => {
+            ctx.fillStyle = styleConfig.projects?.bulletConfig?.bulletColor || '#000';
+            ctx.fillText('•', padding, y);
+            y = wrapText(ctx, desc, padding + 12, y, width - padding * 2 - 12, lineHeight) + lineHeight;
+          });
+          y += 6;
+        });
+
+        // -------------------- EDUCATION --------------------
+      } else if (sectionName === 'education') {
+        ctx.fillStyle = styleConfig.education?.titleStyle?.color || '#fff';
+        ctx.font = `bold ${titleFontSize}px Arial`;
+        ctx.fillText('EDUCATION', padding, y);
+        y += lineHeight + 6;
+
+        const educationList = resumeData.educationList || [];
+        educationList.forEach(edu => {
+          ctx.font = `bold ${fontSize + 1}px Arial`;
+          ctx.fillStyle = styleConfig.education?.degreeStyle?.color || '#fff';
+          ctx.fillText(edu.degree, padding, y);
+          y += lineHeight;
+
+          ctx.font = `${fontSize}px Arial`;
+          ctx.fillStyle = styleConfig.education?.institutionStyle?.color || '#ccc';
+          ctx.fillText(edu.institution || edu.school, padding, y);
+          y += lineHeight;
+
+          const details = [edu.year, edu.gpa ? `GPA: ${edu.gpa}` : '', edu.location].filter(Boolean).join(' • ');
+          ctx.fillText(details, padding, y);
+          y += lineHeight + 6;
+        });
+
+        // -------------------- CERTIFICATIONS --------------------
+      } else if (sectionName === 'certifications') {
+        ctx.fillStyle = styleConfig.certifications?.titleStyle?.color || '#000';
+        ctx.font = `bold ${titleFontSize}px Arial`;
+        ctx.fillText('CERTIFICATIONS', padding, y);
+        y += lineHeight + 6;
+
+        const certifications = resumeData.certifications || [];
+        ctx.font = `${fontSize}px Arial`;
+        ctx.fillStyle = styleConfig.certifications?.itemStyle?.color || '#000';
+        certifications.filter(Boolean).forEach(cert => {
+          ctx.fillText('•', padding, y);
+          y = wrapText(ctx, cert, padding + 12, y, width - padding * 2 - 12, lineHeight) + lineHeight;
+        });
+
+        // -------------------- SUMMARY --------------------
+      } else if (sectionName === 'summary') {
+        ctx.fillStyle = styleConfig.summary?.titleStyle?.color || '#000';
+        ctx.font = `bold ${titleFontSize}px Arial`;
+        ctx.fillText('SUMMARY', padding, y);
+        y += lineHeight + 4;
+
+        const summary = resumeData.resumeDetails?.summary || '';
+        ctx.font = `${fontSize}px Arial`;
+        ctx.fillStyle = styleConfig.summary?.bodyStyle?.color || '#000';
+        y = wrapText(ctx, summary, padding, y, width - padding * 2, lineHeight) + lineHeight;
       }
+
+      // -------------------- CONVERT TO IMAGE --------------------
+      const img = new Image();
+      img.width = width;
+      img.height = height;
+      img.onload = () => {
+        setSectionImages(prev => ({ ...prev, [sectionName]: img }));
+      };
+      img.onerror = () => console.error(`Failed to render ${sectionName}`);
+      img.src = canvas.toDataURL('image/png', 1.0);
     };
 
-    // Render all sections sequentially
-    const renderAllSections = async () => {
-      const sections = Object.keys(sectionRefs.current);
-
-      for (const sectionName of sections) {
-        await renderSectionToImage(sectionName);
-      }
-
-      console.log('✓ All sections rendered');
-    };
-
-    // Wait for React to render components, then capture
     const timer = setTimeout(() => {
-      renderAllSections();
-    }, 500);
+      Object.keys(sectionRefs.current).forEach(renderSectionToImage);
+    }, 300);
 
     return () => clearTimeout(timer);
-    // ❌ CRITICAL: Add ALL these dependencies so preview updates when you change styles
-  }, [
-    TemplateComponents,
-    styleConfig,        // ← This makes it re-render when you change styles in panel
-    resumeData,
-    sectionWidths,      // ← Updates when width changes
-    sectionHeights      // ← Updates when height changes
-  ]);
+  }, [TemplateComponents, styleConfig, resumeData, sectionWidths, sectionHeights]);
 
+
+
+
+  useEffect(() => {
+    if (!TemplateComponents || !resumeData || !styleConfig) return;
+
+    // Wait for React to paint the hidden DOM
+    const timer = setTimeout(() => {
+      const updatedConfig = { ...styleConfig };
+
+      Object.entries(sectionRefs.current).forEach(([key, ref]) => {
+        const el = ref?.current;
+        if (!el) return;
+
+        // Force natural auto height first
+        el.style.height = "auto";
+        el.style.minHeight = "unset";
+        el.style.maxHeight = "none";
+        el.style.overflow = "visible";
+
+        // Measure its natural height
+        const measuredHeight = el.scrollHeight;
+
+        // Save into styleConfig
+        if (!updatedConfig[key]) updatedConfig[key] = {};
+        if (!updatedConfig[key].container) updatedConfig[key].container = {};
+
+        updatedConfig[key].container.height = measuredHeight;
+        updatedConfig[key].container.minHeight = measuredHeight;
+        updatedConfig[key].container.maxHeight = measuredHeight;
+      });
+
+      setStyleConfig(updatedConfig);
+    }, 50); // slight delay ensures hidden DOM is complete
+
+    return () => clearTimeout(timer);
+  }, [resumeData, TemplateComponents]);
 
 
 
@@ -1889,29 +2638,11 @@ const UIEditor = () => {
 
   return (
     <div className="editor-container">
-      {/* Mobile Tab Navigation */}
-      {isMobile && (
-        <div className="mobile-tabs">
-          <button
-            className={`mobile-tab ${activeTab === 'controls' ? 'active' : ''}`}
-            onClick={() => setActiveTab('controls')}
-          >
-            Controls
-          </button>
-          <button
-            className={`mobile-tab ${activeTab === 'properties' ? 'active' : ''}`}
-            onClick={() => setActiveTab('properties')}
-          >
-            Styles
-          </button>
-        </div>
-      )}
-
       {/* Hidden rendering area */}
 
 
-      {/* Hidden rendering area - NOW VISIBLE FOR COMPARISON */}
-      <div className="hidden-render" style={{ position: 'fixed', right: '10px', top: '100px', visibility: 'hidden', width: '794px', background: 'white', border: '3px solid #ff6b6b', borderRadius: '8px', padding: '10px', maxHeight: '80vh', overflowY: 'auto', zIndex: -10000, pointerEvents: 'none' }}>
+      {/* Hidden rendering area */}
+      <div className="hidden-render" style={{ position: 'absolute', left: '-9999px', top: '-9999px', visibility: 'hidden', width: '750px' }}>
         {TemplateComponents && Object.entries(sectionRefs.current).map(([key, ref]) => {
           const Component = TemplateComponents[key];
           if (!Component) return null;
@@ -1919,7 +2650,6 @@ const UIEditor = () => {
           // Map data according to your FlexibleSection component props
           const propsMap = {
             header: { resumeDetails: resumeData?.resumeDetails, styleConfig: styleConfig },
-            contact: { resumeDetails: resumeData?.resumeDetails, styleConfig: styleConfig },
             summary: { summary: resumeData?.resumeDetails?.summary, styleConfig: styleConfig },
             skills: { skills: resumeData?.skills, styleConfig: styleConfig },
             experience: { experiences: resumeData?.experiences, styleConfig: styleConfig },
@@ -1932,7 +2662,7 @@ const UIEditor = () => {
             // <div key={key} ref={ref} style={{ width: styleConfig[key]?.container?.width || 'auto' }}>
             //   <Component {...propsMap[key]} />
             // </div>
-            <div key={key} ref={ref} data-section={key} style={{
+            <div key={key} ref={ref} style={{
               width: styleConfig[key]?.container?.width || 'auto',
               height: styleConfig[key]?.container?.height || 'auto',
               minHeight: styleConfig[key]?.container?.height || 'auto',
@@ -1951,7 +2681,7 @@ const UIEditor = () => {
 
 
       {/* LEFT PANEL - Section Controls */}
-      <div className={`left-panel ${isMobile && activeTab !== 'controls' ? 'mobile-hidden' : ''}`}>
+      <div className="left-panel">
         <h3 className="panel-title">TEMPLATE SELECT</h3>
 
         {TEMPLATES && Object.keys(TEMPLATES).length > 0 && (
@@ -2050,8 +2780,8 @@ const UIEditor = () => {
                   {isOnPage2 && <span className="transparent-badge" style={{ background: '#3b82f6' }}>PAGE 2</span>}
                 </summary>
 
-                <div className="position-controls-wrapper">
-                  <div className="position-grid-layout">
+                <div className="position-controls" style={{ marginBottom: '12px', padding: '8px', background: '#f8f9fa', borderRadius: '4px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
                     <div className="control-item">
                       <label className="control-label-small">X Position</label>
                       <input
@@ -2089,7 +2819,8 @@ const UIEditor = () => {
                           [sectionName]: { ...p[sectionName], y: 50 }
                         }));
                       }}
-                      className="btn-secondary btn-page-nav"
+                      className="btn-secondary"
+                      style={{ fontSize: '10px', padding: '4px 8px', flex: 1 }}
                     >
                       → Page 1
                     </button>
@@ -2101,7 +2832,8 @@ const UIEditor = () => {
                         }));
                         setShowPage2(true);
                       }}
-                      className="btn-secondary btn-page-nav"
+                      className="btn-secondary"
+                      style={{ fontSize: '10px', padding: '4px 8px', flex: 1 }}
                     >
                       → Page 2
                     </button>
@@ -2239,7 +2971,7 @@ const UIEditor = () => {
           ↻ RESET LAYOUT
         </button>
 
-        <button onClick={autoFlowSections} className="btn-primary full-width btn-auto-flow-action">
+        <button onClick={autoFlowSections} className="btn-primary full-width" style={{ background: '#10b981', borderColor: '#10b981' }}>
           ⚡ AUTO-FLOW CONTENT
         </button>
 
@@ -2314,7 +3046,7 @@ const UIEditor = () => {
       {/* MIDDLE - Canvas */}
       <div className="canvas-container">
         <div className="canvas-scroll-wrapper">
-          <div className="canvas-stack-layout">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {/* Page 1 */}
             <div className="canvas-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
               <Stage
@@ -2469,7 +3201,7 @@ const UIEditor = () => {
 
 
 
-      <div className={`right-panel ${isMobile && activeTab !== 'properties' ? 'mobile-hidden' : ''}`}>
+      <div className="right-panel">
         <h3 className="panel-title">QUICK STYLE</h3>
 
         {selectedSection ? (

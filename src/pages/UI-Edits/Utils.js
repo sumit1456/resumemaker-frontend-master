@@ -2,106 +2,105 @@
 
 /**
  * Default resume data
+ * 
  */
+
+
 export const defaultResumeData = {
   resumeDetails: {
-    name: "JOHN DOE",
-    title: "Senior Software Engineer",
-    summary: "Results-driven software engineer with 8+ years of experience building scalable web applications and leading cross-functional teams. Expertise in React, Node.js, and cloud architecture with a proven track record of delivering high-impact solutions that drive business growth.",
+    name: "SUMIT HATEKAR",
+    title: "Full Stack Developer",
     contact: {
-      phone: "+1 (555) 123-4567",
-      email: "john.doe@email.com",
-      linkedin: "linkedin.com/in/johndoe",
-      github: "github.com/johndoe",
-      location: "San Francisco, CA"
-    }
+      phone: "+91 9876543210",
+      email: "sumithatekar@gmail.com",
+      linkedin: "linkedin.com/in/sumithatekar",
+      github: "github.com/sumithatekar",
+      location: "Pune, India",
+    },
+    summary: "Dedicated Java Developer with expertise in Java, Spring Boot, Hibernate/JPA, and RESTful APIs, specializing in building scalable backend systems. Skilled in database design, SQL optimization, and microservices architecture, with strong understanding of OOP and design patterns. Proficient in developing secure, high-performance enterprise applications and experienced in Agile/Scrum environments. Eager to contribute backend expertise while continuously growing as a Java professional.",
   },
-  
+
   skills: [
-    "Languages - JavaScript, TypeScript, Python, Java, SQL",
-    "Frontend - React, Vue.js, Next.js, HTML5, CSS3, Tailwind",
-    "Backend - Node.js, Express, Django, REST APIs, GraphQL",
-    "Database - PostgreSQL, MongoDB, Redis, MySQL",
-    "Cloud & DevOps - AWS, Docker, Kubernetes, CI/CD, Terraform",
-    "Tools - Git, JIRA, Figma, Postman"
+    "Programming Languages - Java, JavaScript (ES6+), SQL",
+    "Databases - PostgreSQL, Oracle",
+    "Frameworks & Libraries - React.js, Spring Boot, Hibernate, Express.js (basic)",
+    "Tools & Platforms - Git, GitHub, Postman, Swagger, Maven, Eclipse/IntelliJ",
+    "Cloud & Deployment - AWS (EC2, S3, RDS), Docker (basic)",
+    "Soft Skills - Problem Solving, Communication, Agile Teamwork"
   ],
-  
+
   experiences: [
     {
-      position: "Senior Software Engineer",
-      company: "Tech Innovations Inc",
-      location: "San Francisco, CA",
-      duration: "Jan 2020 - Present",
-      achievements: [
-        "Led development of microservices architecture serving 2M+ users, reducing response time by 40%",
-        "Architected and implemented real-time analytics dashboard using React and WebSocket, improving data visibility",
-        "Mentored team of 5 junior developers and established code review best practices",
-        "Reduced deployment time by 60% through implementation of automated CI/CD pipelines"
-      ]
-    },
-    {
       position: "Software Engineer",
-      company: "Digital Solutions Corp",
-      location: "Austin, TX",
-      duration: "Jun 2017 - Dec 2019",
+      company: "Tech Solutions Ltd.",
+      location: "Pune, India",
+      duration: "Jan 2022 - Present",
       achievements: [
-        "Built and maintained RESTful APIs handling 500K+ daily requests with 99.9% uptime",
-        "Developed responsive web applications using React and Redux, improving user engagement by 35%",
-        "Implemented automated testing suite, increasing code coverage from 45% to 85%",
-        "Collaborated with product team to deliver features that increased customer retention by 25%"
-      ]
+        "Developed client dashboard using React",
+        "Implemented REST APIs in Node.js"
+      ],
     },
-    {
-      position: "Junior Software Developer",
-      company: "StartUp Labs",
-      location: "Boston, MA",
-      duration: "Jul 2015 - May 2017",
-      achievements: [
-        "Developed full-stack features for SaaS platform using Node.js and Angular",
-        "Optimized database queries reducing page load times by 50%",
-        "Participated in agile development process and daily stand-ups"
-      ]
-    }
   ],
-  
+
   projects: [
     {
-      name: "E-Commerce Platform",
-      duration: "2023",
-      technologies: "React, Node.js, MongoDB, Stripe API, AWS",
+      name: "Resume Maker Pro",
+      duration: "September 2023 - ongoing",
+      technologies: "React, Java, Spring Boot, Spring Security, Docker",
       description: [
-        "Built full-stack e-commerce platform with payment integration and inventory management",
-        "Implemented secure authentication and authorization using JWT and OAuth 2.0",
-        "Deployed on AWS with auto-scaling, serving 10K+ concurrent users"
-      ]
+        "Developed the backend using Java Spring Boot with Hibernate/JPA for efficient data storage and retrieval.",
+        "Built RESTful APIs to manage resume sections such as personal info, skills, certifications, and experience.",
+        "Implemented React.js frontend for real-time editing and live preview of resume templates.",
+        "Integrated resume download/export functionality (PDF/Docx) with formatted layouts.",
+        "Ensured scalable, modular architecture with clean code and reusable components."
+      ],
+      link: "https://janedoe.dev",
     },
     {
-      name: "Real-Time Chat Application",
-      duration: "2022",
-      technologies: "React, Socket.io, Redis, Docker",
+      name: "Find Issue Web Application",
+      duration: "June 2023 - August 2023",
+      technologies: "Java, Spring Boot, Thymeleaf, MySQL",
       description: [
-        "Developed real-time messaging application with typing indicators and read receipts",
-        "Implemented Redis for session management and message caching",
-        "Containerized application using Docker for consistent deployment"
-      ]
+        "Built a web application to log, track, and manage software issues.",
+        "Implemented Spring Boot backend with RESTful APIs for CRUD operations on issues.",
+        "Designed MySQL database schema for efficient issue storage and retrieval.",
+        "Created user-friendly UI using Thymeleaf for issue submission and tracking.",
+        "Added role-based access control to allow admin and user-specific views."
+      ],
+      link: "https://github.com/sumithatekar/find-issue-app",
     }
   ],
-  
+
   educationList: [
     {
-      degree: "Bachelor of Science in Computer Science",
-      institution: "University of California, Berkeley",
-      year: "2011 - 2015",
-      gpa: "3.8",
-      location: "Berkeley, CA"
-    }
+      degree: "Master of Science in Computer Applications",
+      institution: "Savitribai Phule University",
+      location: "Pune, India",
+      year: "2025",
+      gpa: "Currently pursuing",
+    },
+    {
+      degree: "BSc Chemistry",
+      institution: "Shivaji University",
+      location: "Koregaon Satara, India",
+      year: "2021",
+      gpa: "7.52",
+    },
   ],
-  
+
   certifications: [
-    "AWS Certified Solutions Architect - Associate (2022)",
-    "Google Cloud Professional Developer (2021)",
-    "MongoDB Certified Developer (2020)"
-  ]
+    "Java Full Stack Development - QSpiders Wakad 2024",
+    "Scrum Master Certified",
+  ],
+
+  sectionTitles: {
+    summary: "Summary",
+    skills: "Skills",
+    experience: "Experience",
+    projects: "Projects",
+    education: "Education",
+    certifications: "Certifications"
+  }
 };
 
 /**
@@ -113,7 +112,7 @@ export const defaultStyleConfig = {
   textColor: '#000000',
   accentColor: '#000000',
   backgroundColor: '#FFFFFF',
-  
+
   // Typography
   nameFontSize: 24,
   titleFontSize: 11,
@@ -122,7 +121,7 @@ export const defaultStyleConfig = {
   smallFontSize: 9,
   lineHeight: 1.4,
   letterSpacing: 0.5,
-  
+
   // Layout
   pageMargin: 40,
   headerMarginBottom: 20,
@@ -132,12 +131,12 @@ export const defaultStyleConfig = {
   sectionMarginTop: 12,
   sectionMarginBottom: 6,
   itemMarginBottom: 8,
-  
+
   // Borders
   headerBorderWidth: 3,
   sectionBorderWidth: 1.5,
   columnBorderWidth: 2,
-  
+
   // Style Options
   fontFamily: 'Helvetica',
   bulletStyle: '•',
@@ -154,7 +153,7 @@ export const stylePresets = {
     accentColor: '#000000',
     fontFamily: 'Helvetica',
   },
-  
+
   modern: {
     ...defaultStyleConfig,
     primaryColor: '#2563eb',
@@ -164,7 +163,7 @@ export const stylePresets = {
     sectionBorderWidth: 1,
     bulletStyle: '▪',
   },
-  
+
   creative: {
     ...defaultStyleConfig,
     primaryColor: '#7c3aed',
@@ -174,7 +173,7 @@ export const stylePresets = {
     bulletStyle: '→',
     letterSpacing: 1,
   },
-  
+
   minimal: {
     ...defaultStyleConfig,
     primaryColor: '#4b5563',
@@ -185,7 +184,7 @@ export const stylePresets = {
     columnBorderWidth: 1,
     bulletStyle: '-',
   },
-  
+
   professional: {
     ...defaultStyleConfig,
     primaryColor: '#0f172a',
@@ -205,7 +204,7 @@ export const stylePresets = {
 export const groupSkills = (skills) => {
   const groupedSkills = {};
   const ungroupedSkills = [];
-  
+
   if (skills && Array.isArray(skills)) {
     skills.forEach(skill => {
       if (skill && skill.includes(' - ')) {
@@ -216,7 +215,7 @@ export const groupSkills = (skills) => {
       }
     });
   }
-  
+
   return { groupedSkills, ungroupedSkills };
 };
 
@@ -227,19 +226,19 @@ export const groupSkills = (skills) => {
  */
 export const validateResumeData = (resumeData) => {
   const errors = [];
-  
+
   if (!resumeData.resumeDetails?.name) {
     errors.push('Name is required');
   }
-  
+
   if (!resumeData.resumeDetails?.contact?.email) {
     errors.push('Email is required');
   }
-  
+
   if (!resumeData.experiences || resumeData.experiences.length === 0) {
     errors.push('At least one experience is required');
   }
-  
+
   return {
     isValid: errors.length === 0,
     errors
@@ -276,12 +275,12 @@ export const importResumeData = (jsonString) => {
   try {
     const data = JSON.parse(jsonString);
     const validation = validateResumeData(data);
-    
+
     if (!validation.isValid) {
       console.error('Invalid resume data:', validation.errors);
       return null;
     }
-    
+
     return data;
   } catch (error) {
     console.error('Failed to parse resume data:', error);
@@ -298,7 +297,7 @@ export const calculateOptimalFontSizes = (resumeData) => {
   const totalExperiences = resumeData.experiences?.length || 0;
   const totalProjects = resumeData.projects?.length || 0;
   const totalContent = totalExperiences + totalProjects;
-  
+
   // Suggest smaller fonts for content-heavy resumes
   if (totalContent > 8) {
     return {
@@ -313,7 +312,7 @@ export const calculateOptimalFontSizes = (resumeData) => {
       lineHeight: 1.35
     };
   }
-  
+
   return {
     bodyFontSize: 10,
     smallFontSize: 9,
@@ -334,7 +333,7 @@ export const colorUtils = {
       b: parseInt(result[3], 16)
     } : null;
   },
-  
+
   // Check if color is dark
   isDark: (hex) => {
     const rgb = colorUtils.hexToRgb(hex);
@@ -343,7 +342,7 @@ export const colorUtils = {
     const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
     return luminance < 0.5;
   },
-  
+
   // Get contrasting color (black or white)
   getContrastColor: (hex) => {
     return colorUtils.isDark(hex) ? '#FFFFFF' : '#000000';
@@ -357,15 +356,15 @@ export function mergeResumeData(currentResumeDetails = {}, resumeData = {}) {
       name: resumeData.resumeDetails?.name ?? currentResumeDetails.resumeDetails?.name ?? "",
       title: resumeData.resumeDetails?.title ?? currentResumeDetails.resumeDetails?.title ?? "",
       contact: {
-        phone: resumeData.resumeDetails?.contact?.phone 
-          ?? currentResumeDetails.resumeDetails?.contact?.phone 
+        phone: resumeData.resumeDetails?.contact?.phone
+          ?? currentResumeDetails.resumeDetails?.contact?.phone
           ?? "",
-        email: resumeData.resumeDetails?.contact?.email 
-          ?? currentResumeDetails.resumeDetails?.contact?.email 
+        email: resumeData.resumeDetails?.contact?.email
+          ?? currentResumeDetails.resumeDetails?.contact?.email
           ?? ""
       },
-      summary: resumeData.resumeDetails?.summary 
-        ?? currentResumeDetails.resumeDetails?.summary 
+      summary: resumeData.resumeDetails?.summary
+        ?? currentResumeDetails.resumeDetails?.summary
         ?? ""
     },
 
@@ -380,3 +379,358 @@ export function mergeResumeData(currentResumeDetails = {}, resumeData = {}) {
     certifications: resumeData.certifications ?? currentResumeDetails.certifications ?? []
   };
 }
+
+
+
+
+
+
+
+
+
+
+
+
+// layoutNormalizer.js
+export const normalizeLayoutConfig = (config = {}) => {
+  return {
+    display: config.display,
+
+    // backward compatibility
+    direction: config.flexDirection ?? config.direction,
+    align: config.alignItems ?? config.align,
+    justify: config.justifyContent ?? config.justify,
+
+    width: config.width,
+    height: config.height,
+
+    minWidth: config.minWidth,
+    maxWidth: config.maxWidth,
+
+    padding: config.padding,
+    margin: config.margin,
+    gap: config.gap,
+
+    gridColumns: config.gridTemplateColumns,
+    gridRows: config.gridTemplateRows,
+
+    order: config.order,
+    flex: config.flex,
+
+    position: config.position,
+    top: config.top,
+    left: config.left,
+  };
+};
+
+
+export const resolveLayoutStyles = (layout = {}) => {
+  const isGrid = layout.display === "grid";
+
+  return {
+    /* core */
+    display: layout.display || "flex",
+    boxSizing: "border-box",
+
+    /* flex */
+    flexDirection: layout.direction || "row",
+    alignItems: layout.align || "stretch",
+    justifyContent: layout.justify || "flex-start",
+    flexWrap: layout.wrap || "nowrap",
+
+    /* sizing */
+    width: layout.width,
+    minWidth: layout.minWidth,
+    maxWidth: layout.maxWidth,
+    height: layout.height,
+    minHeight: layout.minHeight,
+    maxHeight: layout.maxHeight,
+
+    /* spacing */
+    padding: layout.padding,
+    margin: layout.margin,
+    gap: layout.gap,
+    rowGap: layout.rowGap,
+    columnGap: layout.columnGap,
+
+    /* ordering */
+    order: layout.order,
+    flex: layout.flex,
+
+    /* positioning */
+    position: layout.position,
+    top: layout.top,
+    left: layout.left,
+    right: layout.right,
+    bottom: layout.bottom,
+
+    /* grid */
+    ...(isGrid && {
+      gridTemplateColumns: layout.gridColumns,
+      gridTemplateRows: layout.gridRows,
+      gridAutoFlow: layout.gridAutoFlow,
+    }),
+  };
+};
+
+
+export const resolveZoneLayout = (defaults = {}, zoneConfig = {}) => {
+  const merged = {
+    ...defaults,
+    ...zoneConfig,
+  };
+
+  const normalized = normalizeLayoutConfig(merged);
+  return resolveLayoutStyles(normalized);
+};
+
+
+
+
+/**
+ * Layout resolver
+ * Converts abstract layout intent → DOM CSS
+ * Canvas should read layout intent directly
+ */
+window.__LAYOUT_DEBUG__ = true;
+export function resolveLayout(layout = {}, mode = "dom") {
+  if (mode !== "dom") return {};
+
+  const base = {
+    display: "flex",
+    boxSizing: "border-box",
+  };
+
+  const ALIGN_MAP = {
+    start: "flex-start",
+    center: "center",
+    end: "flex-end",
+    stretch: "stretch",
+  };
+
+  const JUSTIFY_MAP = {
+    start: "flex-start",
+    center: "center",
+    end: "flex-end",
+    between: "space-between",
+    around: "space-around",
+    evenly: "space-evenly",
+  };
+
+  let resolved = {};
+
+  if (layout.type === "grid") {
+    resolved = {
+      display: "grid",
+      boxSizing: "border-box",
+      gridTemplateColumns: layout.columns,
+      gridTemplateRows: layout.rows,
+      gap: layout.gap || 0,
+      rowGap: layout.rowGap,
+      columnGap: layout.columnGap,
+      alignItems: ALIGN_MAP[layout.align] || "stretch",
+      justifyItems: ALIGN_MAP[layout.justify] || "stretch",
+    };
+  } else if (layout.type === "row") {
+    resolved = {
+      ...base,
+      flexDirection: "row",
+      alignItems: ALIGN_MAP[layout.align] || "flex-start",
+      justifyContent: JUSTIFY_MAP[layout.justify] || "flex-start",
+      gap: layout.gap || 0,
+      flexWrap: layout.wrap ? "wrap" : "nowrap",
+    };
+  } else {
+    // default: stack / column
+    resolved = {
+      ...base,
+      flexDirection: "column",
+      alignItems: ALIGN_MAP[layout.align] || "flex-start",
+      justifyContent: JUSTIFY_MAP[layout.justify] || "flex-start",
+      gap: layout.gap || 0,
+    };
+  }
+
+  // 🔍 DOM debug
+  if (window.__LAYOUT_DEBUG__) {
+    console.log("resolveLayout output:", layout, resolved);
+  }
+
+  return resolved;
+}
+
+
+/**
+ * Apply resume data to state setters
+ * @param {Object} setters - Object containing state setter functions
+ * @param {Object} data - Resume data to apply (defaults to defaultResumeData)
+ */
+export const applyResumeData = (setters, data = defaultResumeData) => {
+  if (!setters) return;
+
+  const {
+    setResumeDetails,
+    setSkills,
+    setExperiences,
+    setProjects,
+    setEducationList,
+    setCertifications,
+    setSectionTitles
+  } = setters;
+
+  if (setResumeDetails && data.resumeDetails) {
+    setResumeDetails(data.resumeDetails);
+  }
+
+  if (setSkills && data.skills) {
+    setSkills(data.skills);
+  }
+
+  if (setExperiences && data.experiences) {
+    setExperiences(data.experiences);
+  }
+
+  if (setProjects && data.projects) {
+    setProjects(data.projects);
+  }
+
+  if (setEducationList && data.educationList) {
+    setEducationList(data.educationList);
+  }
+
+  if (setCertifications && data.certifications) {
+    setCertifications(data.certifications);
+  }
+
+  if (setSectionTitles && data.sectionTitles) {
+    setSectionTitles(data.sectionTitles);
+  }
+};
+
+
+export function resolveLayoutForCanvas(layout, containerWidth) {
+  // Default values
+  const defaultLayout = {
+    type: 'stack', // 'stack' for column, 'row' for horizontal
+    align: 'start', // vertical alignment for stack
+    justify: 'start', // horizontal alignment for row
+    gap: 0,
+    wrap: false,
+  };
+
+  const resolved = { ...defaultLayout, ...layout };
+
+  const alignmentMap = {
+    start: 0,
+    center: 0.5,
+    end: 1,
+  };
+
+  const justifyMap = {
+    start: 0,
+    center: 0.5,
+    end: 1,
+    between: 'between', // special handling for 'between'
+    around: 'around',
+    evenly: 'evenly',
+  };
+
+  return {
+    type: resolved.type,
+    align: alignmentMap[resolved.align] !== undefined ? alignmentMap[resolved.align] : 0,
+    justify: justifyMap[resolved.justify] || 0,
+    gap: resolved.gap || 0,
+    wrap: resolved.wrap || false,
+    containerWidth: containerWidth,
+  };
+}
+
+
+
+export const applyStyles = (baseStyle = {}, configStyle = {}) => {
+  if (!configStyle) return baseStyle;
+
+  const validCSSProps = new Set([
+    'alignContent', 'alignItems', 'alignSelf', 'animation', 'animationDelay',
+    'animationDirection', 'animationDuration', 'animationFillMode',
+    'animationIterationCount', 'animationName', 'animationPlayState',
+    'animationTimingFunction', 'backfaceVisibility', 'background',
+    'backgroundAttachment', 'backgroundBlendMode', 'backgroundClip',
+    'backgroundColor', 'backgroundImage', 'backgroundOrigin', 'backgroundPosition',
+    'backgroundRepeat', 'backgroundSize', 'border', 'borderBottom',
+    'borderBottomColor', 'borderBottomLeftRadius', 'borderBottomRightRadius',
+    'borderBottomStyle', 'borderBottomWidth', 'borderCollapse', 'borderColor',
+    'borderImage', 'borderImageOutset', 'borderImageRepeat', 'borderImageSlice',
+    'borderImageSource', 'borderImageWidth', 'borderLeft', 'borderLeftColor',
+    'borderLeftStyle', 'borderLeftWidth', 'borderRadius', 'borderRight',
+    'borderRightColor', 'borderRightStyle', 'borderRightWidth', 'borderSpacing',
+    'borderStyle', 'borderTop', 'borderTopColor', 'borderTopLeftRadius',
+    'borderTopRightRadius', 'borderTopStyle', 'borderTopWidth', 'borderWidth',
+    'bottom', 'boxDecorationBreak', 'boxShadow', 'boxSizing', 'breakAfter',
+    'breakBefore', 'breakInside', 'captionSide', 'caretColor', 'clear', 'clip',
+    'clipPath', 'color', 'columnCount', 'columnFill', 'columnGap', 'columnRule',
+    'columnRuleColor', 'columnRuleStyle', 'columnRuleWidth', 'columnSpan',
+    'columnWidth', 'columns', 'content', 'counterIncrement', 'counterReset',
+    'cursor', 'direction', 'display', 'emptyCells', 'filter', 'flex',
+    'flexBasis', 'flexDirection', 'flexFlow', 'flexGrow', 'flexShrink',
+    'flexWrap', 'float', 'font', 'fontFamily', 'fontFeatureSettings',
+    'fontKerning', 'fontSize', 'fontSizeAdjust', 'fontStretch', 'fontStyle',
+    'fontSynthesis', 'fontVariant', 'fontVariantCaps', 'fontVariantLigatures',
+    'fontVariantNumeric', 'fontVariantPosition', 'fontWeight', 'gap', 'grid',
+    'gridArea', 'gridAutoColumns', 'gridAutoFlow', 'gridAutoRows', 'gridColumn',
+    'gridColumnEnd', 'gridColumnGap', 'gridColumnStart', 'gridGap', 'gridRow',
+    'gridRowEnd', 'gridRowGap', 'gridRowStart', 'gridTemplate', 'gridTemplateAreas',
+    'gridTemplateColumns', 'gridTemplateRows', 'height', 'hyphens', 'imageRendering',
+    'isolation', 'justifyContent', 'justifyItems', 'justifySelf', 'left',
+    'letterSpacing', 'lineBreak', 'lineHeight', 'listStyle', 'listStyleImage',
+    'listStylePosition', 'listStyleType', 'margin', 'marginBottom', 'marginLeft',
+    'marginRight', 'marginTop', 'mask', 'maskClip', 'maskComposite', 'maskImage',
+    'maskMode', 'maskOrigin', 'maskPosition', 'maskRepeat', 'maskSize', 'maskType',
+    'maxHeight', 'maxWidth', 'minHeight', 'minWidth', 'mixBlendMode', 'objectFit',
+    'objectPosition', 'opacity', 'order', 'orphans', 'outline', 'outlineColor',
+    'outlineOffset', 'outlineStyle', 'outlineWidth', 'overflow', 'overflowWrap',
+    'overflowX', 'overflowY', 'padding', 'paddingBottom', 'paddingLeft',
+    'paddingRight', 'paddingTop', 'pageBreakAfter', 'pageBreakBefore',
+    'pageBreakInside', 'perspective', 'perspectiveOrigin', 'placeContent', 'placeItems',
+    'placeSelf', 'pointerEvents', 'position', 'quotes', 'resize', 'right', 'rowGap',
+    'scrollBehavior', 'tabSize', 'tableLayout', 'textAlign', 'textAlignLast',
+    'textCombineUpright', 'textDecoration', 'textDecorationColor', 'textDecorationLine',
+    'textDecorationStyle', 'textIndent', 'textJustify', 'textOrientation', 'textOverflow',
+    'textShadow', 'textTransform', 'textUnderlinePosition', 'top', 'transform',
+    'transformOrigin', 'transformStyle', 'transition', 'transitionDelay',
+    'transitionDuration', 'transitionProperty', 'transitionTimingFunction',
+    'unicodeBidi', 'userSelect', 'verticalAlign', 'visibility', 'whiteSpace',
+    'widows', 'width', 'willChange', 'wordBreak', 'wordSpacing', 'wordWrap',
+    'writingMode', 'zIndex'
+  ]);
+
+  // Merge base + config first
+  const merged = { ...baseStyle, ...configStyle };
+
+  // Handle shorthand vs longhand conflicts
+  const shorthandMap = {
+    margin: ['marginTop', 'marginRight', 'marginBottom', 'marginLeft'],
+    padding: ['paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft'],
+    border: ['borderTop', 'borderRight', 'borderBottom', 'borderLeft'],
+    borderWidth: ['borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth'],
+    borderStyle: ['borderTopStyle', 'borderRightStyle', 'borderBottomStyle', 'borderLeftStyle'],
+    borderColor: ['borderTopColor', 'borderRightColor', 'borderBottomColor', 'borderLeftColor']
+  };
+
+  Object.keys(shorthandMap).forEach(shorthand => {
+    const longhands = shorthandMap[shorthand];
+    const hasLonghand = longhands.some(prop => merged[prop] !== undefined);
+    if (hasLonghand && merged[shorthand] !== undefined) {
+      delete merged[shorthand];
+    }
+  });
+
+  // Filter only valid CSS properties
+  Object.keys(merged).forEach(key => {
+    if (!validCSSProps.has(key)) {
+      delete merged[key];
+    }
+  });
+
+  return merged;
+};
