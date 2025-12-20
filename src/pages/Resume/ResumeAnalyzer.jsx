@@ -9,15 +9,15 @@ const API_BASE_URL = 'https://resumemaker-1.onrender.com';
 const API_BASE_URL2 = 'http://localhost:8080';
 
 const techSkills = [
-  "javascript","python","java","react","angular","vue","node",
-  "typescript","sql","mongodb","aws","azure","docker","kubernetes",
-  "git","agile","scrum","rest","api","microservices","spring boot",
-  "hibernate","html","css","webpack","redux"
+  "javascript", "python", "java", "react", "angular", "vue", "node",
+  "typescript", "sql", "mongodb", "aws", "azure", "docker", "kubernetes",
+  "git", "agile", "scrum", "rest", "api", "microservices", "spring boot",
+  "hibernate", "html", "css", "webpack", "redux"
 ];
 
 const actionVerbs = [
-  "develop","build","design","implement","manage","lead",
-  "create","optimize","deploy","maintain","collaborate"
+  "develop", "build", "design", "implement", "manage", "lead",
+  "create", "optimize", "deploy", "maintain", "collaborate"
 ];
 
 export default function ResumeAnalyzer({
@@ -43,11 +43,11 @@ export default function ResumeAnalyzer({
   const [createComparisonReport, setCreateComparisonReport] = useState("false");
   const enhancedResume = useSelector((state) => state.resume.enhancedResume);
   const currentResume = useSelector((state) => state.resume.currentResume);
- 
 
 
 
-  
+
+
 
   const [currentLocalResume, setCurrentLocalResume] = useState(null);
   const [newLocalResume, setNewLocalResume] = useState(null);
@@ -147,20 +147,20 @@ export default function ResumeAnalyzer({
 
 
   const buildResumePayload = () => {
-  return {
-    details: {
-      name: resumeDetails?.name || "",
-      title: resumeDetails?.title || "",
-      summary: resumeDetails?.summary || ""
-    },
-    skills: skills || [],
-    experiences: experiences || [],
-    projects: projects || [],
-    educationList: educationList || [],
-    certifications: certifications || [],
-  
+    return {
+      details: {
+        name: resumeDetails?.name || "",
+        title: resumeDetails?.title || "",
+        summary: resumeDetails?.summary || ""
+      },
+      skills: skills || [],
+      experiences: experiences || [],
+      projects: projects || [],
+      educationList: educationList || [],
+      certifications: certifications || [],
+
+    };
   };
-};
 
 
   // ==================== UTILITY COMPONENTS ====================
@@ -293,7 +293,7 @@ export default function ResumeAnalyzer({
           </div>
         );
       }
-      
+
       return (
         <ul className="project-description-list">
           {value.map((item, i) => (
@@ -302,16 +302,16 @@ export default function ResumeAnalyzer({
         </ul>
       );
     }
-    
+
     if (typeof value === 'object' && value !== null) {
       return <pre className="version-content">{JSON.stringify(value, null, 2)}</pre>;
     }
-    
+
     return <span className="version-content">{String(value)}</span>;
   };
 
   const formatComparisonReport = (report) => {
-   
+
     if (!report?.differences) return <p>No comparison found.</p>;
 
     return (
@@ -319,9 +319,9 @@ export default function ResumeAnalyzer({
         {Object.entries(report.differences).map(([section, data], idx) => {
           const icon = section.includes("summary") ? "📋"
             : section.includes("skills") ? "🧩"
-            : section.includes("project") ? "🛠️"
-            : section.includes("experience") ? "⚡"
-            : "📄";
+              : section.includes("project") ? "🛠️"
+                : section.includes("experience") ? "⚡"
+                  : "📄";
 
           return (
             <div key={idx} className="comparison-section">
@@ -377,16 +377,16 @@ export default function ResumeAnalyzer({
     const experienceMatch = jobDescription.match(/(\d+)\+?\s*(year|yr)/i);
     const experienceRequired = experienceMatch ? experienceMatch[1] : 'N/A';
 
-    const frontendSkills = detectedSkills.filter(s => 
+    const frontendSkills = detectedSkills.filter(s =>
       ['react', 'vue', 'angular', 'html', 'css', 'javascript', 'typescript'].includes(s)
     );
-    const backendSkills = detectedSkills.filter(s => 
+    const backendSkills = detectedSkills.filter(s =>
       ['node', 'python', 'java', 'spring', 'django', 'flask'].includes(s)
     );
-    const databaseSkills = detectedSkills.filter(s => 
+    const databaseSkills = detectedSkills.filter(s =>
       ['mongodb', 'postgresql', 'mysql', 'redis'].includes(s)
     );
-    const cloudSkills = detectedSkills.filter(s => 
+    const cloudSkills = detectedSkills.filter(s =>
       ['aws', 'azure', 'docker', 'kubernetes'].includes(s)
     );
 
@@ -397,7 +397,7 @@ export default function ResumeAnalyzer({
       setJobDescriptionInsights(
         <div className="analysis-output-wrapper">
           <div className="analysis-container">
-            
+
             {/* Header */}
             <div className="analysis-header">
               <h2 className="analysis-header-title">Result of Quick Analysis</h2>
@@ -415,7 +415,7 @@ export default function ResumeAnalyzer({
             {/* Skills Section */}
             <div className="analysis-section">
               <h3 className="section-header">🎯 SKILLS DETECTED</h3>
-              
+
               {detectedSkills.length === 0 ? (
                 <div className="empty-state">
                   <p className="empty-state-text">No technical skills detected in job description</p>
@@ -441,7 +441,7 @@ export default function ResumeAnalyzer({
             {/* Action Verbs */}
             <div className="analysis-section">
               <h3 className="section-header">⚡ ACTION VERBS · {detectedVerbs.length}</h3>
-              
+
               {detectedVerbs.length > 0 ? (
                 <div className="action-verbs-container">
                   <div className="action-verbs-grid">
@@ -599,7 +599,7 @@ export default function ResumeAnalyzer({
 
       if (data.error) {
         setJobDescriptionInsights(
-          
+
           <ErrorState title="AI Analysis Failed" message={data.error} />
         );
         window.showMessage("Error", 'AI Analysis Failed', "error", 1500);
@@ -624,7 +624,7 @@ export default function ResumeAnalyzer({
             <div className="next-steps-card">
               <h4 className="next-steps-title">💡 Next Steps</h4>
               <p className="next-steps-content">
-                Review the AI suggestions above and update your resume accordingly. 
+                Review the AI suggestions above and update your resume accordingly.
                 For a quick overview, try <strong>Quick Analysis</strong>.
               </p>
             </div>
@@ -634,7 +634,7 @@ export default function ResumeAnalyzer({
 
       window.showMessage("Success", 'AI Analysis Completed', "success", 1500);
 
-      
+
 
     } catch (err) {
       setJobDescriptionInsights(
@@ -685,7 +685,7 @@ export default function ResumeAnalyzer({
 
   const createReport = async () => {
 
-    if(!currentLocalResume && newLocalResume){
+    if (!currentLocalResume && newLocalResume) {
       window.showMessage('For report Enhance your Resume first', 'info');
       return;
     }
@@ -739,10 +739,10 @@ export default function ResumeAnalyzer({
           </div>
         </div>
       );
-       window.showMessage("Success", 'Report has been generated', "general", 1500);
+      window.showMessage("Success", 'Report has been generated', "general", 1500);
 
     } catch (err) {
-       window.showMessage("Error", 'Uable to generate report', "error", 1500);
+      window.showMessage("Error", 'Uable to generate report', "error", 1500);
       // setReportOutput(<ErrorState title="Connection Error" message="Cannot reach backend. Make sure the server is running." />);
     } finally {
       setCreateComparisonReport(false);
@@ -756,9 +756,9 @@ export default function ResumeAnalyzer({
       setLoading(true);
       setMessage('Enhancing your Resume...')
       const payload = buildATSPayload();
-      
+
       setCurrentLocalResume(payload);
-      
+
       const res = await fetch(`${API_BASE_URL}/enhanceResume`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -769,11 +769,11 @@ export default function ResumeAnalyzer({
         console.error("Backend error:", res.status, res.statusText);
         return;
       }
-      
+
       const data = await res.json();
       dispatch(setEnhancedResume(data));
       window.showMessage('Sucess', 'Enhancement Completed', 'success', 1500);
-     
+
       setNewLocalResume(data);
     } catch (err) {
       console.error("❌ Error calling enhanceResume:", err);
@@ -781,83 +781,83 @@ export default function ResumeAnalyzer({
     } finally {
       setIsEnhancing(false);
       setLoading(false);
-      
+
     }
   };
 
   const importResume = async (e) => {
-  setLoading(true);
-  setMessage('Importing...');
-  const file = e.target.files[0];
-  if (!file) return;
+    setLoading(true);
+    setMessage('Importing...');
+    const file = e.target.files[0];
+    if (!file) return;
 
-  if (file.type !== "application/pdf") {
-    alert("Please upload a PDF file");
-    return;
-  }
-
-  const formData = new FormData();
-  formData.append("file", file);
-
-  try {
-    const response = await fetch(`${API_BASE_URL}/uploadResume`, {
-      method: "POST",
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Server error: ${response.status} - ${errorText}`);
+    if (file.type !== "application/pdf") {
+      alert("Please upload a PDF file");
+      return;
     }
 
-    const data = await response.json();
+    const formData = new FormData();
+    formData.append("file", file);
 
-    const resumeJsonString = data.choices?.[0]?.message?.content?.trim();
+    try {
+      const response = await fetch(`${API_BASE_URL}/uploadResume`, {
+        method: "POST",
+        body: formData,
+      });
 
-    if (resumeJsonString) {
-      try {
-        const resumeData = JSON.parse(resumeJsonString);
-        dispatch(setImportedResume(resumeData));
-      } catch (err) {
-        console.error("Failed to parse AI resume JSON:", err, resumeJsonString);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Server error: ${response.status} - ${errorText}`);
       }
-    } else {
-      console.error("No content found in AI response", data);
+
+      const data = await response.json();
+
+      const resumeJsonString = data.choices?.[0]?.message?.content?.trim();
+
+      if (resumeJsonString) {
+        try {
+          const resumeData = JSON.parse(resumeJsonString);
+          dispatch(setImportedResume(resumeData));
+        } catch (err) {
+          console.error("Failed to parse AI resume JSON:", err, resumeJsonString);
+        }
+      } else {
+        console.error("No content found in AI response", data);
+      }
+
+      console.log("Printing the response for resume import");
+
+      console.log("Upload successful:", data);
+      window.showMessage("Success", 'Resume has been imported', "success", 1500);
+    } catch (error) {
+      console.error("Upload failed:", error);
+      window.showMessage("Error", 'Importing Failed', "error", 1500);
+    } finally {
+      e.target.value = '';
+      setLoading(false);
+      setMessage('');
     }
+  };
 
-    console.log("Printing the response for resume import");
-    
-    console.log("Upload successful:", data);
-    window.showMessage("Success", 'Resume has been imported', "success", 1500);
-  } catch (error) {
-    console.error("Upload failed:", error);
-    window.showMessage("Error", 'Importing Failed', "error", 1500);
-  } finally {
-    e.target.value = ''; 
-    setLoading(false);
-    setMessage('');
+
+
+  function downloadResponse(response) {
+    const dataStr = JSON.stringify(response, null, 2); // pretty print
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "ai_response.json";
+    a.click();
+
+    URL.revokeObjectURL(url);
   }
-};
-
-
-
-    function downloadResponse(response) {
-  const dataStr = JSON.stringify(response, null, 2); // pretty print
-  const blob = new Blob([dataStr], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "ai_response.json";
-  a.click();
-
-  URL.revokeObjectURL(url);
-}
 
 
   return (
     <div className="ai-analysis-container">
-      <LoadingAnimation message={message} show={loading}/>
+      <LoadingAnimation message={message} show={loading} />
       <h3 className="ai-analysis-title">🔗AI Analysis Section</h3>
 
       <textarea
@@ -886,33 +886,35 @@ Generate a Report to compare original vs enhanced resume.`}
         </button>
 
         <button
-          className={`ai-button enhance-resume ${
-            isAnalyzing || isAIAnalysis || isEnhancing ? "disabled" : ""
-          }`}
+          className={`ai-button enhance-resume ${isAnalyzing || isAIAnalysis || isEnhancing ? "disabled" : ""
+            }`}
           onClick={improveATSContent}
         >
           {isEnhancing ? "Enhancing..." : "Enhance Your Resume"}
         </button>
 
-        <button
-          className={`ai-button generate-report ${canGenerateReport ? "disabled" : ""} `}
-          onClick={createReport}
-        >
-          {canGenerateReport ? "Generate Report" : "Generate Report"}
-        </button>
-        
-         
-         <label className="ai-button">
-            Import PDF Resume
-            <input
-              type="file"
-              accept=".pdf"
-              style={{ display: "none" }}
-              onChange={importResume} 
-            />
-         </label>
+        {canGenerateReport && (
+          <button
+            className={`ai-button generate-report ${createComparisonReport ? "disabled" : ""}`}
+            onClick={createReport}
+            disabled={createComparisonReport}
+          >
+            {createComparisonReport ? "Generating..." : "Generate Report"}
+          </button>
+        )}
 
-       
+
+        <label className="ai-button">
+          Import PDF Resume
+          <input
+            type="file"
+            accept=".pdf"
+            style={{ display: "none" }}
+            onChange={importResume}
+          />
+        </label>
+
+
 
         <button
           className={`ai-button clear-button ${!jobDescription.trim() ? "disabled" : ""}`}

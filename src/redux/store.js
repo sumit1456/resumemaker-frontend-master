@@ -3,12 +3,12 @@ import { configureStore, createSlice } from '@reduxjs/toolkit';
 // ---------------- AUTH SLICE ----------------
 const authSlice = createSlice({
   name: 'auth',
-  initialState: { 
+  initialState: {
     isLoggedIn: false,
     userId: null,
     resumeId: null,
-    API_BASE_URL : "https://resumemaker-1.onrender.com",
-    API_BASE_URL2 : 'http://localhost:8080',
+    API_BASE_URL: "https://resumemaker-1.onrender.com",
+    API_BASE_URL2: 'http://localhost:8080',
 
   },
   reducers: {
@@ -53,17 +53,17 @@ const resumeSlice = createSlice({
 });
 
 // ---------------- EXPORT ACTIONS ----------------
-export const { 
-  logInUser, 
+export const {
+  logInUser,
   logOutUser,
-  setCurrentResumeId 
+  setCurrentResumeId
 } = authSlice.actions;
 
-export const { 
+export const {
   setImportedResume,
-  setCurrentResume, 
-  setEnhancedResume, 
-  clearResume 
+  setCurrentResume,
+  setEnhancedResume,
+  clearResume
 } = resumeSlice.actions;
 
 // ---------------- CREATE STORE ----------------

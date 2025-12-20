@@ -1136,189 +1136,22 @@
 }
 
 
-/* ==================== MOBILE RESPONSIVE ==================== */
-
-/* Tablets (<= 768px) */
-@media (max-width: 768px) {
-  .editor-container {
-    display: flex;
-    flex-direction: column;
-    height: auto;
-  }
-
-  .left-panel,
-  .right-panel {
-    width: 100%;
-    height: auto;
-    max-height: 200px;
-    overflow-y: auto;
-    border-right: none;
-    border-bottom: 1px solid #222;
-    padding: 12px;
-  }
-
-  .canvas-container {
-    border-right: none;
-    padding: 12px;
-  }
-
-  .canvas-scroll-wrapper {
-    padding: 12px;
-    overflow-x: auto;
-    justify-content: flex-start;
-  }
-
-  .canvas-wrapper {
-    width: 100%;
-    max-width: 100%;
-    transform: scale(0.8);
-  }
-
-  .zoom-controls {
-    bottom: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 6px 10px;
-    gap: 6px;
-  }
-
-  .zoom-value {
-    min-width: 40px;
-  }
-
-  .panel-title {
-    font-size: 12px;
-  }
-
-  .control-label,
-  .control-label-small,
-  .section-subtitle {
-    font-size: 10px;
-  }
-
-  .control-input,
-  .control-input-small,
-  .control-select {
-    font-size: 12px;
-    padding: 6px 8px;
-  }
-
-  .btn-primary,
-  .btn-secondary,
-  .btn-arrow,
-  .btn-resize,
-  .btn-delete,
-  .btn-zoom,
-  .btn-zoom-reset {
-    font-size: 10px;
-    padding: 6px 8px;
-  }
-
-  .canvas-hint,
-  .template-badge {
-    font-size: 9px;
-    padding: 6px 10px;
-  }
-
-  .shape-properties,
-  .line-properties,
-  .section-controls-grid {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-}
-
-/* Phones (<= 480px) */
-@media (max-width: 480px) {
-  .editor-container {
-    flex-direction: column;
-    padding: 0;
-  }
-
-  .left-panel,
-  .right-panel {
-    max-height: 150px;
-    padding: 8px;
-  }
-
-  .canvas-container {
-    padding: 8px;
-  }
-
-  .canvas-scroll-wrapper {
-    padding: 8px;
-    justify-content: flex-start;
-  }
-
-  .canvas-wrapper {
-    width: 100%;
-    transform: scale(0.7);
-  }
-
-  .panel-title {
-    font-size: 11px;
-  }
-
-  .control-label,
-  .control-label-small,
-  .section-subtitle {
-    font-size: 9px;
-  }
-
-  .control-input,
-  .control-input-small,
-  .control-select {
-    font-size: 11px;
-    padding: 4px 6px;
-  }
-
-  .btn-primary,
-  .btn-secondary,
-  .btn-arrow,
-  .btn-resize,
-  .btn-delete,
-  .btn-zoom,
-  .btn-zoom-reset {
-    font-size: 9px;
-    padding: 4px 6px;
-  }
-
-  .canvas-hint,
-  .template-badge {
-    font-size: 8px;
-    padding: 4px 8px;
-  }
-
-  .zoom-controls {
-    bottom: 8px;
-    gap: 4px;
-  }
-
-  .zoom-value {
-    min-width: 30px;
-  }
-
-  .shape-properties,
-  .line-properties,
-  .section-controls-grid {
-    grid-template-columns: 1fr;
-    gap: 6px;
-  }
-}
-
-/* ==================== MOBILE RESPONSIVENESS ==================== */
+/* ==================== MOBILE RESPONSIVE (CONSOLIDATED) ==================== */
 
 @media (max-width: 768px) {
   .editor-container {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 40vh 1fr;
     display: grid;
-    height: 100vh;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 55vh 1fr;
+    /* Increased from 40vh to 55vh to fill wasted space */
+    height: calc(100vh - 64px);
+    /* Account for navbar if present, or just 100vh */
+    overflow: hidden;
   }
 
   .mobile-tabs {
     display: flex;
-    background: #000;
+    background: #0d0d0d;
     border-bottom: 1px solid #333;
     z-index: 100;
   }
@@ -1352,43 +1185,103 @@
   .right-panel {
     width: 100%;
     height: 100%;
-    /* Relative to grid row 40vh */
     border-right: none;
     border-bottom: 1px solid #222;
-    padding: 15px;
+    padding: 10px;
+    /* Reduced from 15px/12px to give more "width" to the fields */
     grid-row: 2;
-    /* Always top */
+    background: #000;
+    overflow-y: auto;
   }
 
   .canvas-container {
     width: 100%;
     height: 100%;
-    /* Relative to grid row 1fr */
-    padding: 10px;
-    background: #1a1a1a;
     grid-row: 3;
-    /* Always bottom */
+    padding: 5px;
+    /* Minimal padding to fill space */
+    background: #111;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .canvas-scroll-wrapper {
+    padding: 10px;
+    overflow: auto;
+    display: flex;
+    justify-content: center;
+    /* Center horizontally on mobile */
+    align-items: flex-start;
+    height: 100%;
+    width: 100%;
+  }
+
+  .canvas-stack-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    align-items: center;
+  }
+
+  .canvas-wrapper {
+    /* Zoom is handled by JS inline transform scale */
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+    margin-bottom: 40px;
+    /* Space for page number */
+  }
+
+  .panel-title {
+    font-size: 11px;
+    margin-bottom: 15px;
+  }
+
+  .control-group {
+    margin-bottom: 12px;
+  }
+
+  .control-input,
+  .control-select,
+  .control-input-small {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    padding: 8px 12px;
+    font-size: 11px;
   }
 
   .zoom-controls {
-    bottom: 10px;
-    padding: 6px 8px;
+    bottom: 15px;
+    padding: 4px 10px;
+    gap: 6px;
+    background: rgba(17, 17, 17, 0.9);
+    border: 1px solid #444;
   }
 
   .btn-zoom,
   .btn-zoom-reset {
     padding: 4px 8px;
-    font-size: 10px;
+    font-size: 11px;
   }
 
   .zoom-value {
-    padding: 4px 8px;
-    font-size: 10px;
+    font-size: 11px;
+    min-width: 35px;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 480px) {
+  .editor-container {
+    grid-template-rows: auto 60vh 1fr;
+    /* Even more for the editor on small screens */
   }
 
-  .canvas-hint,
-  .template-badge {
-    font-size: 9px;
-    padding: 6px 12px;
+  .left-panel,
+  .right-panel {
+    padding: 8px;
   }
 }
