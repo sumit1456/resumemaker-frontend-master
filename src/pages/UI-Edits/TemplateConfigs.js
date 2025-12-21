@@ -423,7 +423,7 @@ export const ATS_TEMPLATE_CONFIG = {
     titleStyle: {
       fontSize: "14px",
       fontWeight: "normal",
-      color: "#c53a3aff"
+      color: "#c53a3a"
     },
     showTitle: true,
     showContact: true,

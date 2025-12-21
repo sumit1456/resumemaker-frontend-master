@@ -9,40 +9,43 @@ import { useSelector, useDispatch } from "react-redux";
 import EmailVerification from "./features/auth/Verification.jsx";
 import BackendWakePopup from "./components/PopUp/Backendpopup.jsx";
 import EditorPage from "./pages/UI-Edits/EditorPage.jsx";
+import B3 from "./pages/UI-Edits/b3.jsx";
+import Demo from "./pages/UI-Edits/Demo.jsx";
 
 
 
 export default function App() {
- 
-  const isLoggedIn = useSelector( (state)=> state.auth.isLoggedIn);
+
+  const isLoggedIn = useSelector((state) => state.auth.isLoggedIn);
 
   const [isLogged, setIsLogged] = useState(false);
   const [userId, setUserId] = useState(null);
 
-  useEffect(()=>{
-    const wakeserver = async()=>{
+  useEffect(() => {
+    const wakeserver = async () => {
       try {
-        
-        
-       
-        
+
+
+
+
       } catch (error) {
         console.log(error);
       }
     }
 
     wakeserver();
-  
+
   }, [])
 
   return (
 
 
     <div className="app-container">
-     <NavBar isLogged={isLogged} userId={userId} setIsLogged={setIsLogged} />
+      <NavBar isLogged={isLogged} userId={userId} setIsLogged={setIsLogged} />
       <Routes>
 
         <Route path="ui-editor" element={<EditorPage></EditorPage>}></Route>
+        <Route path="ui-editor/webgl" element={<B3 initialUseWebGL={true} />} />
         <Route
           path="/*"
           element={
@@ -60,6 +63,7 @@ export default function App() {
         />
 
         <Route path="/verify" element={<EmailVerification />} />
+        <Route path="/demo" element={<Demo />} />
       </Routes>
     </div>
 

@@ -33,7 +33,7 @@ export function extractText(value) {
 // Helper to convert array of items to text nodes
 export function arrayToTextNodes(items = [], style = {}) {
   if (!Array.isArray(items)) return [];
-  return items.filter(Boolean).map(item => 
+  return items.filter(Boolean).map(item =>
     new TextNode(extractText(item), style)
   );
 }
@@ -199,7 +199,7 @@ export function buildTwoColumnResume(resumeData = {}) {
   const details = resumeData.resumeDetails || {};
   const skills = resumeData.skills || [];
   const experiences = resumeData.experiences || [];
-  
+
   return new FlexNode({
     flexDirection: 'row',
     gap: 0
@@ -245,7 +245,7 @@ export function buildExperienceTimeline(experiences = []) {
   const experienceNodes = experiences.map(exp => {
     const achievements = exp.achievements || exp.description || [];
     const achievementList = Array.isArray(achievements) ? achievements : [achievements];
-    
+
     return new FlexNode({
       flexDirection: 'row',
       gap: 12,
@@ -257,7 +257,7 @@ export function buildExperienceTimeline(experiences = []) {
       new FlexNode({ flexDirection: 'column', gap: 4, flexGrow: 1 }, [
         new TextNode(exp.position || '', { font: 'bold 12px Arial', color: '#000' }),
         new TextNode(exp.company || '', { font: '10px Arial', color: '#666' }),
-        ...achievementList.slice(0, 3).map(item => 
+        ...achievementList.slice(0, 3).map(item =>
           new TextNode(`• ${extractText(item)}`, { font: '11px Arial', color: '#333', lineHeight: 16 })
         )
       ])
@@ -308,7 +308,7 @@ export function buildCompleteResume(resumeData = {}) {
 
 export function buildSkillsSection(skills = []) {
   if (!skills || skills.length === 0) return null;
-  
+
   return new FlexNode({ flexDirection: 'column', gap: 4 }, [
     new TextNode('SKILLS', { font: 'bold 12px Arial', color: '#000', marginBottom: 4 }),
     ...arrayToTextNodes(skills, { font: '10px Arial', color: '#333', lineHeight: 14 })
@@ -317,10 +317,10 @@ export function buildSkillsSection(skills = []) {
 
 export function buildEducationSection(educationList = []) {
   if (!Array.isArray(educationList) || educationList.length === 0) return null;
-  
+
   // Handle both single object and array
   const eduArray = Array.isArray(educationList) ? educationList : [educationList];
-  
+
   return new FlexNode({ flexDirection: 'column', gap: 8 }, [
     new TextNode('EDUCATION', { font: 'bold 12px Arial', color: '#000', marginBottom: 4 }),
     ...eduArray.map(education => {
@@ -336,7 +336,7 @@ export function buildEducationSection(educationList = []) {
 
 export function buildExperienceSection(experiences = []) {
   if (!experiences || experiences.length === 0) return null;
-  
+
   return new FlexNode({ flexDirection: 'column', gap: 12 }, [
     new TextNode('EXPERIENCE', { font: 'bold 12px Arial', color: '#000', marginBottom: 4 }),
     ...experiences.map(exp => {
@@ -353,16 +353,16 @@ export function buildExperienceSection(experiences = []) {
 
 export function buildProjectsSection(projects = []) {
   if (!projects || projects.length === 0) return null;
-  
+
   return new FlexNode({ flexDirection: 'column', gap: 12 }, [
     new TextNode('PROJECTS', { font: 'bold 12px Arial', color: '#000', marginBottom: 4 }),
     ...projects.map(proj => {
       const { name = '', description = [], technologies = '', duration = '' } = proj;
       const descArray = Array.isArray(description) ? description : [description];
-      
+
       return new FlexNode({ flexDirection: 'column', gap: 4, marginBottom: 8 }, [
         new TextNode(`${name}${duration ? ` (${duration})` : ''}`, { font: 'bold 11px Arial', color: '#000' }),
-        ...descArray.filter(Boolean).map(d => 
+        ...descArray.filter(Boolean).map(d =>
           new TextNode(`• ${extractText(d)}`, { font: '10px Arial', color: '#333', lineHeight: 14 })
         ),
         technologies ? new TextNode(`Tech: ${technologies}`, { font: 'italic 9px Arial', color: '#666' }) : null
@@ -373,7 +373,7 @@ export function buildProjectsSection(projects = []) {
 
 export function buildCertificationsSection(certifications = []) {
   if (!certifications || certifications.length === 0) return null;
-  
+
   return new FlexNode({ flexDirection: 'column', gap: 4 }, [
     new TextNode('CERTIFICATIONS', { font: 'bold 12px Arial', color: '#000', marginBottom: 4 }),
     ...arrayToTextNodes(certifications, { font: '10px Arial', color: '#333', lineHeight: 14 })

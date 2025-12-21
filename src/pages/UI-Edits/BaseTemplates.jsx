@@ -122,15 +122,6 @@ const FlexibleContainer = ({ children, config = {} }) => {
         overflow: "hidden",
     }, config);
 
-    // Log background color for debugging
-    if (config.backgroundColor !== undefined || finalStyles.backgroundColor !== "transparent") {
-        console.log("[FlexibleContainer] Background Debug:", {
-            configBg: config.backgroundColor,
-            finalBg: finalStyles.backgroundColor,
-            allConfig: config
-        });
-    }
-
     return (
         <div style={finalStyles}>
             {children}

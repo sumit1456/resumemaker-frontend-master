@@ -21,6 +21,7 @@
     "konva": "^10.0.12",
     "lucide-react": "^0.544.0",
     "pdfjs-dist": "^3.11.174",
+    "pixi.js": "^8.14.3",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-konva": "^19.2.1",

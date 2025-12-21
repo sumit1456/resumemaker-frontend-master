@@ -1,1495 +1,318 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { fabric } from "fabric";
 import html2canvas from "html2canvas";
 import { useSelector } from "react-redux";
 import { mergeResumeData } from "./Utils";
 import { ATS_TEMPLATE_CONFIG, MODERN_TEMPLATE_CONFIG, TWO_COLUMN_TEMPLATE_CONFIG, TEMPLATE5_CONFIG } from "./TemplateConfigs";
 import { defaultResumeData } from "./Utils";
 import "./UIEditor.css";
+import {
+  FlexibleCertificationsSection, FlexibleContactSection,
+  FlexibleEducationSection, FlexibleExperienceSection,
+  FlexibleHeaderSection, FlexibleProjectsSection,
+  FlexibleSkillsSection, FlexibleSummarySection
+} from "./BaseTemplates.jsx";
+import { PixiRenderer, GeometrySnapshot, HybridRenderer } from "./WebglEngine.jsx";
+import * as PIXI from 'pixi.js';
 
 
 
 import { Stage, Layer, Image as KonvaImage, Line, Rect, Transformer, Text } from 'react-konva';
 
 
-// const FlexibleContainer = ({ children, config }) => {
-//   return (
-//     <div style={{
-//       width: config.width || "fit-content",
-//       maxWidth: config.maxWidth || "100%",
-//       padding: config.padding || "10px",
-//       margin: config.margin || "0",
-//       backgroundColor: config.backgroundColor || "#FFFFFF",
-//       fontFamily: config.fontFamily || "Arial",
-//       color: config.color || "#000000",
-//       boxSizing: "border-box",
-//       overflow: config.overflow || "hidden",
-//       border: config.border || "none",
-//       borderRadius: config.borderRadius || "0",
-//       boxShadow: config.boxShadow || "none",
-//     }}>
-//       {children}
-//     </div>
-//   );
-// };
+// ==================== WEBGL ENGINE COMPONENT ====================
 
-// /**
-//  * Flexible Section Header - Can render any section title with full config
-//  */
-// const FlexibleSectionHeader = ({ title, config }) => {
-//   return (
-//     <div style={{
-//       fontSize: config.fontSize || "14px",
-//       fontWeight: config.fontWeight || "bold",
-//       color: config.color || "#000000",
-//       marginBottom: config.marginBottom || "8px",
-//       marginTop: config.marginTop || "0",
-//       paddingBottom: config.paddingBottom || "3px",
-//       paddingTop: config.paddingTop || "0",
-//       borderBottom: config.borderBottom || "none",
-//       borderTop: config.borderTop || "none",
-//       textTransform: config.textTransform || "none",
-//       letterSpacing: config.letterSpacing || "0",
-//       textAlign: config.textAlign || "left",
-//       display: config.display || "block",
-//       background: config.background || "transparent",
-//       padding: config.padding,
-//     }}>
-//       {config.icon && <span style={{ marginRight: "8px" }}>{config.icon}</span>}
-//       {title}
-//     </div>
-//   );
-// };
+const normalizeColorForInput = (color) => {
+  if (!color || color === 'transparent') return '#ffffff';
+  if (color.startsWith('#')) {
+    if (color.length === 9) return color.slice(0, 7);
+    return color;
+  }
+  return color;
+};
 
-// /**
-//  * Flexible Layout Container - Handles flex/grid layouts
-//  */
-// const FlexibleLayout = ({ children, config }) => {
-//   const isGrid = config.display === "grid";
-  
-//   return (
-//     <div style={{
-//       display: config.display || "flex",
-//       flexDirection: config.flexDirection || "row",
-//       justifyContent: config.justifyContent || "flex-start",
-//       alignItems: config.alignItems || "stretch",
-//       flexWrap: config.flexWrap || "nowrap",
-//       gap: config.gap || "0",
-//       gridTemplateColumns: isGrid ? config.gridTemplateColumns : undefined,
-//       gridTemplateRows: isGrid ? config.gridTemplateRows : undefined,
-//       padding: config.padding,
-//       margin: config.margin,
-//     }}>
-//       {children}
-//     </div>
-//   );
-// };
+const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, onDragEnd, onSelect, selectedId, type }) => {
+  const containerRef = useRef(null);
+  const pixiApp = useRef(null);
+  const [initTrigger, setInitTrigger] = useState(0);
 
-// /**
-//  * Flexible Text Block - For any text content
-//  */
-// const FlexibleText = ({ children, config }) => {
-//   return (
-//     <div style={{
-//       fontSize: config.fontSize || "10px",
-//       fontWeight: config.fontWeight || "normal",
-//       fontStyle: config.fontStyle || "normal",
-//       color: config.color || "#000000",
-//       lineHeight: config.lineHeight || "1.4",
-//       textAlign: config.textAlign || "left",
-//       marginBottom: config.marginBottom || "0",
-//       marginTop: config.marginTop || "0",
-//       padding: config.padding,
-//       textTransform: config.textTransform || "none",
-//       letterSpacing: config.letterSpacing || "0",
-//       wordWrap: config.wordWrap || "break-word",
-//       whiteSpace: config.whiteSpace || "normal",
-//       textDecoration: config.textDecoration || "none",
-//       background: config.background || "transparent",
-//       border: config.border,
-//       borderRadius: config.borderRadius,
-//       display: config.display || "block",
-//       flex: config.flex,
-//       width: config.width,
-//       maxWidth: config.maxWidth,
-//     }}>
-//       {children}
-//     </div>
-//   );
-// };
+  useEffect(() => {
+    let app;
+    const initPixi = async () => {
+      if (!containerRef.current) return;
 
-// /**
-//  * Flexible Bullet List - Configurable bullet points
-//  */
-// // const FlexibleBulletList = ({ items, config }) => {
-// //   if (!items || items.length === 0) return null;
-  
-// //   return (
-// //     <div style={{ marginTop: config.containerMarginTop || "0" }}>
-// //       {items.filter(item => item?.trim()).map((item, index) => (
-// //         <div key={index} style={{
-// //           display: "flex",
-// //           marginBottom: config.itemMarginBottom || "3px",
-// //           alignItems: config.alignItems || "flex-start",
-// //         }}>
-// //           <div style={{
-// //             width: config.bulletWidth || "10px",
-// //             minWidth: config.bulletWidth || "10px",
-// //             color: config.bulletColor || "#000000",
-// //             fontSize: config.bulletSize || "10px",
-// //             flexShrink: 0,
-// //             marginRight: config.bulletMarginRight || "0",
-// //             marginTop: config.bulletMarginTop || "0",
-// //           }}>
-// //             {config.bulletStyle || "•"}
-// //           </div>
-// //           <FlexibleText config={{
-// //             fontSize: config.textSize || "10px",
-// //             color: config.textColor || "#000000",
-// //             lineHeight: config.lineHeight || "1.4",
-// //             flex: 1,
-// //           }}>
-// //             {item}
-// //           </FlexibleText>
-// //         </div>
-// //       ))}
-// //     </div>
-// //   );
-// // };
+      const PIXI_LIB = PIXI || window.PIXI;
+      // Initialize PixiJS Application (v8 style)
+      app = new PIXI_LIB.Application();
 
+      try {
+        await app.init({
+          width: width,
+          height: height,
+          background: '#ffffff',
+          resolution: 4,
+          autoDensity: true,
+          antialias: true,
+        });
 
-// // ========== FLEXIBLE BULLET LIST ==========
-// const FlexibleBulletList = ({ items = [], styleConfig = {} }) => {
-//   const config = styleConfig;
+        pixiApp.current = app;
+        containerRef.current.appendChild(app.canvas || app.view);
 
-//   return (
-//     <div
-//       style={{
-//         display: "flex",
-//         flexDirection: "column",
-//         gap: config.bulletGap || "4px",
-//         width: "100%",
-//       }}
-//     >
-//       {items.map((item, index) => (
-//         <div
-//           key={index}
-//           style={{
-//             display: "flex",
-//             flexDirection: "row",
-//             alignItems: "flex-start",
-//             width: "100%",
-//           }}
-//         >
-//           {/* Bullet */}
-//           <div
-//             style={{
-//               marginTop: "2px",
-//               width: "10px",
-//               minWidth: "10px",
-//               fontSize: config.bulletSize || "12px",
-//               color: config.textColor || "#000000",
-//               lineHeight: config.lineHeight || "1.4",
-//               userSelect: "none",
-//             }}
-//           >
-//             •
-//           </div>
+        // Create layers
+        const shapesLayer = new PIXI.Container();
+        const linesLayer = new PIXI.Container();
+        const sectionsLayer = new PIXI.Container();
 
-//           {/* Text */}
-//           <div
-//             style={{
-//               flex: 1,
-//               minWidth: 0, // 💥 REQUIRED so bullets don’t break line
-//               fontSize: config.textSize || "10px",
-//               color: config.textColor || "#000000",
-//               lineHeight: config.lineHeight || "1.4",
-//               whiteSpace: "normal",
-//               wordBreak: "normal",
-//               overflowWrap: "anywhere", // 💥 best for resumes
-//             }}
-//           >
-//             {item}
-//           </div>
-//         </div>
-//       ))}
-//     </div>
-//   );
-// };
+        app.stage.addChild(shapesLayer);
+        app.stage.addChild(sectionsLayer);
+        app.stage.addChild(linesLayer);
 
+        // Force a re-render once initialized
+        setInitTrigger(prev => prev + 1);
 
-// // ========== FLEXIBLE SECTION COMPONENTS ==========
+      } catch (err) {
+        console.error("PixiJS init failed:", err);
+      }
+    };
 
-// /**
-//  * HEADER SECTION - Fully Flexible
-//  */
-// export const FlexibleHeaderSection = ({ resumeDetails, styleConfig }) => {
-//   const config = styleConfig.header;
-  
-//   return (
-//     <FlexibleContainer config={config.container}>
-//       <FlexibleLayout config={config.mainLayout}>
-//         {/* Name Section */}
-//         <FlexibleLayout config={config.nameSection}>
-//           <FlexibleText config={config.nameStyle}>
-//             {resumeDetails.name || "Your Name"}
-//           </FlexibleText>
-//           {config.showTitle && (
-//             <FlexibleText config={config.titleStyle}>
-//               {resumeDetails.title || "Your Title"}
-//             </FlexibleText>
-//           )}
-//         </FlexibleLayout>
-        
-//         {/* Contact Section */}
-//         {config.showContact && (
-//           <FlexibleLayout config={config.contactLayout}>
-//             {config.contactOrder.map((contactType, idx) => {
-//               const value = resumeDetails.contact?.[contactType];
-//               if (!value) return null;
-              
-//               return (
-//                 <FlexibleText key={idx} config={config.contactItemStyle}>
-//                   {config.showContactIcons && config.contactIcons?.[contactType] && (
-//                     <span style={{ marginRight: "4px" }}>{config.contactIcons[contactType]}</span>
-//                   )}
-//                   {value}
-//                 </FlexibleText>
-//               );
-//             })}
-//           </FlexibleLayout>
-//         )}
-//       </FlexibleLayout>
-      
-//       {config.showDivider && (
-//         <div style={{
-//           borderBottom: config.dividerStyle || "1px solid #000",
-//           marginTop: config.dividerMarginTop || "8px",
-//           marginBottom: config.dividerMarginBottom || "8px",
-//         }} />
-//       )}
-//     </FlexibleContainer>
-//   );
-// };
+    initPixi();
 
-// /**
-//  * SUMMARY SECTION - Fully Flexible
-//  */
-// export const FlexibleSummarySection = ({ summary, styleConfig }) => {
-//   const config = styleConfig.summary;
-  
-//   return (
-//     <FlexibleContainer config={config.container}>
-//       {config.showTitle && (
-//         <FlexibleSectionHeader title="SUMMARY" config={config.titleStyle} />
-//       )}
-//       <FlexibleText config={config.bodyStyle}>
-//         {summary}
-//       </FlexibleText>
-//     </FlexibleContainer>
-//   );
-// };
+    return () => {
+      if (app) {
+        app.destroy(true, { children: true, texture: true, baseTexture: true });
+      }
+    };
+  }, [width, height]);
 
-// /**
-//  * SKILLS SECTION - Fully Flexible
-//  */
-// export const FlexibleSkillsSection = ({ skills, styleConfig }) => {
-//   const config = styleConfig.skills;
-  
-//   // Parse skills (grouped vs flat)
-//   const groupedSkills = {};
-//   const ungroupedSkills = [];
-  
-//   if (skills && Array.isArray(skills)) {
-//     skills.forEach(skill => {
-//       if (skill && skill.includes(" - ")) {
-//         const [cat, val] = skill.split(" - ");
-//         groupedSkills[cat.trim()] = val.trim();
-//       } else if (skill?.trim()) {
-//         ungroupedSkills.push(skill.trim());
-//       }
-//     });
-//   }
-  
-//   return (
-//     <FlexibleContainer config={config.container}>
-//       {config.showTitle && (
-//         <FlexibleSectionHeader title="SKILLS" config={config.titleStyle} />
-//       )}
-      
-//       <FlexibleLayout config={config.contentLayout}>
-//         {/* Grouped Skills */}
-//         {Object.entries(groupedSkills).map(([category, value], idx) => (
-//           <div key={idx} style={{ marginBottom: config.itemMarginBottom || "8px" }}>
-//             {config.showCategories && (
-//               <FlexibleText config={config.categoryStyle}>
-//                 {category}
-//               </FlexibleText>
-//             )}
-//             <FlexibleText config={config.valueStyle}>
-//               {value}
-//             </FlexibleText>
-//           </div>
-//         ))}
-        
-//         {/* Ungrouped Skills */}
-//         {ungroupedSkills.length > 0 && (
-//           <div style={{ marginBottom: config.itemMarginBottom || "8px" }}>
-//             {config.showCategories && (
-//               <FlexibleText config={config.categoryStyle}>
-//                 Other
-//               </FlexibleText>
-//             )}
-//             {config.displayType === "list" ? (
-//               <FlexibleBulletList items={ungroupedSkills} config={config.bulletConfig} />
-//             ) : (
-//               <FlexibleText config={config.valueStyle}>
-//                 {ungroupedSkills.join(config.separator || ", ")}
-//               </FlexibleText>
-//             )}
-//           </div>
-//         )}
-//       </FlexibleLayout>
-//     </FlexibleContainer>
-//   );
-// };
+  const parseColor = (cssColor) => {
+    if (!cssColor || cssColor === 'transparent') return { hex: 0xffffff, alpha: 0 };
 
-// /**
-//  * EXPERIENCE SECTION - Fully Flexible
-//  */
-// export const FlexibleExperienceSection = ({ experiences, styleConfig }) => {
-//   const config = styleConfig.experience;
-  
-//   return (
-//     <FlexibleContainer config={config.container}>
-//       {config.showTitle && (
-//         <FlexibleSectionHeader title="EXPERIENCE" config={config.titleStyle} />
-//       )}
-      
-//       {experiences.map((exp, idx) => (
-//         <div key={idx} style={{ marginBottom: config.itemMarginBottom || "12px" }}>
-//           <FlexibleLayout config={config.headerLayout}>
-//             {/* Position/Company layout controlled by config */}
-//             {config.positionFirst ? (
-//               <>
-//                 <FlexibleText config={config.positionStyle}>
-//                   {exp.position}
-//                 </FlexibleText>
-//                 <FlexibleText config={config.durationStyle}>
-//                   {exp.duration}
-//                 </FlexibleText>
-//               </>
-//             ) : (
-//               <>
-//                 <FlexibleText config={config.companyStyle}>
-//                   {exp.company}
-//                 </FlexibleText>
-//                 <FlexibleText config={config.durationStyle}>
-//                   {exp.duration}
-//                 </FlexibleText>
-//               </>
-//             )}
-//           </FlexibleLayout>
-          
-//           <FlexibleLayout config={config.subHeaderLayout}>
-//             <FlexibleText config={config.companyStyle}>
-//               {config.positionFirst ? exp.company : exp.position}
-//               {exp.location && config.showLocation ? `, ${exp.location}` : ""}
-//             </FlexibleText>
-//           </FlexibleLayout>
-          
-//           {/* Achievements */}
-//           {config.showAchievements && exp.achievements && (
-//             <FlexibleBulletList items={exp.achievements} config={config.bulletConfig} />
-//           )}
-//         </div>
-//       ))}
-//     </FlexibleContainer>
-//   );
-// };
+    // Improved parser from WebglEngine
+    const PIXI_LIB = PIXI || window.PIXI;
 
-// /**
-//  * PROJECTS SECTION - Fully Flexible
-//  */
-// export const FlexibleProjectsSection = ({ projects, styleConfig }) => {
-//   const config = styleConfig.projects;
-  
-//   return (
-//     <FlexibleContainer config={config.container}>
-//       {config.showTitle && (
-//         <FlexibleSectionHeader title="PROJECTS" config={config.titleStyle} />
-//       )}
-      
-//       {projects.map((proj, idx) => (
-//         <div key={idx} style={{ marginBottom: config.itemMarginBottom || "12px" }}>
-//           <FlexibleLayout config={config.headerLayout}>
-//             <FlexibleText config={config.nameStyle}>
-//               {proj.name}
-//             </FlexibleText>
-//             {proj.duration && config.showDuration && (
-//               <FlexibleText config={config.durationStyle}>
-//                 {proj.duration}
-//               </FlexibleText>
-//             )}
-//           </FlexibleLayout>
-          
-//           {proj.technologies && config.showTechnologies && (
-//             <FlexibleText config={config.techStyle}>
-//               {proj.technologies}
-//             </FlexibleText>
-//           )}
-          
-//           {config.showDescription && proj.description && (
-//             <FlexibleBulletList items={proj.description} config={config.bulletConfig} />
-//           )}
-//         </div>
-//       ))}
-//     </FlexibleContainer>
-//   );
-// };
+    // 1. Hex
+    if (cssColor.startsWith('#')) {
+      const hex = cssColor.slice(1);
+      if (hex.length === 3) {
+        const fullHex = hex.split('').map(c => c + c).join('');
+        return { hex: parseInt(fullHex, 16), alpha: 1 };
+      }
+      if (hex.length === 8) {
+        return { hex: parseInt(hex.slice(0, 6), 16), alpha: parseInt(hex.slice(6, 8), 16) / 255 };
+      }
+      return { hex: parseInt(hex, 16), alpha: 1 };
+    }
 
-// /**
-//  * EDUCATION SECTION - Fully Flexible
-//  */
-// export const FlexibleEducationSection = ({ educationList, styleConfig }) => {
-//   const config = styleConfig.education;
-  
-//   return (
-//     <FlexibleContainer config={config.container}>
-//       {config.showTitle && (
-//         <FlexibleSectionHeader title="EDUCATION" config={config.titleStyle} />
-//       )}
-      
-//       {educationList.map((edu, idx) => (
-//         <div key={idx} style={{ marginBottom: config.itemMarginBottom || "10px" }}>
-//           <FlexibleText config={config.degreeStyle}>
-//             {edu.degree}
-//           </FlexibleText>
-          
-//           {edu.institution && config.showInstitution && (
-//             <FlexibleText config={config.institutionStyle}>
-//               {edu.institution}
-//             </FlexibleText>
-//           )}
-          
-//           <FlexibleLayout config={config.detailsLayout}>
-//             {edu.year && (
-//               <FlexibleText config={config.detailsStyle}>
-//                 {edu.year}
-//               </FlexibleText>
-//             )}
-//             {edu.gpa && config.showGpa && (
-//               <FlexibleText config={config.detailsStyle}>
-//                 {config.gpaPrefix || "GPA: "}{edu.gpa}
-//               </FlexibleText>
-//             )}
-//             {edu.location && config.showLocation && (
-//               <FlexibleText config={config.detailsStyle}>
-//                 {edu.location}
-//               </FlexibleText>
-//             )}
-//           </FlexibleLayout>
-//         </div>
-//       ))}
-//     </FlexibleContainer>
-//   );
-// };
+    // 2. RGB/RGBA
+    if (cssColor.startsWith('rgb')) {
+      const values = cssColor.match(/[\d.]+/g);
+      if (values) {
+        const r = parseInt(values[0]);
+        const g = parseInt(values[1]);
+        const b = parseInt(values[2]);
+        const a = values[3] !== undefined ? parseFloat(values[3]) : 1;
+        return { hex: (r << 16) | (g << 8) | b, alpha: a };
+      }
+    }
 
-// /**
-//  * CERTIFICATIONS SECTION - Fully Flexible
-//  */
-// export const FlexibleCertificationsSection = ({ certifications, styleConfig }) => {
-//   const config = styleConfig.certifications;
-  
-//   return (
-//     <FlexibleContainer config={config.container}>
-//       {config.showTitle && (
-//         <FlexibleSectionHeader title="CERTIFICATIONS" config={config.titleStyle} />
-//       )}
-      
-//       {config.displayType === "list" ? (
-//         <FlexibleBulletList items={certifications} config={config.bulletConfig} />
-//       ) : (
-//         certifications.filter(cert => cert?.trim()).map((cert, idx) => (
-//           <FlexibleText key={idx} config={config.itemStyle}>
-//             {cert}
-//           </FlexibleText>
-//         ))
-//       )}
-//     </FlexibleContainer>
-//   );
-// };
+    // 3. Named colors (Minimal set)
+    const colors = { red: 0xff0000, blue: 0x0000ff, green: 0x00ff00, black: 0x000000, white: 0xffffff, gray: 0x888888 };
+    if (colors[cssColor.toLowerCase()]) {
+      return { hex: colors[cssColor.toLowerCase()], alpha: 1 };
+    }
 
-
-// ========== ENHANCED BASE COMPONENTS ==========
-
-/**
- * Universal Style Applicator - Applies any CSS property
- * Filters out non-CSS properties and nested objects
- */
-
-
-// const applyStyles = (baseStyle, configStyle) => {
-//   if (!configStyle) return baseStyle;
-  
-//   const validStyles = {};
-//   const validCSSProps = new Set([
-//     'alignContent', 'alignItems', 'alignSelf', 'animation', 'animationDelay', 
-//     'animationDirection', 'animationDuration', 'animationFillMode', 
-//     'animationIterationCount', 'animationName', 'animationPlayState', 
-//     'animationTimingFunction', 'backfaceVisibility', 'background', 
-//     'backgroundAttachment', 'backgroundBlendMode', 'backgroundClip', 
-//     'backgroundColor', 'backgroundImage', 'backgroundOrigin', 'backgroundPosition', 
-//     'backgroundRepeat', 'backgroundSize', 'border', 'borderBottom', 
-//     'borderBottomColor', 'borderBottomLeftRadius', 'borderBottomRightRadius', 
-//     'borderBottomStyle', 'borderBottomWidth', 'borderCollapse', 'borderColor', 
-//     'borderImage', 'borderImageOutset', 'borderImageRepeat', 'borderImageSlice', 
-//     'borderImageSource', 'borderImageWidth', 'borderLeft', 'borderLeftColor', 
-//     'borderLeftStyle', 'borderLeftWidth', 'borderRadius', 'borderRight', 
-//     'borderRightColor', 'borderRightStyle', 'borderRightWidth', 'borderSpacing', 
-//     'borderStyle', 'borderTop', 'borderTopColor', 'borderTopLeftRadius', 
-//     'borderTopRightRadius', 'borderTopStyle', 'borderTopWidth', 'borderWidth', 
-//     'bottom', 'boxDecorationBreak', 'boxShadow', 'boxSizing', 'breakAfter', 
-//     'breakBefore', 'breakInside', 'captionSide', 'caretColor', 'clear', 'clip', 
-//     'clipPath', 'color', 'columnCount', 'columnFill', 'columnGap', 'columnRule', 
-//     'columnRuleColor', 'columnRuleStyle', 'columnRuleWidth', 'columnSpan', 
-//     'columnWidth', 'columns', 'content', 'counterIncrement', 'counterReset', 
-//     'cursor', 'direction', 'display', 'emptyCells', 'filter', 'flex', 
-//     'flexBasis', 'flexDirection', 'flexFlow', 'flexGrow', 'flexShrink', 
-//     'flexWrap', 'float', 'font', 'fontFamily', 'fontFeatureSettings', 
-//     'fontKerning', 'fontSize', 'fontSizeAdjust', 'fontStretch', 'fontStyle', 
-//     'fontSynthesis', 'fontVariant', 'fontVariantCaps', 'fontVariantLigatures', 
-//     'fontVariantNumeric', 'fontVariantPosition', 'fontWeight', 'gap', 'grid', 
-//     'gridArea', 'gridAutoColumns', 'gridAutoFlow', 'gridAutoRows', 'gridColumn', 
-//     'gridColumnEnd', 'gridColumnGap', 'gridColumnStart', 'gridGap', 'gridRow', 
-//     'gridRowEnd', 'gridRowGap', 'gridRowStart', 'gridTemplate', 'gridTemplateAreas', 
-//     'gridTemplateColumns', 'gridTemplateRows', 'height', 'hyphens', 'imageRendering', 
-//     'isolation', 'justifyContent', 'justifyItems', 'justifySelf', 'left', 
-//     'letterSpacing', 'lineBreak', 'lineHeight', 'listStyle', 'listStyleImage', 
-//     'listStylePosition', 'listStyleType', 'margin', 'marginBottom', 'marginLeft', 
-//     'marginRight', 'marginTop', 'mask', 'maskClip', 'maskComposite', 'maskImage', 
-//     'maskMode', 'maskOrigin', 'maskPosition', 'maskRepeat', 'maskSize', 'maskType', 
-//     'maxHeight', 'maxWidth', 'minHeight', 'minWidth', 'mixBlendMode', 'objectFit', 
-//     'objectPosition', 'opacity', 'order', 'orphans', 'outline', 'outlineColor', 
-//     'outlineOffset', 'outlineStyle', 'outlineWidth', 'overflow', 'overflowWrap', 
-//     'overflowX', 'overflowY', 'padding', 'paddingBottom', 'paddingLeft', 
-//     'paddingRight', 'paddingTop', 'pageBreakAfter', 'pageBreakBefore', 
-//     'pageBreakInside', 'perspective', 'perspectiveOrigin', 'placeContent', 
-//     'placeItems', 'placeSelf', 'pointerEvents', 'position', 'quotes', 'resize', 
-//     'right', 'rowGap', 'scrollBehavior', 'tabSize', 'tableLayout', 'textAlign', 
-//     'textAlignLast', 'textCombineUpright', 'textDecoration', 'textDecorationColor', 
-//     'textDecorationLine', 'textDecorationStyle', 'textIndent', 'textJustify', 
-//     'textOrientation', 'textOverflow', 'textShadow', 'textTransform', 
-//     'textUnderlinePosition', 'top', 'transform', 'transformOrigin', 'transformStyle', 
-//     'transition', 'transitionDelay', 'transitionDuration', 'transitionProperty', 
-//     'transitionTimingFunction', 'unicodeBidi', 'userSelect', 'verticalAlign', 
-//     'visibility', 'whiteSpace', 'widows', 'width', 'willChange', 'wordBreak', 
-//     'wordSpacing', 'wordWrap', 'writingMode', 'zIndex'
-//   ]);
-  
-//   Object.keys(configStyle).forEach(key => {
-//     const value = configStyle[key];
-//     // Only include valid CSS properties with primitive values
-//     if (validCSSProps.has(key) && (typeof value === 'string' || typeof value === 'number')) {
-//       validStyles[key] = value;
-//     }
-//   });
-  
-//   return { ...baseStyle, ...validStyles };
-// };
-
-
-const applyStyles = (baseStyle, configStyle) => {
-  if (!configStyle) return baseStyle;
-  
-  const validStyles = {};
-  const validCSSProps = new Set([
-    'alignContent', 'alignItems', 'alignSelf', 'animation', 'animationDelay', 
-    'animationDirection', 'animationDuration', 'animationFillMode', 
-    'animationIterationCount', 'animationName', 'animationPlayState', 
-    'animationTimingFunction', 'backfaceVisibility', 'background', 
-    'backgroundAttachment', 'backgroundBlendMode', 'backgroundClip', 
-    'backgroundColor', 'backgroundImage', 'backgroundOrigin', 'backgroundPosition', 
-    'backgroundRepeat', 'backgroundSize', 'border', 'borderBottom', 
-    'borderBottomColor', 'borderBottomLeftRadius', 'borderBottomRightRadius', 
-    'borderBottomStyle', 'borderBottomWidth', 'borderCollapse', 'borderColor', 
-    'borderImage', 'borderImageOutset', 'borderImageRepeat', 'borderImageSlice', 
-    'borderImageSource', 'borderImageWidth', 'borderLeft', 'borderLeftColor', 
-    'borderLeftStyle', 'borderLeftWidth', 'borderRadius', 'borderRight', 
-    'borderRightColor', 'borderRightStyle', 'borderRightWidth', 'borderSpacing', 
-    'borderStyle', 'borderTop', 'borderTopColor', 'borderTopLeftRadius', 
-    'borderTopRightRadius', 'borderTopStyle', 'borderTopWidth', 'borderWidth', 
-    'bottom', 'boxDecorationBreak', 'boxShadow', 'boxSizing', 'breakAfter', 
-    'breakBefore', 'breakInside', 'captionSide', 'caretColor', 'clear', 'clip', 
-    'clipPath', 'color', 'columnCount', 'columnFill', 'columnGap', 'columnRule', 
-    'columnRuleColor', 'columnRuleStyle', 'columnRuleWidth', 'columnSpan', 
-    'columnWidth', 'columns', 'content', 'counterIncrement', 'counterReset', 
-    'cursor', 'direction', 'display', 'emptyCells', 'filter', 'flex', 
-    'flexBasis', 'flexDirection', 'flexFlow', 'flexGrow', 'flexShrink', 
-    'flexWrap', 'float', 'font', 'fontFamily', 'fontFeatureSettings', 
-    'fontKerning', 'fontSize', 'fontSizeAdjust', 'fontStretch', 'fontStyle', 
-    'fontSynthesis', 'fontVariant', 'fontVariantCaps', 'fontVariantLigatures', 
-    'fontVariantNumeric', 'fontVariantPosition', 'fontWeight', 'gap', 'grid', 
-    'gridArea', 'gridAutoColumns', 'gridAutoFlow', 'gridAutoRows', 'gridColumn', 
-    'gridColumnEnd', 'gridColumnGap', 'gridColumnStart', 'gridGap', 'gridRow', 
-    'gridRowEnd', 'gridRowGap', 'gridRowStart', 'gridTemplate', 'gridTemplateAreas', 
-    'gridTemplateColumns', 'gridTemplateRows', 'height', 'hyphens', 'imageRendering', 
-    'isolation', 'justifyContent', 'justifyItems', 'justifySelf', 'left', 
-    'letterSpacing', 'lineBreak', 'lineHeight', 'listStyle', 'listStyleImage', 
-    'listStylePosition', 'listStyleType', 'margin', 'marginBottom', 'marginLeft', 
-    'marginRight', 'marginTop', 'mask', 'maskClip', 'maskComposite', 'maskImage', 
-    'maskMode', 'maskOrigin', 'maskPosition', 'maskRepeat', 'maskSize', 'maskType', 
-    'maxHeight', 'maxWidth', 'minHeight', 'minWidth', 'mixBlendMode', 'objectFit', 
-    'objectPosition', 'opacity', 'order', 'orphans', 'outline', 'outlineColor', 
-    'outlineOffset', 'outlineStyle', 'outlineWidth', 'overflow', 'overflowWrap', 
-    'overflowX', 'overflowY', 'padding', 'paddingBottom', 'paddingLeft', 
-    'paddingRight', 'paddingTop', 'pageBreakAfter', 'pageBreakBefore', 
-    'pageBreakInside', 'perspective', 'perspectiveOrigin', 'placeContent', 
-    'placeItems', 'placeSelf', 'pointerEvents', 'position', 'quotes', 'resize', 
-    'right', 'rowGap', 'scrollBehavior', 'tabSize', 'tableLayout', 'textAlign', 
-    'textAlignLast', 'textCombineUpright', 'textDecoration', 'textDecorationColor', 
-    'textDecorationLine', 'textDecorationStyle', 'textIndent', 'textJustify', 
-    'textOrientation', 'textOverflow', 'textShadow', 'textTransform', 
-    'textUnderlinePosition', 'top', 'transform', 'transformOrigin', 'transformStyle', 
-    'transition', 'transitionDelay', 'transitionDuration', 'transitionProperty', 
-    'transitionTimingFunction', 'unicodeBidi', 'userSelect', 'verticalAlign', 
-    'visibility', 'whiteSpace', 'widows', 'width', 'willChange', 'wordBreak', 
-    'wordSpacing', 'wordWrap', 'writingMode', 'zIndex'
-  ]);
-  
-  // Merge base and config first
-  const merged = { ...baseStyle, ...configStyle };
-  
-  // Property conflict resolution: longhand properties take precedence over shorthand
-  const shorthandMap = {
-    'margin': ['marginTop', 'marginRight', 'marginBottom', 'marginLeft'],
-    'padding': ['paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft'],
-    'border': ['borderTop', 'borderRight', 'borderBottom', 'borderLeft'],
-    'borderWidth': ['borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth'],
-    'borderStyle': ['borderTopStyle', 'borderRightStyle', 'borderBottomStyle', 'borderLeftStyle'],
-    'borderColor': ['borderTopColor', 'borderRightColor', 'borderBottomColor', 'borderLeftColor'],
+    return { hex: 0xcccccc, alpha: 1 };
   };
-  
-  // If any longhand property exists, remove the shorthand
-  Object.keys(shorthandMap).forEach(shorthand => {
-    const longhands = shorthandMap[shorthand];
-    const hasLonghand = longhands.some(prop => merged[prop] !== undefined);
-    if (hasLonghand && merged[shorthand] !== undefined) {
-      delete merged[shorthand];
-    }
-  });
-  
-  // Filter to only valid CSS properties
-  Object.keys(merged).forEach(key => {
-    const value = merged[key];
-    if (validCSSProps.has(key) && (typeof value === 'string' || typeof value === 'number')) {
-      validStyles[key] = value;
-    }
-  });
-  
-  return validStyles;
-};
 
-/**
- * Enhanced Flexible Container
- */
-const FlexibleContainer = ({ children, config = {} }) => {
-  return (
-    <div style={applyStyles({
-      width: "fit-content",
-      maxWidth: "100%",
-      padding: "10px",
-      margin: "0",
-      backgroundColor: "#FFFFFF",
-      fontFamily: "Arial",
-      color: "#000000",
-      boxSizing: "border-box",
-      overflow: "hidden",
-    }, config)}>
-      {children}
-    </div>
-  );
-};
+  // Update elements when props change
+  useEffect(() => {
+    const app = pixiApp.current;
+    if (!app) return;
 
-/**
- * Enhanced Flexible Text - Any text element
- */
-const FlexibleText = ({ children, config = {}, as = "div" }) => {
-  const Element = as; // Can be div, span, p, h1, etc.
-  
-  return (
-    <Element style={applyStyles({
-      fontSize: "10px",
-      fontWeight: "normal",
-      fontStyle: "normal",
-      color: "#000000",
-      lineHeight: "1.4",
-      textAlign: "left",
-      margin: "0",
-      padding: "0",
-    }, config)}>
-      {children}
-    </Element>
-  );
-};
+    const shapesLayer = app.stage.children[0];
+    const sectionsLayer = app.stage.children[1];
+    const linesLayer = app.stage.children[2];
 
-/**
- * Flexible Section Header
- */
-const FlexibleSectionHeader = ({ title, config }) => {
-  return (
-    <div style={applyStyles({
-      fontSize: "14px",
-      fontWeight: "bold",
-      color: "#000000",
-      marginBottom: "8px",
-      marginTop: "0",
-      paddingBottom: "3px",
-      paddingTop: "0",
-      borderBottom: "none",
-      borderTop: "none",
-      textTransform: "none",
-      letterSpacing: "0",
-      textAlign: "left",
-      display: "block",
-      background: "transparent",
-    }, config)}>
-      {config.icon && <span style={{ marginRight: "8px" }}>{config.icon}</span>}
-      {title}
-    </div>
-  );
-};
+    // Clear and redraw (for simplicity in this first version)
+    shapesLayer.removeChildren();
+    linesLayer.removeChildren();
+    sectionsLayer.removeChildren();
 
-/**
- * Enhanced Flexible Layout
- */
-const FlexibleLayout = ({ children, config = {} }) => {
-  const isGrid = config.display === "grid";
-  
-  return (
-    <div style={applyStyles({
-      display: "flex",
-      flexDirection: "row",
-      justifyContent: "flex-start",
-      alignItems: "stretch",
-      flexWrap: "nowrap",
-      gap: "0",
-    }, {
-      ...config,
-      gridTemplateColumns: isGrid ? config.gridTemplateColumns : undefined,
-      gridTemplateRows: isGrid ? config.gridTemplateRows : undefined,
-    })}>
-      {children}
-    </div>
-  );
-};
+    // Render Shapes
+    shapes.forEach(shape => {
+      const graphics = new PIXI.Graphics();
+      const colorData = parseColor(shape.color);
 
-// ========== ENHANCED BULLET LIST ==========
+      if (graphics.fill) {
+        if (shape.type === 'circle') {
+          graphics.circle(shape.width / 2, shape.height / 2, shape.width / 2);
+        } else {
+          graphics.rect(0, 0, shape.width, shape.height);
+        }
+        graphics.fill({ color: colorData.hex, alpha: colorData.alpha });
+      } else {
+        graphics.beginFill(colorData.hex, colorData.alpha);
+        if (shape.type === 'circle') {
+          graphics.drawCircle(shape.width / 2, shape.height / 2, shape.width / 2);
+        } else {
+          graphics.drawRect(0, 0, shape.width, shape.height);
+        }
+        graphics.endFill();
+      }
+      graphics.x = shape.x;
+      graphics.y = shape.y;
 
-const FlexibleBulletList = ({ items = [], styleConfig = {} }) => {
-  const config = styleConfig;
+      // Make interactive
+      graphics.interactive = true;
+      graphics.buttonMode = true;
+
+      graphics.on('pointerdown', (event) => {
+        onSelect('shape', shape.id);
+        graphics.data = event.data;
+        graphics.dragging = true;
+        graphics.dragOffset = event.data.getLocalPosition(graphics.parent);
+        graphics.dragOffset.x -= graphics.x;
+        graphics.dragOffset.y -= graphics.y;
+      });
+
+      graphics.on('pointermove', () => {
+        if (graphics.dragging) {
+          const newPosition = graphics.data.getLocalPosition(graphics.parent);
+          graphics.x = newPosition.x - graphics.dragOffset.x;
+          graphics.y = newPosition.y - graphics.dragOffset.y;
+        }
+      });
+
+      graphics.on('pointerup', () => {
+        if (graphics.dragging) {
+          graphics.dragging = false;
+          onDragEnd('shape', shape.id, { x: Math.round(graphics.x), y: Math.round(graphics.y) });
+        }
+      });
+
+      graphics.on('pointerupoutside', () => {
+        if (graphics.dragging) {
+          graphics.dragging = false;
+          onDragEnd('shape', shape.id, { x: Math.round(graphics.x), y: Math.round(graphics.y) });
+        }
+      });
+
+      shapesLayer.addChild(graphics);
+    });
+
+    // Render Lines
+    lines.forEach(line => {
+      const graphics = new PIXI.Graphics();
+      const colorData = parseColor(line.color);
+      const thickness = line.thickness || 1;
+
+      if (graphics.stroke) {
+        graphics.moveTo(line.x1, line.y1);
+        graphics.lineTo(line.x2, line.y2);
+        graphics.stroke({ color: colorData.hex, width: thickness, alpha: colorData.alpha });
+      } else {
+        graphics.lineStyle(thickness, colorData.hex, colorData.alpha);
+        graphics.moveTo(line.x1, line.y1);
+        graphics.lineTo(line.x2, line.y2);
+      }
+
+      // Make lines selectable too
+      graphics.interactive = true;
+      graphics.buttonMode = true;
+      graphics.hitArea = new PIXI.Rectangle(
+        Math.min(line.x1, line.x2) - 5,
+        Math.min(line.y1, line.y2) - 5,
+        Math.abs(line.x2 - line.x1) + 10,
+        Math.abs(line.y2 - line.y1) + 10
+      );
+      graphics.on('pointerdown', () => onSelect('line', line.id));
+
+      linesLayer.addChild(graphics);
+    });
+
+    // Render Sections (using images or snapshots)
+    sections.forEach(([sectionName, pos]) => {
+      const snapshot = sectionSnapshots[sectionName];
+      if (snapshot) {
+        const sectionContainer = new PIXI.Container();
+        sectionContainer.x = pos.x;
+        sectionContainer.y = pos.y;
+        sectionContainer.interactive = true;
+        sectionContainer.buttonMode = true;
+
+        sectionContainer.on('pointerdown', (event) => {
+          onSelect('section', sectionName);
+          sectionContainer.data = event.data;
+          sectionContainer.dragging = true;
+          sectionContainer.dragOffset = event.data.getLocalPosition(sectionContainer.parent);
+          sectionContainer.dragOffset.x -= sectionContainer.x;
+          sectionContainer.dragOffset.y -= sectionContainer.y;
+        });
+
+        sectionContainer.on('pointermove', () => {
+          if (sectionContainer.dragging) {
+            const newPosition = sectionContainer.data.getLocalPosition(sectionContainer.parent);
+            sectionContainer.x = newPosition.x - sectionContainer.dragOffset.x;
+            sectionContainer.y = newPosition.y - sectionContainer.dragOffset.y;
+          }
+        });
+
+        sectionContainer.on('pointerup', () => {
+          if (sectionContainer.dragging) {
+            sectionContainer.dragging = false;
+            sectionContainer.data = null;
+            onDragEnd('section', sectionName, { x: Math.round(sectionContainer.x), y: Math.round(sectionContainer.y) });
+          }
+        });
+
+        sectionContainer.on('pointerupoutside', () => {
+          if (sectionContainer.dragging) {
+            sectionContainer.dragging = false;
+            sectionContainer.data = null;
+            onDragEnd('section', sectionName, { x: Math.round(sectionContainer.x), y: Math.round(sectionContainer.y) });
+          }
+        });
+
+        sectionsLayer.addChild(sectionContainer);
+
+        const renderer = new PixiRenderer(null, {
+          width: snapshot.width,
+          height: snapshot.height,
+          backgroundColor: 'transparent'
+        });
+
+        renderer.render(snapshot, { targetContainer: sectionContainer });
+      }
+    });
+
+
+
+  }, [shapes, lines, sections, sectionSnapshots, selectedId, initTrigger]);
 
   return (
     <div
-      style={applyStyles({
-        display: "flex",
-        flexDirection: "column",
-        gap: "4px",
-        width: "100%",
-      }, config.containerStyle)}
-    >
-      {items.filter(item => item?.trim()).map((item, index) => (
-        <div
-          key={index}
-          style={applyStyles({
-            display: "flex",
-            flexDirection: "row",
-            alignItems: "flex-start",
-            width: "100%",
-          }, config.itemStyle)}
-        >
-          {/* Bullet */}
-          <div
-            style={applyStyles({
-              marginTop: "2px",
-              width: "10px",
-              minWidth: "10px",
-              fontSize: config.bulletSize || "12px",
-              color: config.bulletColor || config.textColor || "#000000",
-              lineHeight: config.lineHeight || "1.4",
-              userSelect: "none",
-            }, config.bulletStyle)}
-          >
-            {config.bulletChar || config.bulletStyle?.bulletChar || "•"}
-          </div>
-
-          {/* Text */}
-          <div
-            style={applyStyles({
-              flex: 1,
-              minWidth: 0,
-              fontSize: config.textSize || "10px",
-              color: config.textColor || "#000000",
-              lineHeight: config.lineHeight || "1.4",
-              whiteSpace: "normal",
-              wordBreak: "normal",
-              overflowWrap: "anywhere",
-            }, config.textStyle)}
-          >
-            {item}
-          </div>
-        </div>
-      ))}
-    </div>
+      ref={containerRef}
+      className="webgl-stage-container"
+      style={{
+        width: width,
+        height: height,
+        boxShadow: '0 0 20px rgba(0,0,0,0.1)',
+        background: 'white'
+      }}
+    />
   );
 };
-
-// ========== FLEXIBLE SECTION COMPONENTS (KEEPING ORIGINAL NAMES) ==========
-
-/**
- * HEADER SECTION - Enhanced with backward compatibility
- */
-// export const FlexibleHeaderSection = ({ resumeDetails, styleConfig }) => {
-//   const config = styleConfig.header;
-  
-//   return (
-//     <FlexibleContainer config={config.container}>
-//       {/* Main Header Layout */}
-//       <FlexibleLayout config={config.mainLayout}>
-        
-//         {/* Name Section - Enhanced */}
-//         <FlexibleLayout config={config.nameSection}>
-//           <FlexibleText 
-//             config={config.nameConfig || config.nameStyle}
-//             as={config.nameElement || "h1"}
-//           >
-//             {resumeDetails.name || "Your Name"}
-//           </FlexibleText>
-          
-//           {config.showTitle && (
-//             <FlexibleText 
-//               config={config.titleConfig || config.titleStyle}
-//               as={config.titleElement || "div"}
-//             >
-//               {resumeDetails.title || "Your Title"}
-//             </FlexibleText>
-//           )}
-//         </FlexibleLayout>
-        
-//         {/* Contact Section - Enhanced with per-item styling */}
-//         {config.showContact && (
-//           <FlexibleLayout config={config.contactLayout}>
-//             {config.contactOrder?.map((contactType, idx) => {
-//               const value = resumeDetails.contact?.[contactType];
-//               if (!value) return null;
-              
-//               // Get specific config for this contact type (NEW)
-//               const itemConfig = config.contactStyles?.[contactType] || config.contactItemStyle || {};
-//               const iconConfig = config.contactIconStyles?.[contactType] || config.contactIconStyle || {};
-              
-//               return (
-//                 <FlexibleLayout 
-//                   key={idx} 
-//                   config={{ 
-//                     display: "flex", 
-//                     alignItems: "center",
-//                     gap: "0px"
-//                   }}
-//                 >
-//                   {config.showContactIcons && (
-//                     <div style={applyStyles({
-//                       width: "5px",
-//                       height: "5px",
-//                       backgroundColor: "#E74C3C",
-//                       borderRadius: "50%",
-//                       marginRight: "8px",
-//                     }, iconConfig)} />
-//                   )}
-//                   <FlexibleText config={itemConfig}>
-//                     {config.contactIcons?.[contactType] && (
-//                       <span style={{ marginRight: "4px" }}>{config.contactIcons[contactType]}</span>
-//                     )}
-//                     {value}
-//                   </FlexibleText>
-//                 </FlexibleLayout>
-//               );
-//             })}
-//           </FlexibleLayout>
-//         )}
-//       </FlexibleLayout>
-      
-//       {/* Optional Divider */}
-//       {config.showDivider && (
-//         <div style={applyStyles({
-//           borderBottom: config.dividerStyle || "1px solid #000",
-//           marginTop: config.dividerMarginTop || "8px",
-//           marginBottom: config.dividerMarginBottom || "8px",
-//         }, typeof config.dividerStyle === 'object' ? config.dividerStyle : {})} />
-//       )}
-//     </FlexibleContainer>
-//   );
-// };
-
-export const FlexibleHeaderSection = ({ resumeDetails, styleConfig }) => {
-  const config = styleConfig.header;
-
-  // Helper function to render sections based on order
-  const renderSection = (sectionType) => {
-    switch (sectionType) {
-      case 'name':
-        return (
-          <FlexibleLayout
-            key="name"
-            config={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: config.nameAlign || "flex-start",
-              justifyContent: config.nameJustify || "flex-start",
-              marginBottom: config.nameMarginBottom || "0px",
-              marginTop: config.nameMarginTop || "0px",
-              marginLeft: config.nameMarginLeft || "0px",
-              marginRight: config.nameMarginRight || "0px",
-              padding: config.namePadding || "0px",
-              width: config.nameWidth || "auto",
-              flex: config.nameFlex || "initial",
-              order: config.nameOrder ?? 1,
-              ...config.nameZone,
-            }}
-          >
-            <FlexibleText
-              config={config.nameStyle}
-              as={config.nameElement || "h1"}
-            >
-              {resumeDetails.name || "Your Name"}
-            </FlexibleText>
-          </FlexibleLayout>
-        );
-
-      case 'title':
-        return config.showTitle ? (
-          <FlexibleLayout
-            key="title"
-            config={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: config.titleAlign || "flex-start",
-              justifyContent: config.titleJustify || "flex-start",
-              marginBottom: config.titleMarginBottom || "0px",
-              marginTop: config.titleMarginTop || "0px",
-              marginLeft: config.titleMarginLeft || "0px",
-              marginRight: config.titleMarginRight || "0px",
-              padding: config.titlePadding || "0px",
-              width: config.titleWidth || "auto",
-              flex: config.titleFlex || "initial",
-              order: config.titleOrder ?? 2,
-              ...config.titleZone,
-            }}
-          >
-            <FlexibleText
-              config={config.titleStyle}
-              as={config.titleElement || "div"}
-            >
-              {resumeDetails.title || "Your Title"}
-            </FlexibleText>
-          </FlexibleLayout>
-        ) : null;
-
-      case 'contact':
-        return config.showContact ? (
-          <FlexibleLayout
-            key="contact"
-            config={{
-              display: config.contactLayoutType === "grid" ? "grid" : "flex",
-              flexDirection: config.contactDirection || "row",
-              flexWrap: config.contactWrap || "wrap",
-              gridTemplateColumns: config.contactGridColumns,
-              gridTemplateRows: config.contactGridRows,
-              gap: config.contactGap || "16px",
-              rowGap: config.contactRowGap,
-              columnGap: config.contactColumnGap,
-              alignItems: config.contactAlign || "center",
-              justifyContent: config.contactJustify || "flex-start",
-              marginTop: config.contactMarginTop || "0px",
-              marginBottom: config.contactMarginBottom || "0px",
-              marginLeft: config.contactMarginLeft || "0px",
-              marginRight: config.contactMarginRight || "0px",
-              padding: config.contactPadding || "0px",
-              width: config.contactWidth || "auto",
-              flex: config.contactFlex || "initial",
-              order: config.contactOrder ?? 3,
-              ...config.contactZone,
-            }}
-          >
-            {config.contactItems?.map((type, idx) => {
-              const value = resumeDetails.contact?.[type];
-              if (!value) return null;
-
-              return (
-                <FlexibleLayout
-                  key={idx}
-                  config={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: config.contactItemJustify || "flex-start",
-                    padding: config.contactItemPadding || "0px",
-                    margin: config.contactItemMargin || "0px",
-                    ...config.contactItemContainer,
-                  }}
-                >
-                  {config.showContactIcons && (
-                    <div
-                      style={{
-                        width: config.contactIconSize || "5px",
-                        height: config.contactIconSize || "5px",
-                        borderRadius: config.contactIconBorderRadius || "50%",
-                        backgroundColor: config.contactIconColor || "#E74C3C",
-                        marginRight: config.contactIconMarginRight || "8px",
-                        marginLeft: config.contactIconMarginLeft || "0px",
-                      }}
-                    />
-                  )}
-
-                  <FlexibleText config={config.contactItemStyle}>
-                    {value}
-                  </FlexibleText>
-                </FlexibleLayout>
-              );
-            })}
-          </FlexibleLayout>
-        ) : null;
-
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <FlexibleContainer config={config.container}>
-      <FlexibleLayout
-        config={{
-          display: config.layoutDisplay || "flex",
-          flexDirection: config.layoutDirection || "column",
-          alignItems: config.layoutAlign || "stretch",
-          justifyContent: config.layoutJustify || "flex-start",
-          gap: config.layoutGap || "0px",
-          rowGap: config.layoutRowGap,
-          columnGap: config.layoutColumnGap,
-          padding: config.layoutPadding || "0px",
-          ...config.layout,
-        }}
-      >
-        {(config.sectionOrder || ['name', 'title', 'contact']).map(renderSection)}
-      </FlexibleLayout>
-    </FlexibleContainer>
-  );
-};
-
-/**
- * SUMMARY SECTION - Enhanced
- */
-export const FlexibleSummarySection = ({ summary, styleConfig }) => {
-  const config = styleConfig.summary;
-  
-  return (
-    <FlexibleContainer config={config.container}>
-      {config.showTitle && (
-        <FlexibleSectionHeader 
-          title={config.titleText || "SUMMARY"} 
-          config={config.titleStyle} 
-        />
-      )}
-      
-      {Array.isArray(summary) ? (
-        config.displayType === "bullets" ? (
-          <FlexibleBulletList items={summary} styleConfig={config.bulletConfig} />
-        ) : (
-          summary.map((para, idx) => (
-            <FlexibleText key={idx} config={config.bodyStyle || config.valueStyle}>
-              {para}
-            </FlexibleText>
-          ))
-        )
-      ) : (
-        <FlexibleText config={config.bodyStyle || config.valueStyle}>
-          {summary}
-        </FlexibleText>
-      )}
-    </FlexibleContainer>
-  );
-};
-
-/**
- * SKILLS SECTION - Enhanced with multiple display modes
- */
-export const FlexibleSkillsSection = ({ skills, styleConfig }) => {
-  const config = styleConfig.skills;
-  
-  // Parse skills based on display mode
-  const groupedSkills = {};
-  const flatSkills = [];
-  
-  if (skills && Array.isArray(skills)) {
-    skills.forEach(skill => {
-      const separator = config.categorySeparator || " - ";
-      if (skill && skill.includes(separator)) {
-        const [cat, val] = skill.split(separator);
-        groupedSkills[cat.trim()] = val.trim();
-      } else if (skill?.trim()) {
-        flatSkills.push(skill.trim());
-      }
-    });
-  }
-  
-  return (
-    <FlexibleContainer config={config.container}>
-      {config.showTitle && (
-        <FlexibleSectionHeader 
-          title={config.titleText || "SKILLS"} 
-          config={config.titleStyle} 
-        />
-      )}
-      
-      <FlexibleLayout config={config.contentLayout}>
-        {/* Display Mode: Categories (DEFAULT) */}
-        {(!config.displayMode || config.displayMode === "categories" || config.displayMode === "text") && 
-          Object.entries(groupedSkills).map(([category, value], idx) => (
-          <div key={idx} style={applyStyles({ display: "flex", flexDirection: "column", marginBottom: config.itemMarginBottom || "8px" }, config.categoryLayout)}>
-            {config.showCategories && (
-              <FlexibleText config={config.categoryStyle}>
-                {category}
-                {config.categoryValueSeparator && (
-                  <span style={applyStyles({}, config.separatorStyle || {})}>{config.categoryValueSeparator}</span>
-                )}
-              </FlexibleText>
-            )}
-            <FlexibleText config={config.valueStyle}>
-              {value}
-            </FlexibleText>
-          </div>
-        ))}
-        
-        {/* Display Mode: Tags */}
-        {config.displayMode === "tags" && (
-          <FlexibleLayout config={config.tagsContainer || { flexWrap: "wrap", gap: "6px" }}>
-            {[...Object.keys(groupedSkills), ...flatSkills].map((skill, idx) => (
-              <FlexibleText 
-                key={idx}
-                config={config.tagStyle || {
-                  padding: "4px 10px",
-                  backgroundColor: "#E74C3C",
-                  color: "#FFFFFF",
-                  borderRadius: "3px",
-                  fontSize: "8px",
-                  fontWeight: "500",
-                }}
-              >
-                {skill}
-              </FlexibleText>
-            ))}
-          </FlexibleLayout>
-        )}
-        
-        {/* Display Mode: List */}
-        {config.displayMode === "list" && (
-          <FlexibleBulletList 
-            items={[...Object.entries(groupedSkills).map(([k,v]) => `${k}: ${v}`), ...flatSkills]} 
-            styleConfig={config.bulletConfig} 
-          />
-        )}
-        
-        {/* Display Mode: Inline */}
-        {config.displayMode === "inline" && (
-          <FlexibleText config={config.inlineStyle || config.valueStyle}>
-            {[...Object.values(groupedSkills), ...flatSkills].join(config.inlineSeparator || ", ")}
-          </FlexibleText>
-        )}
-        
-        {/* Ungrouped Skills (for backward compatibility) */}
-        {flatSkills.length > 0 && (!config.displayMode || config.displayMode === "categories" || config.displayMode === "text") && (
-          <div style={{ marginBottom: config.itemMarginBottom || "8px" }}>
-            {config.showCategories && (
-              <FlexibleText config={config.categoryStyle}>
-                Other
-              </FlexibleText>
-            )}
-            <FlexibleText config={config.valueStyle}>
-              {flatSkills.join(config.separator || ", ")}
-            </FlexibleText>
-          </div>
-        )}
-      </FlexibleLayout>
-    </FlexibleContainer>
-  );
-};
-
-/**
- * EXPERIENCE SECTION - Enhanced with custom structure support
- */
-export const FlexibleExperienceSection = ({ experiences, styleConfig }) => {
-  const config = styleConfig.experience;
-  
-  return (
-    <FlexibleContainer config={config.container}>
-      {config.showTitle && (
-        <FlexibleSectionHeader 
-          title={config.titleText || "EXPERIENCE"} 
-          config={config.titleStyle} 
-        />
-      )}
-      
-      {experiences.map((exp, idx) => (
-        <div key={idx} style={applyStyles({ marginBottom: config.itemMarginBottom || "12px" }, config.itemContainer || {})}>
-          
-          {/* Custom Header Structure (NEW FEATURE) */}
-          {config.headerStructure ? (
-            config.headerStructure.map((structure, structIdx) => (
-              <FlexibleLayout key={structIdx} config={structure.layout}>
-                {structure.fields?.map((fieldName, fieldIdx) => {
-                  const value = exp[fieldName];
-                  if (!value && !structure.showEmpty) return null;
-                  
-                  const fieldStyle = structure.styles?.[fieldName] || {};
-                  const prefix = structure.prefix?.[fieldName] || "";
-                  const suffix = structure.suffix?.[fieldName] || "";
-                  
-                  return (
-                    <FlexibleText key={fieldIdx} config={fieldStyle}>
-                      {prefix}{value}{suffix}
-                    </FlexibleText>
-                  );
-                })}
-              </FlexibleLayout>
-            ))
-          ) : (
-            // Fallback to original layout (BACKWARD COMPATIBLE)
-            <>
-              <FlexibleLayout config={config.headerLayout}>
-                {config.positionFirst ? (
-                  <>
-                    <FlexibleText config={config.positionStyle}>
-                      {exp.position}
-                    </FlexibleText>
-                    <FlexibleText config={config.durationStyle}>
-                      {exp.duration}
-                    </FlexibleText>
-                  </>
-                ) : (
-                  <>
-                    <FlexibleText config={config.companyStyle}>
-                      {exp.company}
-                    </FlexibleText>
-                    <FlexibleText config={config.durationStyle}>
-                      {exp.duration}
-                    </FlexibleText>
-                  </>
-                )}
-              </FlexibleLayout>
-              
-              <FlexibleLayout config={config.subHeaderLayout}>
-                <FlexibleText config={config.companyStyle}>
-                  {config.positionFirst ? exp.company : exp.position}
-                  {exp.location && config.showLocation ? `, ${exp.location}` : ""}
-                </FlexibleText>
-              </FlexibleLayout>
-            </>
-          )}
-          
-          {/* Achievements */}
-          {config.showAchievements && exp.achievements && (
-            <FlexibleBulletList items={exp.achievements} styleConfig={config.bulletConfig} />
-          )}
-        </div>
-      ))}
-    </FlexibleContainer>
-  );
-};
-
-/**
- * PROJECTS SECTION - Enhanced
- */
-export const FlexibleProjectsSection = ({ projects, styleConfig }) => {
-  const config = styleConfig.projects;
-  
-  return (
-    <FlexibleContainer config={config.container}>
-      {config.showTitle && (
-        <FlexibleSectionHeader 
-          title={config.titleText || "PROJECTS"} 
-          config={config.titleStyle} 
-        />
-      )}
-      
-      {projects.map((proj, idx) => (
-        <FlexibleContainer 
-          key={idx} 
-          config={config.itemStyle || { marginBottom: config.itemMarginBottom || "12px" }}
-        >
-          {/* Project Header */}
-          <FlexibleLayout config={config.headerLayout}>
-            <FlexibleText config={config.nameStyle}>
-              {proj.name}
-            </FlexibleText>
-            {proj.duration && config.showDuration && (
-              <FlexibleText config={config.durationStyle}>
-                {proj.duration}
-              </FlexibleText>
-            )}
-          </FlexibleLayout>
-          
-          {/* Technologies */}
-          {proj.technologies && config.showTechnologies && (
-            <FlexibleText config={config.techStyle}>
-              {config.techPrefix || ""}{proj.technologies}
-            </FlexibleText>
-          )}
-          
-          {/* Link */}
-          {proj.link && config.showLink && (
-            <FlexibleText 
-              as="a" 
-              config={{ ...config.linkStyle, href: proj.link, target: "_blank" }}
-            >
-              {proj.link}
-            </FlexibleText>
-          )}
-          
-          {/* Description */}
-          {config.showDescription && proj.description && (
-            Array.isArray(proj.description) ? (
-              <FlexibleBulletList items={proj.description} styleConfig={config.bulletConfig} />
-            ) : (
-              <FlexibleText config={config.descriptionStyle || config.bodyStyle}>
-                {proj.description}
-              </FlexibleText>
-            )
-          )}
-        </FlexibleContainer>
-      ))}
-    </FlexibleContainer>
-  );
-};
-
-/**
- * EDUCATION SECTION - Enhanced with field order control
- */
-export const FlexibleEducationSection = ({ educationList, styleConfig }) => {
-  const config = styleConfig.education;
-  
-  return (
-    <FlexibleContainer config={config.container}>
-      {config.showTitle && (
-        <FlexibleSectionHeader 
-          title={config.titleText || "EDUCATION"} 
-          config={config.titleStyle} 
-        />
-      )}
-      
-      {educationList.map((edu, idx) => (
-        <FlexibleContainer 
-          key={idx} 
-          config={config.itemStyle || { marginBottom: config.itemMarginBottom || "10px" }}
-        >
-          {/* Custom Field Order (NEW FEATURE) */}
-          {config.fieldOrder ? (
-            config.fieldOrder.map((field, fieldIdx) => {
-              const value = edu[field];
-              if (!value && !config.showEmptyFields) return null;
-              
-              const fieldConfig = config.fieldStyles?.[field] || {};
-              const prefix = config.fieldPrefixes?.[field] || "";
-              
-              return (
-                <FlexibleText key={fieldIdx} config={fieldConfig}>
-                  {prefix}{value}
-                </FlexibleText>
-              );
-            })
-          ) : (
-            // Fallback to original layout (BACKWARD COMPATIBLE)
-            <>
-              <FlexibleText config={config.degreeStyle}>
-                {edu.degree}
-              </FlexibleText>
-              
-              {edu.institution && config.showInstitution && (
-                <FlexibleText config={config.institutionStyle}>
-                  {edu.institution}
-                </FlexibleText>
-              )}
-              
-              <FlexibleLayout config={config.detailsLayout}>
-                {edu.year && (
-                  <FlexibleText config={config.detailsStyle}>
-                    {edu.year}
-                  </FlexibleText>
-                )}
-                {edu.gpa && config.showGpa && (
-                  <FlexibleText config={config.detailsStyle}>
-                    {config.gpaPrefix || "GPA: "}{edu.gpa}
-                  </FlexibleText>
-                )}
-                {edu.location && config.showLocation && (
-                  <FlexibleText config={config.detailsStyle}>
-                    {edu.location}
-                  </FlexibleText>
-                )}
-              </FlexibleLayout>
-            </>
-          )}
-        </FlexibleContainer>
-      ))}
-    </FlexibleContainer>
-  );
-};
-
-/**
- * CERTIFICATIONS SECTION - Enhanced with display types
- */
-export const FlexibleCertificationsSection = ({ certifications, styleConfig }) => {
-  const config = styleConfig.certifications;
-  
-  return (
-    <FlexibleContainer config={config.container}>
-      {config.showTitle && (
-        <FlexibleSectionHeader 
-          title={config.titleText || "CERTIFICATIONS"} 
-          config={config.titleStyle} 
-        />
-      )}
-      
-      {config.displayType === "list" ? (
-        <FlexibleBulletList items={certifications} styleConfig={config.bulletConfig} />
-      ) : config.displayType === "grid" ? (
-        <FlexibleLayout config={config.gridLayout || { flexWrap: "wrap", gap: "8px" }}>
-          {certifications.filter(cert => cert?.trim()).map((cert, idx) => (
-            <FlexibleText key={idx} config={config.itemStyle}>
-              {cert}
-            </FlexibleText>
-          ))}
-        </FlexibleLayout>
-      ) : (
-        certifications.filter(cert => cert?.trim()).map((cert, idx) => (
-          <FlexibleText key={idx} config={config.itemStyle}>
-            {cert}
-          </FlexibleText>
-        ))
-      )}
-    </FlexibleContainer>
-  );
-};
-
-
 
 
 // ==================== MAIN UI EDITOR COMPONENT ====================
 
-const UIEditor = () => {
+const UIEditor = ({ initialUseWebGL = false }) => {
   // Refs
   const stageRef = useRef(null);
   const stage2Ref = useRef(null);
   const sectionRefs = useRef({});
-  
+
+
   // State
   const [selectedLine, setSelectedLine] = useState(null);
   const [selectedShape, setSelectedShape] = useState(null);
@@ -1505,16 +328,35 @@ const UIEditor = () => {
   const [sectionWidths, setSectionWidths] = useState({});
   const [styleConfig, setStyleConfig] = useState(ATS_TEMPLATE_CONFIG);
   const [sectionImages, setSectionImages] = useState({});
+  const [sectionSnapshots, setSectionSnapshots] = useState({});
   const [TemplateComponents, setTemplateComponents] = useState(null);
+  const [useWebGL, setUseWebGL] = useState(initialUseWebGL); // Toggle for WebGL
   const [resumeData, setResumeData] = useState(defaultResumeData);
-  const currentResume = useSelector((state)=> state.resume.currentResume);
-  const [lastEditedSection, setLastEditedSection] = useState(null);
+  const currentResume = useSelector((state) => state.resume.currentResume);
 
   const [resumeDetails, setResumeDetails] = useState(defaultResumeData);
 
-  useEffect(()=>{
-     if(!currentResume) return;
-     setResumeData(currentResume);
+  // Mobile responsiveness state
+  const [isMobile, setIsMobile] = useState(false);
+  const [activeTab, setActiveTab] = useState('controls'); // 'controls' | 'properties'
+
+  // Mobile detection effect
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      if (mobile) {
+        setZoom(0.55); // A better default for mobile width
+      }
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  useEffect(() => {
+    if (!currentResume) return;
+    setResumeData(currentResume);
   }, [currentResume])
 
   const TEMPLATES = {
@@ -1531,7 +373,7 @@ const UIEditor = () => {
     setSectionPositions(defaultTemplate.positions || {});
     setLines(defaultTemplate.lines || []);
     setBackgroundShapes(defaultTemplate.shapes || []);
-    
+
     // Initialize IDs
     if (defaultTemplate.lines && defaultTemplate.lines.length > 0) {
       setNextLineId(Math.max(...defaultTemplate.lines.map(l => l.id || 0)) + 1);
@@ -1544,60 +386,44 @@ const UIEditor = () => {
 
   // ==================== USE EFFECTS ====================
 
-// Initialize template components
-useEffect(() => {
-  console.log('Initializing template components...');
-  
-  setTemplateComponents({
-    header: FlexibleHeaderSection,
-    summary: FlexibleSummarySection,
-    skills: FlexibleSkillsSection,
-    experience: FlexibleExperienceSection,
-    projects: FlexibleProjectsSection,
-    education: FlexibleEducationSection,
-    certifications: FlexibleCertificationsSection
-  });
-  
-  // Initialize section refs
-  const sections = ['header', 'summary', 'skills', 'experience', 'education', 'projects', 'certifications'];
-  sections.forEach(section => {
-    if (!sectionRefs.current[section]) {
-      sectionRefs.current[section] = React.createRef();
-    }
-  });
-  
-  console.log('Template components initialized');
-}, []);
+  // Initialize template components
+  useEffect(() => {
+
+    setTemplateComponents({
+      header: FlexibleHeaderSection,
+      contact: FlexibleContactSection,
+      summary: FlexibleSummarySection,
+      skills: FlexibleSkillsSection,
+      experience: FlexibleExperienceSection,
+      projects: FlexibleProjectsSection,
+      education: FlexibleEducationSection,
+      certifications: FlexibleCertificationsSection
+    });
+
+    // Initialize section refs
+    const sections = ['header', 'contact', 'summary', 'skills', 'experience', 'education', 'projects', 'certifications'];
+    sections.forEach(section => {
+      if (!sectionRefs.current[section]) {
+        sectionRefs.current[section] = React.createRef();
+      }
+    });
+  }, []);
 
 
-
-
-  // ==================== HELPER FUNCTIONS ====================
-
-  // Extract widths from config
-  // const extractWidthsFromConfig = (config) => {
-  //   const widths = {};
-  //   Object.keys(config).forEach(key => {
-  //     if (config[key]?.container?.width) {
-  //       widths[key] = config[key].container.width;
-  //     }
-  //   });
-  //   return widths;
-  // };
 
   const extractWidthsAndHeightsFromConfig = (config) => {
-  const widths = {};
-  const heights = {};
-  Object.keys(config).forEach(key => {
-    if (config[key]?.container?.width) {
-      widths[key] = config[key].container.width;
-    }
-    if (config[key]?.container?.height) {
-      heights[key] = config[key].container.height;
-    }
-  });
-  return { widths, heights };
-};
+    const widths = {};
+    const heights = {};
+    Object.keys(config).forEach(key => {
+      if (config[key]?.container?.width) {
+        widths[key] = config[key].container.width;
+      }
+      if (config[key]?.container?.height) {
+        heights[key] = config[key].container.height;
+      }
+    });
+    return { widths, heights };
+  };
 
 
   // Handle width change
@@ -1611,31 +437,28 @@ useEffect(() => {
 
   const [sectionHeights, setSectionHeights] = useState({});
 
-// Add this helper function with your other helper functions
-const handleHeightChange = (sectionName, value) => {
-  setSectionHeights(prev => ({
-    ...prev,
-    [sectionName]: value
-  }));
-};
+  // Add this helper function with your other helper functions
+  const handleHeightChange = (sectionName, value) => {
+    setSectionHeights(prev => ({
+      ...prev,
+      [sectionName]: value
+    }));
+  };
 
-// Add this to apply height
-const handleHeightBlur = (sectionName) => {
-  const height = sectionHeights[sectionName];
-  setStyleConfig(prev => ({
-    ...prev,
-    [sectionName]: {
-      ...prev[sectionName],
-      container: {
-        ...prev[sectionName]?.container,
-        height: height
+  // Add this to apply height
+  const handleHeightBlur = (sectionName) => {
+    const height = sectionHeights[sectionName];
+    setStyleConfig(prev => ({
+      ...prev,
+      [sectionName]: {
+        ...prev[sectionName],
+        container: {
+          ...prev[sectionName]?.container,
+          height: height
+        }
       }
-    }
-  }));
-  
-  // ✅ Trigger re-render of this specific section
-  setTimeout(() => setLastEditedSection(sectionName), 100);
-};
+    }));
+  };
 
 
   // Handle width blur (apply the width)
@@ -1651,9 +474,6 @@ const handleHeightBlur = (sectionName) => {
         }
       }
     }));
-    
-    // ✅ Trigger re-render of this specific section
-    setTimeout(() => setLastEditedSection(sectionName), 100);
   };
 
   // Handle style changes
@@ -1668,63 +488,51 @@ const handleHeightBlur = (sectionName) => {
         }
       }
     }));
-    
-    // ✅ Trigger re-render of this specific section
-    setTimeout(() => setLastEditedSection(sectionName), 100);
   };
 
   // Add these helper methods to your component
 
-const handleHeaderLayoutChange = (key, value) => {
-  setStyleConfig(prev => ({
-    ...prev,
-    header: {
-      ...prev.header,
-      [key]: value
-    }
-  }));
-  
-  // ✅ Trigger re-render
-  setTimeout(() => setLastEditedSection('header'), 100);
-};
-
-const handleHeaderStyleChange = (styleKey, property, value) => {
-  setStyleConfig(prev => ({
-    ...prev,
-    header: {
-      ...prev.header,
-      [styleKey]: {
-        ...prev.header?.[styleKey],
-        [property]: value
+  const handleHeaderLayoutChange = (key, value) => {
+    setStyleConfig(prev => ({
+      ...prev,
+      header: {
+        ...prev.header,
+        [key]: value
       }
-    }
-  }));
-  
-  // ✅ Trigger re-render
-  setTimeout(() => setLastEditedSection('header'), 100);
-};
+    }));
+  };
 
-const handleSectionOrderChange = (currentIndex, direction) => {
-  const currentOrder = styleConfig.header?.sectionOrder || ['name', 'title', 'contact'];
-  const newOrder = [...currentOrder];
-  
-  if (direction === 'up' && currentIndex > 0) {
-    [newOrder[currentIndex], newOrder[currentIndex - 1]] = [newOrder[currentIndex - 1], newOrder[currentIndex]];
-  } else if (direction === 'down' && currentIndex < newOrder.length - 1) {
-    [newOrder[currentIndex], newOrder[currentIndex + 1]] = [newOrder[currentIndex + 1], newOrder[currentIndex]];
-  }
-  
-  setStyleConfig(prev => ({
-    ...prev,
-    header: {
-      ...prev.header,
-      sectionOrder: newOrder
+  const handleHeaderStyleChange = (styleKey, property, value) => {
+    setStyleConfig(prev => ({
+      ...prev,
+      header: {
+        ...prev.header,
+        [styleKey]: {
+          ...prev.header?.[styleKey],
+          [property]: value
+        }
+      }
+    }));
+  };
+
+  const handleSectionOrderChange = (currentIndex, direction) => {
+    const currentOrder = styleConfig.header?.sectionOrder || ['name', 'title', 'contact'];
+    const newOrder = [...currentOrder];
+
+    if (direction === 'up' && currentIndex > 0) {
+      [newOrder[currentIndex], newOrder[currentIndex - 1]] = [newOrder[currentIndex - 1], newOrder[currentIndex]];
+    } else if (direction === 'down' && currentIndex < newOrder.length - 1) {
+      [newOrder[currentIndex], newOrder[currentIndex + 1]] = [newOrder[currentIndex + 1], newOrder[currentIndex]];
     }
-  }));
-  
-  // ✅ Trigger re-render
-  setTimeout(() => setLastEditedSection('header'), 100);
-};
+
+    setStyleConfig(prev => ({
+      ...prev,
+      header: {
+        ...prev.header,
+        sectionOrder: newOrder
+      }
+    }));
+  };
 
   // Reset Layout
   // const resetLayout = () => {
@@ -1734,7 +542,7 @@ const handleSectionOrderChange = (currentIndex, direction) => {
   //   setLines(template.lines || []);
   //   setBackgroundShapes(template.backgroundShapes || []);
   //   setZoom(1);
-    
+
   //   // Reset line and shape ID counters
   //   if (template.lines && template.lines.length > 0) {
   //     setNextLineId(Math.max(...template.lines.map(l => l.id)) + 1);
@@ -1750,44 +558,44 @@ const handleSectionOrderChange = (currentIndex, direction) => {
 
 
   // Reset Layout - UPDATED
-const resetLayout = () => {
-  const template = TEMPLATES[currentTemplate];
-  setSectionPositions(template.positions || {});
-  
-  const { widths, heights } = extractWidthsAndHeightsFromConfig(template);
-  setSectionWidths(widths);
-  setSectionHeights(heights);
-  
-  setLines(template.lines || []);
-  setBackgroundShapes(template.shapes || []);
-  setZoom(1);
-  
-  // Reset line and shape ID counters
-  if (template.lines && template.lines.length > 0) {
-    setNextLineId(Math.max(...template.lines.map(l => l.id)) + 1);
-  } else {
-    setNextLineId(1);
-  }
-  if (template.shapes && template.shapes.length > 0) {
-    setNextShapeId(Math.max(...template.shapes.map(s => s.id)) + 1);
-  } else {
-    setNextShapeId(1);
-  }
-};
+  const resetLayout = () => {
+    const template = TEMPLATES[currentTemplate];
+    setSectionPositions(template.positions || {});
+
+    const { widths, heights } = extractWidthsAndHeightsFromConfig(template);
+    setSectionWidths(widths);
+    setSectionHeights(heights);
+
+    setLines(template.lines || []);
+    setBackgroundShapes(template.shapes || []);
+    setZoom(1);
+
+    // Reset line and shape ID counters
+    if (template.lines && template.lines.length > 0) {
+      setNextLineId(Math.max(...template.lines.map(l => l.id)) + 1);
+    } else {
+      setNextLineId(1);
+    }
+    if (template.shapes && template.shapes.length > 0) {
+      setNextShapeId(Math.max(...template.shapes.map(s => s.id)) + 1);
+    } else {
+      setNextShapeId(1);
+    }
+  };
 
   // Download as image
   const downloadResume = () => {
     if (!stageRef.current) return;
-    
-    const uri1 = stageRef.current.toDataURL({ pixelRatio: 3 });
+
+    const uri1 = stageRef.current.toDataURL({ pixelRatio: 5 });
     const link1 = document.createElement('a');
     link1.download = 'resume-page1.png';
     link1.href = uri1;
     link1.click();
-    
+
     if (showPage2 && stage2Ref.current) {
       setTimeout(() => {
-        const uri2 = stage2Ref.current.toDataURL({ pixelRatio: 3 });
+        const uri2 = stage2Ref.current.toDataURL({ pixelRatio: 5 });
         const link2 = document.createElement('a');
         link2.download = 'resume-page2.png';
         link2.href = uri2;
@@ -1809,18 +617,18 @@ const resetLayout = () => {
   const getElementsForPage = (pageNum) => {
     const pageStart = (pageNum - 1) * 842;
     const pageEnd = pageNum * 842;
-    
+
     return {
       sections: Object.entries(sectionPositions || {}).filter(([_, pos]) => {
         return pos && pos.y >= pageStart && pos.y < pageEnd;
       }),
       lines: (lines || []).filter(line => {
-        return (line.y1 >= pageStart && line.y1 < pageEnd) || 
-               (line.y2 >= pageStart && line.y2 < pageEnd);
+        return (line.y1 >= pageStart && line.y1 < pageEnd) ||
+          (line.y2 >= pageStart && line.y2 < pageEnd);
       }),
       shapes: (backgroundShapes || []).filter(shape => {
         return (shape.y >= pageStart && shape.y < pageEnd) ||
-               (shape.y + shape.height > pageStart && shape.y < pageEnd);
+          (shape.y + shape.height > pageStart && shape.y < pageEnd);
       })
     };
   };
@@ -1844,7 +652,7 @@ const resetLayout = () => {
   //   setSelectedLine(null);
   //   setSelectedShape(null);
   //   setSelectedSection(null);
-    
+
   //   // Reset counters
   //   if (template.lines && template.lines.length > 0) {
   //     setNextLineId(Math.max(...template.lines.map(l => l.id)) + 1);
@@ -1860,36 +668,35 @@ const resetLayout = () => {
 
 
   const handleTemplateSwitch = (templateName) => {
-  setCurrentTemplate(templateName);
-  const template = TEMPLATES[templateName];
-  console.log(template);
-  
-  setStyleConfig(template);
-  setSectionPositions(template.positions || {});
-  
-  const { widths, heights } = extractWidthsAndHeightsFromConfig(template);
-  setSectionWidths(widths);
-  setSectionHeights(heights);
-  
-  setLines(template.lines || []);
-  setBackgroundShapes(template.shapes || []);
-  setZoom(1);
-  setSelectedLine(null);
-  setSelectedShape(null);
-  setSelectedSection(null);
-  
-  // Reset counters
-  if (template.lines && template.lines.length > 0) {
-    setNextLineId(Math.max(...template.lines.map(l => l.id)) + 1);
-  } else {
-    setNextLineId(1);
-  }
-  if (template.shapes && template.shapes.length > 0) {
-    setNextShapeId(Math.max(...template.shapes.map(s => s.id)) + 1);
-  } else {
-    setNextShapeId(1);
-  }
-};
+    setCurrentTemplate(templateName);
+    const template = TEMPLATES[templateName];
+
+    setStyleConfig(template);
+    setSectionPositions(template.positions || {});
+
+    const { widths, heights } = extractWidthsAndHeightsFromConfig(template);
+    setSectionWidths(widths);
+    setSectionHeights(heights);
+
+    setLines(template.lines || []);
+    setBackgroundShapes(template.shapes || []);
+    setZoom(1);
+    setSelectedLine(null);
+    setSelectedShape(null);
+    setSelectedSection(null);
+
+    // Reset counters
+    if (template.lines && template.lines.length > 0) {
+      setNextLineId(Math.max(...template.lines.map(l => l.id)) + 1);
+    } else {
+      setNextLineId(1);
+    }
+    if (template.shapes && template.shapes.length > 0) {
+      setNextShapeId(Math.max(...template.shapes.map(s => s.id)) + 1);
+    } else {
+      setNextShapeId(1);
+    }
+  };
 
 
 
@@ -1923,7 +730,7 @@ const resetLayout = () => {
 
   // Update line property
   const updateLine = (id, property, value) => {
-    setLines(lines.map(line => 
+    setLines(lines.map(line =>
       line.id === id ? { ...line, [property]: value } : line
     ));
   };
@@ -1933,8 +740,8 @@ const resetLayout = () => {
     const step = 10;
     setLines(lines.map(line => {
       if (line.id !== id) return line;
-      
-      switch(direction) {
+
+      switch (direction) {
         case 'up':
           return { ...line, y1: line.y1 - step, y2: line.y2 - step };
         case 'down':
@@ -1954,7 +761,7 @@ const resetLayout = () => {
     const step = 20;
     setLines(lines.map(line => {
       if (line.id !== id) return line;
-      
+
       if (line.orientation === 'horizontal') {
         return {
           ...line,
@@ -1971,14 +778,14 @@ const resetLayout = () => {
 
   // Handle line drag end
   const handleLineDragEnd = (id, newPos) => {
-    setLines(lines.map(line => 
+    setLines(lines.map(line =>
       line.id === id ? { ...line, ...newPos } : line
     ));
   };
 
   // Handle line update
   const handleLineUpdate = (id, updates) => {
-    setLines(lines.map(line => 
+    setLines(lines.map(line =>
       line.id === id ? { ...line, ...updates } : line
     ));
   };
@@ -2012,21 +819,21 @@ const resetLayout = () => {
 
   // Update background shape property
   const updateBackgroundShape = (id, property, value) => {
-    setBackgroundShapes(backgroundShapes.map(shape => 
+    setBackgroundShapes(backgroundShapes.map(shape =>
       shape.id === id ? { ...shape, [property]: value } : shape
     ));
   };
 
   // Handle shape drag end
   const handleShapeDragEnd = (id, newPos) => {
-    setBackgroundShapes(backgroundShapes.map(shape => 
+    setBackgroundShapes(backgroundShapes.map(shape =>
       shape.id === id ? { ...shape, x: newPos.x, y: newPos.y } : shape
     ));
   };
 
   // Handle shape update
   const handleShapeUpdate = (id, updates) => {
-    setBackgroundShapes(backgroundShapes.map(shape => 
+    setBackgroundShapes(backgroundShapes.map(shape =>
       shape.id === id ? { ...shape, ...updates } : shape
     ));
   };
@@ -2045,90 +852,102 @@ const resetLayout = () => {
   };
 
 
+  // Handle section transform - COMPLETE VERSION
+  const handleSectionTransform = (sectionName, newAttrs) => {
+    console.log('Transform:', sectionName, newAttrs); // Debug log
+
+    setSectionPositions(prev => ({
+      ...prev,
+      [sectionName]: {
+        x: newAttrs.x,
+        y: newAttrs.y
+      }
+    }));
+
+    // Update WIDTH
+    if (newAttrs.width) {
+      const widthPx = `${Math.round(newAttrs.width)}px`;
+
+      setSectionWidths(prev => ({
+        ...prev,
+        [sectionName]: widthPx
+      }));
+
+      setStyleConfig(prev => ({
+        ...prev,
+        [sectionName]: {
+          ...prev[sectionName],
+          container: {
+            ...prev[sectionName]?.container,
+            width: widthPx
+          }
+        }
+      }));
+    }
+
+    // Update HEIGHT
+    if (newAttrs.height) {
+      const heightPx = `${Math.round(newAttrs.height)}px`;
+
+      setSectionHeights(prev => ({
+        ...prev,
+        [sectionName]: heightPx
+      }));
+
+      setStyleConfig(prev => ({
+        ...prev,
+        [sectionName]: {
+          ...prev[sectionName],
+          container: {
+            ...prev[sectionName]?.container,
+            height: heightPx
+          }
+        }
+      }));
+    }
+  };
+
+  // Auto-flow sections - WITH PAGINATION
   const autoFlowSections = () => {
     let currentY = 50;
     const spacing = 20;
+    const PAGE_HEIGHT = 842;
+    const PAGE_MARGIN = 50;
+    let currentPage = 1;
+
+    // Sort by current Y position to maintain relative order
     const sortedSections = Object.keys(sectionPositions).sort((a, b) => {
       const posA = sectionPositions[a];
       const posB = sectionPositions[b];
       return (posA?.y || 0) - (posB?.y || 0);
     });
-    
+
     const newPositions = {};
-    
+
     sortedSections.forEach(sectionName => {
       const img = sectionImages[sectionName];
       const height = img ? img.height : 100;
-      
+      const currentX = sectionPositions[sectionName]?.x || 40;
+
+      // Check if we need to break to next page
+      // If currentY + height exceeds page boundary
+      if (currentPage === 1 && (currentY + height) > (PAGE_HEIGHT - PAGE_MARGIN)) {
+        currentPage = 2;
+        currentY = PAGE_HEIGHT + PAGE_MARGIN; // Start at Page 2 top (842 + 50)
+        setShowPage2(true);
+      }
+
       newPositions[sectionName] = {
-        x: sectionPositions[sectionName]?.x || 40,
+        x: currentX, // Keep X position (respect columns)
         y: currentY
       };
-      
+
       currentY += height + spacing;
     });
-    
+
     setSectionPositions(newPositions);
   };
 
-
- 
- // Handle section transform - FIXED VERSION
-const handleSectionTransform = (sectionName, newAttrs) => {
-  console.log('Transform:', sectionName, newAttrs);
-  
-  setSectionPositions(prev => ({
-    ...prev,
-    [sectionName]: {
-      x: newAttrs.x,
-      y: newAttrs.y
-    }
-  }));
-  
-  // Update WIDTH
-  if (newAttrs.width) {
-    const widthPx = `${Math.round(newAttrs.width)}px`;
-    
-    setSectionWidths(prev => ({
-      ...prev,
-      [sectionName]: widthPx
-    }));
-    
-    setStyleConfig(prev => ({
-      ...prev,
-      [sectionName]: {
-        ...prev[sectionName],
-        container: {
-          ...prev[sectionName]?.container,
-          width: widthPx
-        }
-      }
-    }));
-  }
-  
-  // Update HEIGHT
-  if (newAttrs.height) {
-    const heightPx = `${Math.round(newAttrs.height)}px`;
-    
-    setSectionHeights(prev => ({
-      ...prev,
-      [sectionName]: heightPx
-    }));
-    
-    setStyleConfig(prev => ({
-      ...prev,
-      [sectionName]: {
-        ...prev[sectionName],
-        container: {
-          ...prev[sectionName]?.container,
-          height: heightPx
-        }
-      }
-    }));
-  }
-  
-  // ✅ Don't trigger re-render during drag - wait until onTransformEnd completes
-};
 
 
   // ==================== DRAGGABLE COMPONENTS ====================
@@ -2159,27 +978,27 @@ const handleSectionTransform = (sectionName, newAttrs) => {
             const node = e.target;
             node.scaleX(1);
             node.scaleY(1);
-            
+
             const dx = node.x();
             const dy = node.y();
-            
+
             onDragEnd(line.id, {
               x1: line.x1 + dx,
               y1: line.y1 + dy,
               x2: line.x2 + dx,
               y2: line.y2 + dy
             });
-            
+
             node.position({ x: 0, y: 0 });
           }}
           onTransformEnd={() => {
             const node = lineRef.current;
             const scaleX = node.scaleX();
             const scaleY = node.scaleY();
-            
+
             node.scaleX(1);
             node.scaleY(1);
-            
+
             onUpdate(line.id, {
               x2: line.x1 + (line.x2 - line.x1) * scaleX,
               y2: line.y1 + (line.y2 - line.y1) * scaleY
@@ -2231,10 +1050,10 @@ const handleSectionTransform = (sectionName, newAttrs) => {
             const node = shapeRef.current;
             const scaleX = node.scaleX();
             const scaleY = node.scaleY();
-            
+
             node.scaleX(1);
             node.scaleY(1);
-            
+
             onUpdate(shape.id, {
               width: Math.max(10, Math.round(shape.width * scaleX)),
               height: Math.max(10, Math.round(shape.height * scaleY))
@@ -2247,131 +1066,105 @@ const handleSectionTransform = (sectionName, newAttrs) => {
   };
 
   // Draggable Section Component - WITH VISIBLE RESIZE HANDLES
-const DraggableSection = ({ sectionName, image, position, onDragEnd, onTransform, isSelected, onSelect }) => {
-  const imageRef = useRef();
-  const trRef = useRef();
+  const DraggableSection = ({ sectionName, image, position, onDragEnd, onTransform, isSelected, onSelect }) => {
+    const imageRef = useRef();
+    const trRef = useRef();
 
-  // Track current dimensions locally for real-time resize feedback
-  const [dimensions, setDimensions] = useState({
-    width: image?.width || 100,
-    height: image?.height || 100
-  });
+    useEffect(() => {
+      if (isSelected && trRef.current && imageRef.current) {
+        trRef.current.nodes([imageRef.current]);
+        trRef.current.getLayer().batchDraw();
+      }
+    }, [isSelected]);
 
-  // Sync dimensions when image changes
-  useEffect(() => {
-    if (image) {
-      setDimensions({
-        width: image.width,
-        height: image.height
-      });
-    }
-  }, [image]);
+    if (!image) return null;
 
-  useEffect(() => {
-    if (isSelected && trRef.current && imageRef.current) {
-      trRef.current.nodes([imageRef.current]);
-      trRef.current.getLayer().batchDraw();
-    }
-  }, [isSelected]);
+    return (
+      <>
+        <KonvaImage
+          ref={imageRef}
+          image={image}
+          x={position.x}
+          y={position.y}
+          draggable
+          onClick={onSelect}
+          onTap={onSelect}
+          onDragEnd={(e) => {
+            onDragEnd(sectionName, {
+              x: Math.round(e.target.x()),
+              y: Math.round(e.target.y())
+            });
+          }}
+          onTransformEnd={() => {
+            const node = imageRef.current;
+            const scaleX = node.scaleX();
+            const scaleY = node.scaleY();
 
-  if (!image) return null;
+            const newWidth = Math.max(50, Math.round(node.width() * scaleX));
+            const newHeight = Math.max(20, Math.round(node.height() * scaleY));
 
-  return (
-    <>
-      <KonvaImage
-        ref={imageRef}
-        image={image}
-        x={position.x}
-        y={position.y}
-        width={dimensions.width}
-        height={dimensions.height}
-        draggable
-        onClick={onSelect}
-        onTap={onSelect}
-        onDragEnd={(e) => {
-          onDragEnd(sectionName, {
-            x: Math.round(e.target.x()),
-            y: Math.round(e.target.y())
-          });
-        }}
-        onTransformEnd={() => {
-          const node = imageRef.current;
-          const scaleX = node.scaleX();
-          const scaleY = node.scaleY();
-          
-          const newWidth = Math.max(50, Math.round(dimensions.width * scaleX));
-          const newHeight = Math.max(20, Math.round(dimensions.height * scaleY));
-          
-          // Update local dimensions immediately for real-time UI feedback
-          setDimensions({
-            width: newWidth,
-            height: newHeight
-          });
-          
-          // Reset scale
-          node.scaleX(1);
-          node.scaleY(1);
-          
-          // Trigger parent re-render with new dimensions
-          onTransform(sectionName, {
-            x: Math.round(node.x()),
-            y: Math.round(node.y()),
-            width: newWidth,
-            height: newHeight
-          });
-          
-          // ✅ AFTER drag completes, trigger HTML preview update
-          setTimeout(() => window.dispatchEvent(new CustomEvent('sectionResized', { detail: { sectionName } })), 50);
-        }}
-      />
-      {isSelected && (
-        <Transformer
-          ref={trRef}
-          rotateEnabled={false}
-          keepRatio={false}
-          enabledAnchors={[
-            'top-left',
-            'top-center', 
-            'top-right',
-            'middle-right',
-            'bottom-right',
-            'bottom-center',
-            'bottom-left',
-            'middle-left'
-          ]}
-          // Make anchors MORE VISIBLE
-          anchorSize={10}
-          anchorStroke="#3b82f6"
-          anchorFill="#ffffff"
-          anchorStrokeWidth={2}
-          anchorCornerRadius={2}
-          borderStroke="#3b82f6"
-          borderStrokeWidth={2}
-          borderDash={[4, 4]}
-          boundBoxFunc={(oldBox, newBox) => {
-            // Minimum sizes
-            if (newBox.width < 50) {
-              newBox.width = 50;
-            }
-            if (newBox.height < 20) {
-              newBox.height = 20;
-            }
-            return newBox;
+            onTransform(sectionName, {
+              x: Math.round(node.x()),
+              y: Math.round(node.y()),
+              width: newWidth,
+              height: newHeight
+            });
+
+            node.scaleX(1);
+            node.scaleY(1);
           }}
         />
-      )}
-    </>
-  );
-};
+        {isSelected && (
+          <Transformer
+            ref={trRef}
+            rotateEnabled={false}
+            keepRatio={false}
+            enabledAnchors={[
+              'top-left',
+              'top-center',
+              'top-right',
+              'middle-right',
+              'bottom-right',
+              'bottom-center',
+              'bottom-left',
+              'middle-left'
+            ]}
+            // Make anchors MORE VISIBLE
+            anchorSize={10}
+            anchorStroke="#3b82f6"
+            anchorFill="#ffffff"
+            anchorStrokeWidth={2}
+            anchorCornerRadius={2}
+            borderStroke="#3b82f6"
+            borderStrokeWidth={2}
+            borderDash={[4, 4]}
+            boundBoxFunc={(oldBox, newBox) => {
+              // Minimum sizes
+              if (newBox.width < 50) {
+                newBox.width = 50;
+              }
+              if (newBox.height < 20) {
+                newBox.height = 20;
+              }
+              return newBox;
+            }}
+          />
+        )}
+      </>
+    );
+  };
 
 
 
   // ==================== USE EFFECTS ====================
 
+  // Initialize template components
+
+
   useEffect(() => {
     if (!TemplateComponents || !resumeData) return;
 
-    const renderSectionToImage = async (sectionName) => {
+    const renderSectionData = async (sectionName) => {
       const ref = sectionRefs.current[sectionName];
       if (!ref?.current) {
         console.warn(`No ref found for ${sectionName}`);
@@ -2386,26 +1179,27 @@ const DraggableSection = ({ sectionName, image, position, onDragEnd, onTransform
 
         // Force layout recalculation
         element.offsetHeight; // Trigger reflow
-        
-        // Small delay to ensure all styles are applied
-        await new Promise(resolve => setTimeout(resolve, 100));
 
-        // Capture with proper options
+        // Small delay to ensure all styles are applied
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // 1. CAPTURE FOR WEBGL (Geometry Snapshot)
+        const scanner = new GeometrySnapshot();
+        const snapshot = scanner.capture(element);
+
+        setSectionSnapshots(prev => ({ ...prev, [sectionName]: snapshot }));
+
+        // 2. CAPTURE FOR KONVA (html2canvas)
+        // Keep this for now to support the existing Konva stage
         const canvas = await html2canvas(element, {
-          scale: 3, // High quality
+          backgroundColor: null,
+          scale: 8,
+          logging: false,
           useCORS: true,
           allowTaint: true,
-          backgroundColor: styleConfig[sectionName]?.container?.backgroundColor || '#FFFFFF',
-          logging: false,
-          
-          windowWidth: element.scrollWidth,
-          windowHeight: element.scrollHeight,
-          width: element.offsetWidth,
           height: element.offsetHeight,
-          
           letterRendering: true,
           imageTimeout: 0,
-          
           onclone: (clonedDoc) => {
             const clonedElement = clonedDoc.querySelector(`[data-section="${sectionName}"]`);
             if (clonedElement) {
@@ -2420,122 +1214,39 @@ const DraggableSection = ({ sectionName, image, position, onDragEnd, onTransform
         const img = new Image();
         img.width = element.offsetWidth;
         img.height = element.offsetHeight;
-        
+
         img.onload = () => {
           console.log(`✓ Rendered ${sectionName}: ${img.width}x${img.height}`);
           setSectionImages(prev => ({ ...prev, [sectionName]: img }));
         };
-        
-        img.onerror = (err) => {
-          console.error(`Failed to render ${sectionName}:`, err);
-        };
-        
+
         img.src = canvas.toDataURL('image/png', 1.0);
-        
+
       } catch (error) {
         console.error(`Error rendering ${sectionName}:`, error);
       }
     };
 
-    // Render all sections sequentially
+    // Render all sections in parallel
     const renderAllSections = async () => {
       const sections = Object.keys(sectionRefs.current);
-      
-      for (const sectionName of sections) {
-        await renderSectionToImage(sectionName);
-      }
-      
-      console.log('✓ All sections rendered');
+      await Promise.all(sections.map(sectionName => renderSectionData(sectionName)));
+      console.log('✓ All sections data captured');
     };
 
-    // Wait for React to render components, then capture
     const timer = setTimeout(() => {
       renderAllSections();
     }, 500);
 
     return () => clearTimeout(timer);
-  // ❌ CRITICAL: Add ALL these dependencies so preview updates when you change styles
   }, [
-    TemplateComponents, 
-    styleConfig,        // ← This makes it re-render when you change styles in panel
+    TemplateComponents,
+    styleConfig,
     resumeData,
-    sectionWidths,      // ← Updates when width changes
-    sectionHeights      // ← Updates when height changes
+    sectionWidths,
+    sectionHeights
   ]);
 
-
-// ==================== LISTEN FOR RESIZE COMPLETION ====================
-useEffect(() => {
-  const handleResizeComplete = async (event) => {
-    const sectionName = event.detail?.sectionName;
-    if (!sectionName) return;
-    
-    console.log(`Resize complete for ${sectionName}, updating HTML preview...`);
-    
-    // Trigger re-render of this section
-    setLastEditedSection(sectionName);
-  };
-  
-  window.addEventListener('sectionResized', handleResizeComplete);
-  return () => window.removeEventListener('sectionResized', handleResizeComplete);
-}, []);
-
-// ==================== THIS TRIGGERS RE-RENDER WHEN SPECIFIC SECTIONS ARE EDITED ====================
-useEffect(() => {
-  if (!lastEditedSection) return;
-  
-  const renderSection = async () => {
-    const ref = sectionRefs.current[lastEditedSection];
-    if (!ref?.current) return;
-
-    const element = ref.current;
-
-    try {
-      await document.fonts.ready;
-      element.offsetHeight;
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      const canvas = await html2canvas(element, {
-        scale: 3,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: styleConfig[lastEditedSection]?.container?.backgroundColor || '#FFFFFF',
-        logging: false,
-        windowWidth: element.scrollWidth,
-        windowHeight: element.scrollHeight,
-        width: element.offsetWidth,
-        height: element.offsetHeight,
-        letterRendering: true,
-        imageTimeout: 0,
-        onclone: (clonedDoc) => {
-          const clonedElement = clonedDoc.querySelector(`[data-section="${lastEditedSection}"]`);
-          if (clonedElement) {
-            clonedElement.style.opacity = '1';
-            clonedElement.style.visibility = 'visible';
-            clonedElement.style.display = 'block';
-          }
-        }
-      });
-
-      const img = new Image();
-      img.width = element.offsetWidth;
-      img.height = element.offsetHeight;
-      
-      img.onload = () => {
-        console.log(`✓ Re-rendered ${lastEditedSection}`);
-        setSectionImages(prev => ({ ...prev, [lastEditedSection]: img }));
-        setLastEditedSection(null); // Reset
-      };
-      
-      img.src = canvas.toDataURL('image/png', 1.0);
-      
-    } catch (error) {
-      console.error(`Error re-rendering ${lastEditedSection}:`, error);
-    }
-  };
-
-  renderSection();
-}, [lastEditedSection, styleConfig, sectionWidths, sectionHeights]);
 
 
 
@@ -2556,17 +1267,37 @@ useEffect(() => {
 
   return (
     <div className="editor-container">
+      {/* Mobile Tab Navigation */}
+      {isMobile && (
+        <div className="mobile-tabs">
+          <button
+            className={`mobile-tab ${activeTab === 'controls' ? 'active' : ''}`}
+            onClick={() => setActiveTab('controls')}
+          >
+            Controls
+          </button>
+          <button
+            className={`mobile-tab ${activeTab === 'properties' ? 'active' : ''}`}
+            onClick={() => setActiveTab('properties')}
+          >
+            Styles
+          </button>
+        </div>
+      )}
+
       {/* Hidden rendering area */}
 
 
-      {/* Hidden rendering area */}
-      <div className="hidden-render" style={{ position: 'absolute', left: '-9999px', top: '-9999px', visibility: 'hidden', width: '750px' }}>
+      {/* Hidden rendering area - NOW VISIBLE FOR COMPARISON */}
+      <div className="hidden-render" style={{ position: 'fixed', right: '10px', top: '100px', visibility: 'visible', width: '794px', background: 'white', border: '3px solid #ff6b6b', borderRadius: '8px', padding: '10px', maxHeight: '80vh', overflowY: 'auto', zIndex: 10000, pointerEvents: 'auto' }}>
         {TemplateComponents && Object.entries(sectionRefs.current).map(([key, ref]) => {
           const Component = TemplateComponents[key];
           if (!Component) return null;
-          
+
+          // Map data according to your FlexibleSection component props
           const propsMap = {
             header: { resumeDetails: resumeData?.resumeDetails, styleConfig: styleConfig },
+            contact: { resumeDetails: resumeData?.resumeDetails, styleConfig: styleConfig },
             summary: { summary: resumeData?.resumeDetails?.summary, styleConfig: styleConfig },
             skills: { skills: resumeData?.skills, styleConfig: styleConfig },
             experience: { experiences: resumeData?.experiences, styleConfig: styleConfig },
@@ -2574,17 +1305,21 @@ useEffect(() => {
             education: { educationList: resumeData?.educationList, styleConfig: styleConfig },
             certifications: { certifications: resumeData?.certifications, styleConfig: styleConfig }
           };
-          
+
           return (
-            <div 
-              key={key} 
-              ref={ref} 
-              data-section={key}
-              style={{ 
-                width: '515px',
-                minHeight: '50px'
-              }}
-            >
+            // <div key={key} ref={ref} style={{ width: styleConfig[key]?.container?.width || 'auto' }}>
+            //   <Component {...propsMap[key]} />
+            // </div>
+            <div key={key} ref={ref} data-section={key} style={{
+              width: styleConfig[key]?.container?.width || 'auto',
+              height: styleConfig[key]?.container?.height || 'auto',
+              minHeight: styleConfig[key]?.container?.height || 'auto',
+              maxHeight: styleConfig[key]?.container?.height || 'none',
+              overflow: 'visible',
+              boxSizing: 'border-box',
+              position: 'relative',
+              minWidth: 0,
+            }}>
               <Component {...propsMap[key]} />
             </div>
           );
@@ -2594,14 +1329,14 @@ useEffect(() => {
 
 
       {/* LEFT PANEL - Section Controls */}
-      <div className="left-panel">
+      <div className={`left-panel ${isMobile && activeTab !== 'controls' ? 'mobile-hidden' : ''}`}>
         <h3 className="panel-title">TEMPLATE SELECT</h3>
-        
+
         {TEMPLATES && Object.keys(TEMPLATES).length > 0 && (
           <div className="control-group">
             <label className="control-label">Choose Template</label>
-            <select 
-              value={currentTemplate} 
+            <select
+              value={currentTemplate}
               onChange={(e) => handleTemplateSwitch(e.target.value)}
               className="control-select"
             >
@@ -2619,57 +1354,57 @@ useEffect(() => {
         <button onClick={addShape} className="btn-primary full-width">
           + ADD BACKGROUND SHAPE
         </button>
-        
+
         {backgroundShapes.length > 0 && backgroundShapes.map(shape => (
           <div key={shape.id} className={`shape-control ${selectedShape === shape.id ? 'selected' : ''}`}>
             <div className="line-header">
               <span className="line-label">{shape.label}</span>
               <button onClick={() => deleteBackgroundShape(shape.id)} className="btn-delete">✕</button>
             </div>
-            
+
             <div className="shape-properties">
               <div className="property-control">
                 <label className="control-label">X Position</label>
-                <input 
-                  type="number" 
-                  value={shape.x} 
-                  onChange={(e) => updateBackgroundShape(shape.id, 'x', parseInt(e.target.value))} 
+                <input
+                  type="number"
+                  value={shape.x}
+                  onChange={(e) => updateBackgroundShape(shape.id, 'x', parseInt(e.target.value))}
                   className="control-input"
                 />
               </div>
               <div className="property-control">
                 <label className="control-label">Y Position</label>
-                <input 
-                  type="number" 
-                  value={shape.y} 
-                  onChange={(e) => updateBackgroundShape(shape.id, 'y', parseInt(e.target.value))} 
+                <input
+                  type="number"
+                  value={shape.y}
+                  onChange={(e) => updateBackgroundShape(shape.id, 'y', parseInt(e.target.value))}
                   className="control-input"
                 />
               </div>
               <div className="property-control">
                 <label className="control-label">Width</label>
-                <input 
-                  type="number" 
-                  value={shape.width} 
-                  onChange={(e) => updateBackgroundShape(shape.id, 'width', parseInt(e.target.value))} 
+                <input
+                  type="number"
+                  value={shape.width}
+                  onChange={(e) => updateBackgroundShape(shape.id, 'width', parseInt(e.target.value))}
                   className="control-input"
                 />
               </div>
               <div className="property-control">
                 <label className="control-label">Height</label>
-                <input 
-                  type="number" 
-                  value={shape.height} 
-                  onChange={(e) => updateBackgroundShape(shape.id, 'height', parseInt(e.target.value))} 
+                <input
+                  type="number"
+                  value={shape.height}
+                  onChange={(e) => updateBackgroundShape(shape.id, 'height', parseInt(e.target.value))}
                   className="control-input"
                 />
               </div>
               <div className="property-control">
                 <label className="control-label">Color</label>
-                <input 
-                  type="color" 
-                  value={shape.color} 
-                  onChange={(e) => updateBackgroundShape(shape.id, 'color', e.target.value)} 
+                <input
+                  type="color"
+                  value={shape.color}
+                  onChange={(e) => updateBackgroundShape(shape.id, 'color', e.target.value)}
                   className="control-color"
                 />
               </div>
@@ -2692,13 +1427,13 @@ useEffect(() => {
                   {isTransparent && <span className="transparent-badge">TRANSPARENT</span>}
                   {isOnPage2 && <span className="transparent-badge" style={{ background: '#3b82f6' }}>PAGE 2</span>}
                 </summary>
-              
-                <div className="position-controls" style={{ marginBottom: '12px', padding: '8px', background: '#f8f9fa', borderRadius: '4px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+
+                <div className="position-controls-wrapper">
+                  <div className="position-grid-layout">
                     <div className="control-item">
                       <label className="control-label-small">X Position</label>
-                      <input 
-                        type="number" 
+                      <input
+                        type="number"
                         value={Math.round(position.x)}
                         onChange={(e) => {
                           setSectionPositions(p => ({
@@ -2711,8 +1446,8 @@ useEffect(() => {
                     </div>
                     <div className="control-item">
                       <label className="control-label-small">Y Position</label>
-                      <input 
-                        type="number" 
+                      <input
+                        type="number"
                         value={Math.round(position.y)}
                         onChange={(e) => {
                           setSectionPositions(p => ({
@@ -2732,8 +1467,7 @@ useEffect(() => {
                           [sectionName]: { ...p[sectionName], y: 50 }
                         }));
                       }}
-                      className="btn-secondary"
-                      style={{ fontSize: '10px', padding: '4px 8px', flex: 1 }}
+                      className="btn-secondary btn-page-nav"
                     >
                       → Page 1
                     </button>
@@ -2745,8 +1479,7 @@ useEffect(() => {
                         }));
                         setShowPage2(true);
                       }}
-                      className="btn-secondary"
-                      style={{ fontSize: '10px', padding: '4px 8px', flex: 1 }}
+                      className="btn-secondary btn-page-nav"
                     >
                       → Page 2
                     </button>
@@ -2756,37 +1489,37 @@ useEffect(() => {
                 <div className="section-controls-grid">
                   <div className="control-item">
                     <label className="control-label-small">Width (px)</label>
-                    <input 
-                      type="text" 
-                      value={sectionWidths[sectionName]} 
-                      onChange={(e) => handleWidthChange(sectionName, e.target.value)} 
+                    <input
+                      type="text"
+                      value={sectionWidths[sectionName]}
+                      onChange={(e) => handleWidthChange(sectionName, e.target.value)}
                       onBlur={() => handleWidthBlur(sectionName)}
                       className="control-input-small"
                       placeholder="Width"
                     />
                   </div>
 
-      
 
-<div className="control-item">
-  <label className="control-label-small">Height (px)</label>
-  <input 
-    type="text" 
-    value={sectionHeights[sectionName] || '300px'} 
-    onChange={(e) => handleHeightChange(sectionName, e.target.value)} 
-    onBlur={() => handleHeightBlur(sectionName)}
-    className="control-input-small"
-    placeholder="auto or px"
-  />
-</div>
 
-                
+                  <div className="control-item">
+                    <label className="control-label-small">Height (px)</label>
+                    <input
+                      type="text"
+                      value={sectionHeights[sectionName] || '300px'}
+                      onChange={(e) => handleHeightChange(sectionName, e.target.value)}
+                      onBlur={() => handleHeightBlur(sectionName)}
+                      className="control-input-small"
+                      placeholder="auto or px"
+                    />
+                  </div>
 
-                
+
+
+
                   <div className="control-item">
                     <label className="control-label-small">Padding (px)</label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       value={parseInt(styleConfig[sectionName]?.container?.padding) || 0}
                       onChange={(e) => {
                         const newPadding = `${e.target.value}px`;
@@ -2801,8 +1534,8 @@ useEffect(() => {
                   <div className="control-item">
                     <label className="control-label-small">Background</label>
                     <div className="color-with-transparent">
-                      <input 
-                        type="color" 
+                      <input
+                        type="color"
                         value={styleConfig[sectionName]?.container?.backgroundColor === 'transparent' ? '#FFFFFF' : (styleConfig[sectionName]?.container?.backgroundColor || '#FFFFFF')}
                         onChange={(e) => handleStyleChange(sectionName, 'container', e.target.value, 'backgroundColor')}
                         className="control-color-small"
@@ -2825,8 +1558,8 @@ useEffect(() => {
                     <>
                       <div className="control-item">
                         <label className="control-label-small">Title Size</label>
-                        <input 
-                          type="number" 
+                        <input
+                          type="number"
                           value={parseInt(styleConfig[sectionName]?.titleStyle?.fontSize) || 12}
                           onChange={(e) => handleStyleChange(sectionName, 'titleStyle', `${e.target.value}px`, 'fontSize')}
                           className="control-input-small"
@@ -2837,8 +1570,8 @@ useEffect(() => {
 
                       <div className="control-item">
                         <label className="control-label-small">Title Color</label>
-                        <input 
-                          type="color" 
+                        <input
+                          type="color"
                           value={styleConfig[sectionName]?.titleStyle?.color || '#000000'}
                           onChange={(e) => handleStyleChange(sectionName, 'titleStyle', e.target.value, 'color')}
                           className="control-color-small"
@@ -2851,8 +1584,8 @@ useEffect(() => {
                     <>
                       <div className="control-item">
                         <label className="control-label-small">Body Size</label>
-                        <input 
-                          type="number" 
+                        <input
+                          type="number"
                           value={parseInt(styleConfig[sectionName]?.bodyStyle?.fontSize) || 10}
                           onChange={(e) => handleStyleChange(sectionName, 'bodyStyle', `${e.target.value}px`, 'fontSize')}
                           className="control-input-small"
@@ -2863,8 +1596,8 @@ useEffect(() => {
 
                       <div className="control-item">
                         <label className="control-label-small">Body Color</label>
-                        <input 
-                          type="color" 
+                        <input
+                          type="color"
                           value={styleConfig[sectionName]?.bodyStyle?.color || '#000000'}
                           onChange={(e) => handleStyleChange(sectionName, 'bodyStyle', e.target.value, 'color')}
                           className="control-color-small"
@@ -2883,28 +1616,28 @@ useEffect(() => {
         <button onClick={resetLayout} className="btn-primary full-width">
           ↻ RESET LAYOUT
         </button>
-        
-        <button onClick={autoFlowSections} className="btn-primary full-width" style={{ background: '#10b981', borderColor: '#10b981' }}>
+
+        <button onClick={autoFlowSections} className="btn-primary full-width btn-auto-flow-action">
           ⚡ AUTO-FLOW CONTENT
         </button>
-        
+
         <div className="button-grid">
           <button onClick={downloadResume} className="btn-secondary">📥 PNG</button>
         </div>
-        
+
         <h3 className="panel-title">DIVIDER LINES</h3>
         <div className="button-grid">
           <button onClick={() => addLine('horizontal')} className="btn-secondary">─ H</button>
           <button onClick={() => addLine('vertical')} className="btn-secondary">│ V</button>
         </div>
-        
+
         {lines.length > 0 && lines.map(line => (
           <div key={line.id} className={`line-control ${selectedLine === line.id ? 'selected' : ''}`}>
             <div className="line-header">
               <span className="line-label">{line.label}</span>
               <button onClick={() => deleteLine(line.id)} className="btn-delete">✕</button>
             </div>
-            
+
             <div className="line-move-control">
               <label className="control-label">Move Position</label>
               <div className="arrow-grid">
@@ -2919,7 +1652,7 @@ useEffect(() => {
                 <div></div>
               </div>
             </div>
-            
+
             <div className="line-resize-control">
               <label className="control-label">
                 Resize {line.orientation === 'vertical' ? 'Height' : 'Width'}
@@ -2929,24 +1662,24 @@ useEffect(() => {
                 <button onClick={() => resizeLine(line.id, 'increase')} className="btn-resize">+</button>
               </div>
             </div>
-            
+
             <div className="line-properties">
               <div className="property-control">
                 <label className="control-label">Thickness</label>
-                <input 
-                  type="number" 
-                  value={line.thickness} 
-                  onChange={(e) => updateLine(line.id, 'thickness', parseFloat(e.target.value))} 
-                  step="0.5" 
+                <input
+                  type="number"
+                  value={line.thickness}
+                  onChange={(e) => updateLine(line.id, 'thickness', parseFloat(e.target.value))}
+                  step="0.5"
                   className="control-input"
                 />
               </div>
               <div className="property-control">
                 <label className="control-label">Color</label>
-                <input 
-                  type="color" 
-                  value={line.color} 
-                  onChange={(e) => updateLine(line.id, 'color', e.target.value)} 
+                <input
+                  type="color"
+                  value={normalizeColorForInput(line.color)}
+                  onChange={(e) => updateLine(line.id, 'color', e.target.value)}
                   className="control-color"
                 />
               </div>
@@ -2959,60 +1692,82 @@ useEffect(() => {
       {/* MIDDLE - Canvas */}
       <div className="canvas-container">
         <div className="canvas-scroll-wrapper">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div className="canvas-stack-layout">
             {/* Page 1 */}
             <div className="canvas-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
-              <Stage
-                ref={stageRef}
-                width={595}
-                height={842}
-                onClick={handleStageClick}
-                onTap={handleStageClick}
-              >
-                {/* Background Layer */}
-                <Layer>
-                  {page1Elements.shapes.map(shape => (
-                    <DraggableShape
-                      key={shape.id}
-                      shape={shape}
-                      onDragEnd={handleShapeDragEnd}
-                      onUpdate={handleShapeUpdate}
-                      isSelected={selectedShape === shape.id}
-                      onSelect={() => setSelectedShape(shape.id)}
-                    />
-                  ))}
-                </Layer>
-                
-                {/* Lines Layer */}
-                <Layer>
-                  {page1Elements.lines.map(line => (
-                    <DraggableLine
-                      key={line.id}
-                      line={line}
-                      onDragEnd={handleLineDragEnd}
-                      onUpdate={handleLineUpdate}
-                      isSelected={selectedLine === line.id}
-                      onSelect={() => setSelectedLine(line.id)}
-                    />
-                  ))}
-                </Layer>
-                
-                {/* Content Layer */}
-                <Layer>
-                  {page1Elements.sections.map(([sectionName, pos]) => (
-                    <DraggableSection
-                      key={sectionName}
-                      sectionName={sectionName}
-                      image={sectionImages[sectionName]}
-                      position={pos}
-                      onDragEnd={handleSectionDragEnd}
-                      onTransform={handleSectionTransform}
-                      isSelected={selectedSection === sectionName}
-                      onSelect={() => setSelectedSection(sectionName)}
-                    />
-                  ))}
-                </Layer>
-              </Stage>
+              {useWebGL ? (
+                <WebGLStage
+                  width={595}
+                  height={842}
+                  shapes={page1Elements.shapes}
+                  lines={page1Elements.lines}
+                  sections={page1Elements.sections}
+                  sectionSnapshots={sectionSnapshots}
+                  onDragEnd={(type, id, pos) => {
+                    if (type === 'section') handleSectionDragEnd(id, pos);
+                    if (type === 'shape') handleShapeDragEnd(id, pos);
+                    if (type === 'line') handleLineDragEnd(id, pos);
+                  }}
+                  onSelect={(type, id) => {
+                    if (type === 'shape') setSelectedShape(id);
+                    if (type === 'line') setSelectedLine(id);
+                    if (type === 'section') setSelectedSection(id);
+                  }}
+                  selectedId={selectedShape || selectedLine || selectedSection}
+                />
+              ) : (
+                <Stage
+                  ref={stageRef}
+                  width={595}
+                  height={842}
+                  onClick={handleStageClick}
+                  onTap={handleStageClick}
+                >
+                  {/* Background Layer */}
+                  <Layer>
+                    {page1Elements.shapes.map(shape => (
+                      <DraggableShape
+                        key={shape.id}
+                        shape={shape}
+                        onDragEnd={handleShapeDragEnd}
+                        onUpdate={handleShapeUpdate}
+                        isSelected={selectedShape === shape.id}
+                        onSelect={() => setSelectedShape(shape.id)}
+                      />
+                    ))}
+                  </Layer>
+
+                  {/* Lines Layer */}
+                  <Layer>
+                    {page1Elements.lines.map(line => (
+                      <DraggableLine
+                        key={line.id}
+                        line={line}
+                        onDragEnd={handleLineDragEnd}
+                        onUpdate={handleLineUpdate}
+                        isSelected={selectedLine === line.id}
+                        onSelect={() => setSelectedLine(line.id)}
+                      />
+                    ))}
+                  </Layer>
+
+                  {/* Content Layer */}
+                  <Layer>
+                    {page1Elements.sections.map(([sectionName, pos]) => (
+                      <DraggableSection
+                        key={sectionName}
+                        sectionName={sectionName}
+                        image={sectionImages[sectionName]}
+                        position={pos}
+                        onDragEnd={handleSectionDragEnd}
+                        onTransform={handleSectionTransform}
+                        isSelected={selectedSection === sectionName}
+                        onSelect={() => setSelectedSection(sectionName)}
+                      />
+                    ))}
+                  </Layer>
+                </Stage>
+              )}
               <div className="page-number">Page 1</div>
             </div>
 
@@ -3021,66 +1776,88 @@ useEffect(() => {
             {/* Page 2 */}
             {showPage2 && (
               <div className="canvas-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
-                <Stage
-                  ref={stage2Ref}
-                  width={595}
-                  height={842}
-                  onClick={handleStageClick}
-                  onTap={handleStageClick}
-                >
-                  <Layer>
-                    {page2Elements.shapes.map(shape => {
-                      const adjustedShape = { ...shape, y: shape.y - 842 };
-                      return (
-                        <DraggableShape
-                          key={shape.id}
-                          shape={adjustedShape}
-                          onDragEnd={(id, pos) => handleShapeDragEnd(id, { ...pos, y: pos.y + 842 })}
-                          onUpdate={handleShapeUpdate}
-                          isSelected={selectedShape === shape.id}
-                          onSelect={() => setSelectedShape(shape.id)}
-                        />
-                      );
-                    })}
-                  </Layer>
-                  
-                  <Layer>
-                    {page2Elements.lines.map(line => {
-                      const adjustedLine = { ...line, y1: line.y1 - 842, y2: line.y2 - 842 };
-                      return (
-                        <DraggableLine
-                          key={line.id}
-                          line={adjustedLine}
-                          onDragEnd={(id, pos) => handleLineDragEnd(id, {
-                            x1: pos.x1, y1: pos.y1 + 842,
-                            x2: pos.x2, y2: pos.y2 + 842
-                          })}
-                          onUpdate={handleLineUpdate}
-                          isSelected={selectedLine === line.id}
-                          onSelect={() => setSelectedLine(line.id)}
-                        />
-                      );
-                    })}
-                  </Layer>
-                  
-                  <Layer>
-                    {page2Elements.sections.map(([sectionName, pos]) => {
-                      const adjustedPos = { ...pos, y: pos.y - 842 };
-                      return (
-                        <DraggableSection
-                          key={sectionName}
-                          sectionName={sectionName}
-                          image={sectionImages[sectionName]}
-                          position={adjustedPos}
-                          onDragEnd={(name, newPos) => handleSectionDragEnd(name, { ...newPos, y: newPos.y + 842 })}
-                          onTransform={handleSectionTransform}
-                          isSelected={selectedSection === sectionName}
-                          onSelect={() => setSelectedSection(sectionName)}
-                        />
-                      );
-                    })}
-                  </Layer>
-                </Stage>
+                {useWebGL ? (
+                  <WebGLStage
+                    width={595}
+                    height={842}
+                    shapes={page2Elements.shapes}
+                    lines={page2Elements.lines}
+                    sections={page2Elements.sections}
+                    sectionSnapshots={sectionSnapshots}
+                    onDragEnd={(type, id, pos) => {
+                      if (type === 'section') handleSectionDragEnd(id, pos);
+                      if (type === 'shape') handleShapeDragEnd(id, pos);
+                      if (type === 'line') handleLineDragEnd(id, pos);
+                    }}
+                    onSelect={(type, id) => {
+                      if (type === 'shape') setSelectedShape(id);
+                      if (type === 'line') setSelectedLine(id);
+                      if (type === 'section') setSelectedSection(id);
+                    }}
+                    selectedId={selectedShape || selectedLine || selectedSection}
+                  />
+                ) : (
+                  <Stage
+                    ref={stage2Ref}
+                    width={595}
+                    height={842}
+                    onClick={handleStageClick}
+                    onTap={handleStageClick}
+                  >
+                    <Layer>
+                      {page2Elements.shapes.map(shape => {
+                        const adjustedShape = { ...shape, y: shape.y - 842 };
+                        return (
+                          <DraggableShape
+                            key={shape.id}
+                            shape={adjustedShape}
+                            onDragEnd={(id, pos) => handleShapeDragEnd(id, { ...pos, y: pos.y + 842 })}
+                            onUpdate={handleShapeUpdate}
+                            isSelected={selectedShape === shape.id}
+                            onSelect={() => setSelectedShape(shape.id)}
+                          />
+                        );
+                      })}
+                    </Layer>
+
+                    <Layer>
+                      {page2Elements.lines.map(line => {
+                        const adjustedLine = { ...line, y1: line.y1 - 842, y2: line.y2 - 842 };
+                        return (
+                          <DraggableLine
+                            key={line.id}
+                            line={adjustedLine}
+                            onDragEnd={(id, pos) => handleLineDragEnd(id, {
+                              x1: pos.x1, y1: pos.y1 + 842,
+                              x2: pos.x2, y2: pos.y2 + 842
+                            })}
+                            onUpdate={handleLineUpdate}
+                            isSelected={selectedLine === line.id}
+                            onSelect={() => setSelectedLine(line.id)}
+                          />
+                        );
+                      })}
+                    </Layer>
+
+                    <Layer>
+                      {page2Elements.sections.map(([sectionName, pos]) => {
+                        const adjustedPos = { ...pos, y: pos.y - 842 };
+                        return (
+                          <DraggableSection
+                            key={sectionName}
+                            sectionName={sectionName}
+                            image={sectionImages[sectionName]}
+                            position={adjustedPos}
+                            onDragEnd={(name, newPos) => handleSectionDragEnd(name, { ...newPos, y: newPos.y + 842 })}
+                            onTransform={handleSectionTransform}
+                            isSelected={selectedSection === sectionName}
+                            onSelect={() => setSelectedSection(sectionName)}
+                          />
+                        );
+                      })}
+                    </Layer>
+                  </Stage>
+                )}
                 <div className="page-number">Page 2</div>
               </div>
             )}
@@ -3090,20 +1867,27 @@ useEffect(() => {
 
 
         <div className="zoom-controls">
+          <button
+            onClick={() => setUseWebGL(!useWebGL)}
+            className={`btn-zoom-reset ${useWebGL ? 'active' : ''}`}
+            style={{ marginRight: '10px', background: useWebGL ? '#10b981' : '#6b7280', color: 'white', fontWeight: 'bold' }}
+          >
+            {useWebGL ? '🚀 WEBGL ON' : '⚙️ WEBGL OFF'}
+          </button>
           <button onClick={() => setZoom(Math.max(0.3, zoom - 0.1))} className="btn-zoom">−</button>
           <span className="zoom-value">{Math.round(zoom * 100)}%</span>
           <button onClick={() => setZoom(Math.min(2, zoom + 0.1))} className="btn-zoom">+</button>
           <button onClick={() => setZoom(1)} className="btn-zoom-reset">100%</button>
           <button onClick={() => setZoom(0.7)} className="btn-zoom-reset">FIT</button>
-          <button 
-            onClick={() => setShowPage2(!showPage2)} 
+          <button
+            onClick={() => setShowPage2(!showPage2)}
             className={`btn-zoom-reset ${showPage2 ? 'active' : ''}`}
             style={{ marginLeft: '10px' }}
           >
             {showPage2 ? '1 PAGE' : '2 PAGES'}
           </button>
         </div>
-        
+
         <div className="canvas-hint">💡 DRAG & RESIZE • Scroll to see more</div>
         <div className="template-badge">
           {currentTemplate === 'ats' ? '📄 ATS' : currentTemplate === 'modern' ? '✨ MODERN' : '📑 TWO COLUMN'}
@@ -3113,16 +1897,16 @@ useEffect(() => {
       {/* ======================= RIGHT PANEL START ======================= */}
 
 
-      
-      <div className="right-panel">
+
+      <div className={`right-panel ${isMobile && activeTab !== 'properties' ? 'mobile-hidden' : ''}`}>
         <h3 className="panel-title">QUICK STYLE</h3>
-        
+
         {selectedSection ? (
           <div style={{ padding: '12px' }}>
-            <div style={{ 
-              background: '#f3f4f6', 
-              padding: '8px 12px', 
-              borderRadius: '6px', 
+            <div style={{
+              background: '#f3f4f6',
+              padding: '8px 12px',
+              borderRadius: '6px',
               marginBottom: '16px',
               fontSize: '12px',
               fontWeight: '600',
@@ -3130,14 +1914,14 @@ useEffect(() => {
             }}>
               📝 {selectedSection.toUpperCase()}
             </div>
-            
+
             {/* Font Size Quick Controls */}
             <div style={{ marginBottom: '16px' }}>
               <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
                 Font Size
               </label>
               <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                <button 
+                <button
                   onClick={() => {
                     const current = parseInt(styleConfig[selectedSection]?.bodyStyle?.fontSize) || 10;
                     handleStyleChange(selectedSection, 'bodyStyle', `${Math.max(6, current - 1)}px`, 'fontSize');
@@ -3147,10 +1931,10 @@ useEffect(() => {
                 >
                   −
                 </button>
-                <span style={{ 
-                  fontSize: '14px', 
-                  fontWeight: '600', 
-                  minWidth: '40px', 
+                <span style={{
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  minWidth: '40px',
                   textAlign: 'center',
                   background: 'white',
                   padding: '8px',
@@ -3159,7 +1943,7 @@ useEffect(() => {
                 }}>
                   {parseInt(styleConfig[selectedSection]?.bodyStyle?.fontSize) || 10}
                 </span>
-                <button 
+                <button
                   onClick={() => {
                     const current = parseInt(styleConfig[selectedSection]?.bodyStyle?.fontSize) || 10;
                     handleStyleChange(selectedSection, 'bodyStyle', `${Math.min(32, current + 1)}px`, 'fontSize');
@@ -3171,7 +1955,7 @@ useEffect(() => {
                 </button>
               </div>
             </div>
-            
+
             {/* Title Font Size (if applicable) */}
             {styleConfig[selectedSection]?.titleStyle && (
               <div style={{ marginBottom: '16px' }}>
@@ -3179,7 +1963,7 @@ useEffect(() => {
                   Title Font Size
                 </label>
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                  <button 
+                  <button
                     onClick={() => {
                       const current = parseInt(styleConfig[selectedSection]?.titleStyle?.fontSize) || 14;
                       handleStyleChange(selectedSection, 'titleStyle', `${Math.max(8, current - 1)}px`, 'fontSize');
@@ -3189,10 +1973,10 @@ useEffect(() => {
                   >
                     −
                   </button>
-                  <span style={{ 
-                    fontSize: '14px', 
-                    fontWeight: '600', 
-                    minWidth: '40px', 
+                  <span style={{
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    minWidth: '40px',
                     textAlign: 'center',
                     background: 'white',
                     padding: '8px',
@@ -3201,7 +1985,7 @@ useEffect(() => {
                   }}>
                     {parseInt(styleConfig[selectedSection]?.titleStyle?.fontSize) || 14}
                   </span>
-                  <button 
+                  <button
                     onClick={() => {
                       const current = parseInt(styleConfig[selectedSection]?.titleStyle?.fontSize) || 14;
                       handleStyleChange(selectedSection, 'titleStyle', `${Math.min(36, current + 1)}px`, 'fontSize');
@@ -3214,62 +1998,62 @@ useEffect(() => {
                 </div>
               </div>
             )}
-            
+
             {/* Text Color */}
             <div style={{ marginBottom: '16px' }}>
               <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
                 Text Color
               </label>
-              <input 
-                type="color" 
-                value={styleConfig[selectedSection]?.bodyStyle?.color || '#000000'}
+              <input
+                type="color"
+                value={normalizeColorForInput(styleConfig[selectedSection]?.bodyStyle?.color)}
                 onChange={(e) => handleStyleChange(selectedSection, 'bodyStyle', e.target.value, 'color')}
-                style={{ 
-                  width: '100%', 
-                  height: '40px', 
-                  border: '1px solid #d1d5db', 
+                style={{
+                  width: '100%',
+                  height: '40px',
+                  border: '1px solid #d1d5db',
                   borderRadius: '6px',
                   cursor: 'pointer'
                 }}
               />
             </div>
-            
+
             {/* Title Color (if applicable) */}
             {styleConfig[selectedSection]?.titleStyle && (
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
                   Title Color
                 </label>
-                <input 
-                  type="color" 
-                  value={styleConfig[selectedSection]?.titleStyle?.color || '#000000'}
+                <input
+                  type="color"
+                  value={normalizeColorForInput(styleConfig[selectedSection]?.titleStyle?.color)}
                   onChange={(e) => handleStyleChange(selectedSection, 'titleStyle', e.target.value, 'color')}
-                  style={{ 
-                    width: '100%', 
-                    height: '40px', 
-                    border: '1px solid #d1d5db', 
+                  style={{
+                    width: '100%',
+                    height: '40px',
+                    border: '1px solid #d1d5db',
                     borderRadius: '6px',
                     cursor: 'pointer'
                   }}
                 />
               </div>
             )}
-            
+
             {/* Background Color */}
             <div style={{ marginBottom: '16px' }}>
               <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
                 Background
               </label>
               <div style={{ display: 'flex', gap: '6px' }}>
-                <input 
-                  type="color" 
-                  value={styleConfig[selectedSection]?.container?.backgroundColor === 'transparent' ? '#FFFFFF' : (styleConfig[selectedSection]?.container?.backgroundColor || '#FFFFFF')}
+                <input
+                  type="color"
+                  value={normalizeColorForInput(styleConfig[selectedSection]?.container?.backgroundColor)}
                   onChange={(e) => handleStyleChange(selectedSection, 'container', e.target.value, 'backgroundColor')}
                   disabled={styleConfig[selectedSection]?.container?.backgroundColor === 'transparent'}
-                  style={{ 
+                  style={{
                     flex: 1,
-                    height: '40px', 
-                    border: '1px solid #d1d5db', 
+                    height: '40px',
+                    border: '1px solid #d1d5db',
                     borderRadius: '6px',
                     cursor: 'pointer',
                     opacity: styleConfig[selectedSection]?.container?.backgroundColor === 'transparent' ? 0.5 : 1
@@ -3281,7 +2065,7 @@ useEffect(() => {
                     handleStyleChange(selectedSection, 'container', currentBg === 'transparent' ? '#FFFFFF' : 'transparent', 'backgroundColor');
                   }}
                   className="btn-secondary"
-                  style={{ 
+                  style={{
                     padding: '0 16px',
                     fontSize: '12px',
                     fontWeight: '600',
@@ -3297,13 +2081,13 @@ useEffect(() => {
                 {styleConfig[selectedSection]?.container?.backgroundColor === 'transparent' ? 'Transparent' : 'Solid'}
               </span>
             </div>
-            
+
             {/* Padding */}
             <div style={{ marginBottom: '16px' }}>
               <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
                 Padding
               </label>
-              <input 
+              <input
                 type="range"
                 min="0"
                 max="50"
@@ -3322,7 +2106,7 @@ useEffect(() => {
                 <span>50px</span>
               </div>
             </div>
-            
+
             {/* Width (range slider) */}
             <div style={{ marginBottom: '16px' }}>
               <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
@@ -3345,11 +2129,11 @@ useEffect(() => {
               </div>
             </div>
 
-            
-            
-            <div style={{ 
-              background: '#fef3c7', 
-              padding: '12px', 
+
+
+            <div style={{
+              background: '#fef3c7',
+              padding: '12px',
               borderRadius: '6px',
               border: '1px solid #fbbf24',
               marginTop: '20px'
@@ -3361,9 +2145,9 @@ useEffect(() => {
           </div>
         ) : (
           <div style={{ padding: '12px' }}>
-            <div style={{ 
-              background: '#f3f4f6', 
-              padding: '20px', 
+            <div style={{
+              background: '#f3f4f6',
+              padding: '20px',
               borderRadius: '8px',
               textAlign: 'center',
               color: '#6b7280',
@@ -3374,7 +2158,7 @@ useEffect(() => {
                 Click on a section in the canvas to edit its styles
               </p>
             </div>
-            
+
             <div style={{ marginTop: '20px', padding: '12px', background: '#eff6ff', borderRadius: '6px', border: '1px solid #3b82f6' }}>
               <h4 style={{ fontSize: '11px', fontWeight: '600', color: '#1e40af', margin: '0 0 8px 0' }}>
                 Quick Actions:
