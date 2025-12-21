@@ -996,7 +996,7 @@ export const MODERN_TEMPLATE_CONFIG = {
   education: {
     container: {
       width: "200px",
-      backgroundColor: "red",
+      backgroundColor: "transparent",
       padding: "20px 20px 20px 40px",
       color: "#FFFFFF",
     },
