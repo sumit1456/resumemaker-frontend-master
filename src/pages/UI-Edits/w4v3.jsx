@@ -313,8 +313,6 @@ class GeometrySnapshot {
             fontWeight: computed.fontWeight,
             fontStyle: computed.fontStyle,
             textAlign: computed.textAlign,
-            justifyContent: computed.justifyContent,
-            alignItems: computed.alignItems,
             lineHeight: parseFloat(computed.lineHeight) || parseFloat(computed.fontSize) * 1.2,
             letterSpacing: parseFloat(computed.letterSpacing) || 0,
             padding: {
@@ -499,195 +497,68 @@ class GeometrySnapshot {
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, this.rootWidth, this.rootHeight);
 
-        // Sort nodes by z-index if available, or maintain original order
-        const sortedNodes = [...this.nodes].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
-
         // Render each node
-        for (const node of sortedNodes) {
+        for (const node of this.nodes) {
             this.renderNode(ctx, node);
         }
 
         return canvas;
     }
 
-
     renderNode(ctx, node) {
-        const { x, y, width, height, styles, type, text, src } = node;
+        const { x, y, width, height, styles, type, text } = node;
 
         ctx.save();
 
-        // 0. GLOBAL OPACITY
-        if (styles.opacity !== undefined) {
-            ctx.globalAlpha = styles.opacity;
-        }
-
-        // 1. SHADOW (Apply to the box/image first)
-        if (styles.boxShadow && styles.boxShadow !== 'none') {
-            const colorMatch = styles.boxShadow.match(/(rgba?\(.*?\)|#[0-9a-fA-F]{3,8}|[a-zA-Z]+)/);
-            if (colorMatch) {
-                const shadowColor = colorMatch[0];
-                const otherParts = styles.boxShadow.replace(shadowColor, '').trim().split(/\s+/);
-
-                ctx.shadowColor = shadowColor;
-                ctx.shadowOffsetX = parseFloat(otherParts[0]) || 0;
-                ctx.shadowOffsetY = parseFloat(otherParts[1]) || 0;
-                ctx.shadowBlur = parseFloat(otherParts[2]) || 0;
-            }
-        }
-
-        // Helper to get absolute border radius
-        const getRadius = () => {
-            let r = styles.borderRadius || 0;
-            if (typeof r === 'string' && r.endsWith('%')) {
-                return (Math.min(width, height) * parseFloat(r)) / 100;
-            }
-            return parseFloat(r) || 0;
-        };
-        const radius = getRadius();
-
-
-        // 2. BACKGROUND 
-        if (styles.backgroundColor && styles.backgroundColor !== 'transparent') {
+        // Background
+        if (styles.backgroundColor) {
             ctx.fillStyle = styles.backgroundColor;
-            if (radius > 0) {
-                this.roundRect(ctx, x, y, width, height, radius);
+            if (styles.borderRadius > 0) {
+                this.roundRect(ctx, x, y, width, height, styles.borderRadius);
                 ctx.fill();
             } else {
                 ctx.fillRect(x, y, width, height);
             }
         }
 
-
-        // 3. GRADIENT OVERLAY
-        if (styles.gradient) {
-            let gradient;
-            if (styles.gradient.type === 'radial') {
-                const centerX = x + width / 2;
-                const centerY = y + height / 2;
-                const gr = Math.max(width, height) / 2;
-                gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, gr);
-
-            } else {
-                const angle = styles.gradient.angle !== undefined ? styles.gradient.angle : 180;
-                const angleRad = ((angle - 90) * Math.PI) / 180;
-                const length = Math.abs(width * Math.cos(angleRad)) + Math.abs(height * Math.sin(angleRad));
-                const centerX = x + width / 2;
-                const centerY = y + height / 2;
-                const x1 = centerX - (Math.cos(angleRad) * length) / 2;
-                const y1 = centerY - (Math.sin(angleRad) * length) / 2;
-                const x2 = centerX + (Math.cos(angleRad) * length) / 2;
-                const y2 = centerY + (Math.sin(angleRad) * length) / 2;
-                gradient = ctx.createLinearGradient(x1, y1, x2, y2);
-            }
-
-            styles.gradient.stops.forEach(stop => {
-                gradient.addColorStop(stop.position, stop.color);
-            });
-
-            ctx.fillStyle = gradient;
-            if (radius > 0) {
-                this.roundRect(ctx, x, y, width, height, radius);
-                ctx.fill();
-            } else {
-                ctx.fillRect(x, y, width, height);
-            }
-
-        }
-
-        // 4. IMAGE
-        if (type === 'image' && src) {
-            // NOTE: This assumes images are preloaded or cached in browser.
-            // For a benchmark, the source images already exist on page.
-            const img = new Image();
-            img.src = src;
-            if (img.complete) {
-                if (radius > 0) {
-                    ctx.save();
-                    this.roundRect(ctx, x, y, width, height, radius);
-                    ctx.clip();
-                    ctx.drawImage(img, x, y, width, height);
-                    ctx.restore();
-                } else {
-                    ctx.drawImage(img, x, y, width, height);
-                }
-
-            } else {
-                // If not complete, draw a placeholder but start loading
-                ctx.fillStyle = '#f3f4f6';
-                ctx.fillRect(x, y, width, height);
-                img.onload = () => { /* Redraw will happen on next run */ };
-            }
-        }
-
-        // Reset shadow for subsequent items
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
-
-        // 5. BORDER
+        // Border
         if (styles.borderWidth > 0 && styles.borderStyle !== 'none') {
             ctx.strokeStyle = styles.borderColor || '#000';
             ctx.lineWidth = styles.borderWidth;
-
-            // Handle dashed/dotted
-            if (styles.borderStyle === 'dashed') {
-                ctx.setLineDash([styles.borderWidth * 3, styles.borderWidth * 2]);
-            } else if (styles.borderStyle === 'dotted') {
-                ctx.setLineDash([styles.borderWidth, styles.borderWidth * 2]);
-            } else {
-                ctx.setLineDash([]);
-            }
-
-            if (radius > 0) {
-                this.roundRect(ctx, x, y, width, height, radius);
+            if (styles.borderRadius > 0) {
+                this.roundRect(ctx, x, y, width, height, styles.borderRadius);
                 ctx.stroke();
             } else {
-                const strokeOffset = ctx.lineWidth / 2;
-                ctx.strokeRect(x + strokeOffset, y + strokeOffset, width - ctx.lineWidth, height - ctx.lineWidth);
+                ctx.strokeRect(x, y, width, height);
             }
-
-            ctx.setLineDash([]); // Reset
         }
 
-        // 6. TEXT (Works for both 'text' type and 'box' type with direct text)
-        if (text) {
+        // Text
+        if (type === 'text' && text) {
             ctx.fillStyle = styles.color || '#000';
             ctx.font = `${styles.fontStyle || ''} ${styles.fontWeight || ''} ${styles.fontSize}px ${styles.fontFamily || 'Arial'}`;
             ctx.textBaseline = 'top';
 
-            const pLeft = (styles.padding?.left || 0);
-            const pTop = (styles.padding?.top || 0);
-            const pRight = (styles.padding?.right || 0);
-            const mWidth = Math.max(10, width - pLeft - pRight);
-
-            const lines = this.wrapText(ctx, text, mWidth);
-            let cY = y + pTop;
-
-            // Adjust vertical centering if it's a box with single line text
-            if (type === 'box' && lines.length === 1 && !styles.padding?.top) {
-                const tHeight = styles.lineHeight || styles.fontSize * 1.2;
-                cY = y + (height - tHeight) / 2;
-            }
+            const lines = this.wrapText(ctx, text, width - (styles.padding?.left || 0) - (styles.padding?.right || 0));
+            let currentY = y + (styles.padding?.top || 0);
+            const startX = x + (styles.padding?.left || 0);
 
             lines.forEach(line => {
-                let aX = x + pLeft;
+                let alignX = startX;
                 if (styles.textAlign === 'center') {
-                    const m = ctx.measureText(line);
-                    aX = x + width / 2 - m.width / 2;
+                    const metrics = ctx.measureText(line);
+                    alignX = x + width / 2 - metrics.width / 2;
                 } else if (styles.textAlign === 'right') {
-                    const m = ctx.measureText(line);
-                    aX = x + width - pRight - m.width;
+                    const metrics = ctx.measureText(line);
+                    alignX = x + width - (styles.padding?.right || 0) - metrics.width;
                 }
-                ctx.fillText(line, aX, cY);
-                cY += (styles.lineHeight || styles.fontSize * 1.2);
+                ctx.fillText(line, alignX, currentY);
+                currentY += styles.lineHeight;
             });
         }
 
-
         ctx.restore();
     }
-
 
     wrapText(ctx, text, maxWidth) {
         const words = text.split(' ');
@@ -1103,7 +974,7 @@ class PixiRenderer {
             points = [{ x: 0, y: 0 }, { x: width, y: 0 }, { x: width, y: height }, { x: 0, y: height }, { x: 0, y: 0 }];
         } else {
             const r = Math.min(radius, width / 2, height / 2);
-            const steps = 8; // Points per corner for smooth look
+            const steps = 8; // Points per corner
 
             // Top-Right
             for (let i = 0; i <= steps; i++) {
@@ -1125,7 +996,7 @@ class PixiRenderer {
                 const ang = Math.PI + (Math.PI * 0.5 * (i / steps));
                 points.push({ x: r + Math.cos(ang) * r, y: r + Math.sin(ang) * r });
             }
-            points.push(points[0]); // Close path
+            points.push(points[0]);
         }
 
         drawSegmentedPath(points);
@@ -1222,7 +1093,6 @@ class PixiRenderer {
 
         const paddingLeft = (styles.padding?.left || 0);
         const paddingRight = (styles.padding?.right || 0);
-        const paddingTop = (styles.padding?.top || 0);
         const effectiveWidth = Math.max(1, width - paddingLeft - paddingRight);
         const isSingleLine = height < lineHeight * 1.5;
 
@@ -1240,29 +1110,8 @@ class PixiRenderer {
             pixiText = new PIXI_LIB.Text(text, new PIXI_LIB.TextStyle(textStyleOptions));
         }
 
-        // --- HIGH ACCURACY POSITIONING & ANCHORS ---
-        const align = (styles.textAlign || 'left').toLowerCase();
-        const jc = (styles.justifyContent || '').toLowerCase();
-        const ai = (styles.alignItems || '').toLowerCase();
-        const isFlexCenter = jc.includes('center') || ai.includes('center');
-
-        if (align === 'center' || (isLocal && isFlexCenter)) {
-            pixiText.anchor.set(0.5, 0);
-            pixiText.x = (isLocal ? 0 : x) + width / 2;
-        } else if (align === 'right') {
-            pixiText.anchor.set(1, 0);
-            pixiText.x = (isLocal ? 0 : x) + width - paddingRight;
-        } else {
-            pixiText.x = (isLocal ? 0 : x) + paddingLeft;
-        }
-
-        // Vertical Centering for boxes or flex items
-        if (isSingleLine && (height > lineHeight * 1.1 || isFlexCenter)) {
-            pixiText.anchor.y = 0.5;
-            pixiText.y = (isLocal ? 0 : y) + height / 2;
-        } else {
-            pixiText.y = (isLocal ? 0 : y) + paddingTop;
-        }
+        pixiText.x = (isLocal ? 0 : x) + paddingLeft;
+        pixiText.y = (isLocal ? 0 : y) + (styles.padding?.top || 0);
 
         const colorData = this.parseColor(styles.color || '#000000');
         pixiText.alpha = (styles.opacity !== undefined ? styles.opacity : 1) * (colorData.alpha !== undefined ? colorData.alpha : 1);
@@ -1276,54 +1125,13 @@ class PixiRenderer {
 
         try {
             const texture = PIXI_LIB.Assets ? await PIXI_LIB.Assets.load(src) : await PIXI_LIB.Texture.fromURL(src);
-            if (!texture) return null;
-
             const sprite = new PIXI_LIB.Sprite(texture);
-
-            // --- OBJECT-FIT: COVER LOGIC ---
-            const iW = texture.width;
-            const iH = texture.height;
-            if (iW > 0 && iH > 0) {
-                const imageRatio = iW / iH;
-                const containerRatio = width / height;
-
-                let finalScale = 1;
-                if (containerRatio > imageRatio) {
-                    finalScale = width / iW;
-                } else {
-                    finalScale = height / iH;
-                }
-
-                sprite.scale.set(finalScale);
-                sprite.x = x + (width - iW * finalScale) / 2;
-                sprite.y = y + (height - iH * finalScale) / 2;
-            } else {
-                sprite.x = x;
-                sprite.y = y;
-                sprite.width = width;
-                sprite.height = height;
-            }
-
+            sprite.x = x;
+            sprite.y = y;
+            sprite.width = width;
+            sprite.height = height;
             if (styles.opacity !== undefined) sprite.alpha = styles.opacity;
-
-            // Apply clipping mask
-            const mask = new PIXI_LIB.Graphics();
-            if (mask.rect) {
-                mask.beginPath();
-                mask.rect(x, y, width, height);
-                mask.fill(0xffffff);
-            } else {
-                mask.beginFill(0xffffff);
-                mask.drawRect(x, y, width, height);
-                mask.endFill();
-            }
-            sprite.mask = mask;
-
-            const container = new PIXI_LIB.Container();
-            container.addChild(sprite);
-            container.addChild(mask);
-
-            return container;
+            return sprite;
         } catch (error) {
             console.error('Failed to load image:', src);
             return null;

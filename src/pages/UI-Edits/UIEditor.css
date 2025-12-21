@@ -15,6 +15,54 @@
   left: -99999px;
 }
 
+/* ==================== DYNAMIC PERCEPTION EFFECTS ==================== */
+.tilt-section {
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
+  cursor: pointer;
+  transform-style: preserve-3d;
+}
+
+.tilt-section:hover {
+  transform: perspective(1000px) rotateX(8deg) rotateY(-8deg) scale(1.02);
+  z-index: 50;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15) !important;
+}
+
+.bloom-effect:hover {
+  box-shadow: 0 0 25px rgba(102, 126, 234, 0.5) !important;
+}
+
+.interactivity-active .hidden-render {
+  position: fixed;
+  left: 20px;
+  top: 80px;
+  width: 400px;
+  max-height: 80vh;
+  z-index: 9999;
+  background: white;
+  border: 4px solid #667eea;
+  border-radius: 12px;
+  padding: 15px;
+  visibility: visible !important;
+  opacity: 1 !important;
+  overflow-y: auto;
+  pointer-events: auto;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.interactivity-label {
+  position: absolute;
+  top: -15px;
+  left: 20px;
+  background: #667eea;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
 /* ==================== LEFT PANEL ==================== */
 
 .left-panel {

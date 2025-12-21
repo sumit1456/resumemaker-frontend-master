@@ -1289,7 +1289,7 @@ const UIEditor = ({ initialUseWebGL = false }) => {
 
 
       {/* Hidden rendering area - NOW VISIBLE FOR COMPARISON */}
-      <div className="hidden-render" style={{ position: 'fixed', right: '10px', top: '100px', visibility: 'visible', width: '794px', background: 'white', border: '3px solid #ff6b6b', borderRadius: '8px', padding: '10px', maxHeight: '80vh', overflowY: 'auto', zIndex: 10000, pointerEvents: 'auto' }}>
+      <div className="hidden-render" style={{ position: 'absolute', left: '-9999px', visibility: 'visible', width: '794px', background: 'white', padding: '10px', height: '0', overflow: 'hidden' }}>
         {TemplateComponents && Object.entries(sectionRefs.current).map(([key, ref]) => {
           const Component = TemplateComponents[key];
           if (!Component) return null;
@@ -1307,19 +1307,20 @@ const UIEditor = ({ initialUseWebGL = false }) => {
           };
 
           return (
-            // <div key={key} ref={ref} style={{ width: styleConfig[key]?.container?.width || 'auto' }}>
-            //   <Component {...propsMap[key]} />
-            // </div>
-            <div key={key} ref={ref} data-section={key} style={{
-              width: styleConfig[key]?.container?.width || 'auto',
-              height: styleConfig[key]?.container?.height || 'auto',
-              minHeight: styleConfig[key]?.container?.height || 'auto',
-              maxHeight: styleConfig[key]?.container?.height || 'none',
-              overflow: 'visible',
-              boxSizing: 'border-box',
-              position: 'relative',
-              minWidth: 0,
-            }}>
+            <div
+              key={key}
+              ref={ref}
+              data-section={key}
+              style={{
+                width: styleConfig[key]?.container?.width || 'auto',
+                height: styleConfig[key]?.container?.height || 'auto',
+                minHeight: styleConfig[key]?.container?.height || 'auto',
+                maxHeight: styleConfig[key]?.container?.height || 'none',
+                overflow: 'visible',
+                boxSizing: 'border-box',
+                position: 'relative',
+                minWidth: 0,
+              }}>
               <Component {...propsMap[key]} />
             </div>
           );

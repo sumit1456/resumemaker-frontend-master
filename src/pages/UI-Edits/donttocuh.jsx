@@ -64,15 +64,41 @@ class GeometrySnapshot {
     capture(element) {
         if (!element) return null;
 
+        // Store original transform
+        const originalTransform = element.style.transform;
+
+        // Temporarily remove any transforms that might affect measurement
+        let current = element;
+        const transforms = [];
+        while (current && current !== document.body) {
+            if (current.style.transform && current.style.transform !== 'none') {
+                transforms.push({
+                    element: current,
+                    transform: current.style.transform
+                });
+                current.style.transform = 'none';
+            }
+            current = current.parentElement;
+        }
+
         const rootRect = element.getBoundingClientRect();
         this.rootRect = rootRect;
         this.rootWidth = Math.ceil(rootRect.width);
         this.rootHeight = Math.ceil(rootRect.height);
         this.nodes = [];
-        this.processedNodes = new Set(); // Smart Snapshot: Prevent duplicate captures
+        this.processedNodes = new Set();
 
         this.captureNode(element);
+
+        // Restore transforms
+        transforms.forEach(({ element, transform }) => {
+            element.style.transform = transform;
+        });
+
         console.log(`📸 GeometrySnapshot: Captured ${this.nodes.length} nodes from ${element.tagName}`);
+
+        // TEST FIX: Verify layout capture
+        this.verifyCapture();
 
         return {
             nodes: this.nodes,
@@ -87,13 +113,12 @@ class GeometrySnapshot {
 
         const rect = element.getBoundingClientRect();
 
-        // Sub-pixel sanitization (0.5px rounding fixes fuzzy margins)
-        const sanitize = (val) => Math.round(val * 2) / 2;
-
-        const x = sanitize(rect.left - this.rootRect.left);
-        const y = sanitize(rect.top - this.rootRect.top);
-        const width = sanitize(rect.width);
-        const height = sanitize(rect.height);
+        // ✅ FIX: Calculate ABSOLUTE position from root
+        // This ensures all coordinates are in the same coordinate system
+        const x = Math.round((rect.left - this.rootRect.left) * 2) / 2;
+        const y = Math.round((rect.top - this.rootRect.top) * 2) / 2;
+        const width = Math.round(rect.width * 2) / 2;
+        const height = Math.round(rect.height * 2) / 2;
 
         const computed = window.getComputedStyle(element);
 
@@ -129,6 +154,21 @@ class GeometrySnapshot {
         if (type === 'text') {
             nodeData.text = element.textContent.trim();
             if (!nodeData.text) return; // Skip containers that look like text but are empty
+
+            // ✅ DEBUG LOG (remove in production)
+            if (styles.fontWeight === 'bold' || styles.fontSize > 13 || nodeData.text.length < 50) {
+                console.log(`[GEO] Text: "${nodeData.text.substring(0, 20)}..."`, {
+                    x, y,
+                    w: width,
+                    h: height,
+                    fs: styles.fontSize,
+                    lh: styles.lineHeight,
+                    padL: styles.padding?.left || 0,
+                    padT: styles.padding?.top || 0,
+                    finalY: y
+                });
+            }
+
             this.markProcessedRecursive(element);
         } else if (type === 'image') {
             nodeData.src = element.src;
@@ -147,6 +187,54 @@ class GeometrySnapshot {
         }
     }
 
+    verifyCapture() {
+        console.group('🔍 Geometry Capture Verification');
+
+        // Check for suspicious patterns
+        const nodesAtOrigin = this.nodes.filter(n => n.x === 0 && n.y === 0);
+        if (nodesAtOrigin.length > 5) {
+            console.warn(`⚠️ WARNING: ${nodesAtOrigin.length} nodes at (0,0) - likely positioning bug!`);
+            console.log('Nodes at origin:', nodesAtOrigin.map(n => ({
+                type: n.type,
+                text: n.text?.substring(0, 30),
+                size: `${n.width}x${n.height}`
+            })));
+        }
+
+        // Check for overlapping text nodes
+        const textNodes = this.nodes.filter(n => n.type === 'text');
+        let overlaps = 0;
+        for (let i = 0; i < textNodes.length; i++) {
+            for (let j = i + 1; j < textNodes.length; j++) {
+                const a = textNodes[i];
+                const b = textNodes[j];
+
+                // Check if rectangles overlap
+                if (a.x < b.x + b.width && a.x + a.width > b.x &&
+                    a.y < b.y + b.height && a.y + a.height > b.y) {
+                    overlaps++;
+                    if (overlaps <= 3) { // Only show first 3
+                        console.warn('Overlapping text:', {
+                            text1: a.text?.substring(0, 20),
+                            pos1: `(${a.x}, ${a.y})`,
+                            text2: b.text?.substring(0, 20),
+                            pos2: `(${b.x}, ${b.y})`
+                        });
+                    }
+                }
+            }
+        }
+
+        if (overlaps > 0) {
+            console.warn(`⚠️ Found ${overlaps} overlapping text nodes`);
+        }
+
+        console.groupEnd();
+    }
+
+    // Recurse into children
+
+
     markProcessedRecursive(element) {
         this.processedNodes.add(element);
         for (const child of element.children) {
@@ -157,30 +245,29 @@ class GeometrySnapshot {
     getNodeType(element, computed) {
         if (element.tagName === 'IMG') return 'image';
 
-        // Check for MEANINGFUL direct text nodes
-        const hasMeaningfulDirectText = Array.from(element.childNodes).some(
-            child => child.nodeType === Node.TEXT_NODE && child.textContent.replace(/\s/g, '').length > 0
-        );
+        // FIX 7: Better text node detection
+        const textContent = element.textContent.trim();
+        const hasOnlyText = element.children.length === 0 ||
+            Array.from(element.children).every(child =>
+                ['SPAN', 'STRONG', 'EM', 'B', 'I', 'MARK', 'BR'].includes(child.tagName)
+            );
 
-        // If it has direct text that isn't just spaces/newlines, it's a primary text node
-        if (hasMeaningfulDirectText) {
+        const isTextElement = ['SPAN', 'P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
+            'STRONG', 'EM', 'B', 'I', 'LABEL', 'A', 'LI'].includes(element.tagName);
+
+        // If it's a text element with content and no complex children, treat as text
+        if (isTextElement && textContent.length > 0 && hasOnlyText) {
             return 'text';
         }
 
-        // Check if it's a known text wrapper with ONLY text/simple inline children
-        const isTextWrapper = ['SPAN', 'STRONG', 'EM', 'B', 'I', 'MARK', 'P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LABEL', 'A'].includes(element.tagName);
-        if (isTextWrapper) {
-            // If it's a wrapper and has content, we might treat it as a single text unit 
-            // BUT only if it doesn't contain block-level children that would need separate positioning
-            const hasComplexChildren = Array.from(element.children).some(
-                child => !['SPAN', 'STRONG', 'EM', 'B', 'I', 'MARK', 'BR'].includes(child.tagName)
-            );
+        // Check for meaningful direct text
+        const hasDirectText = Array.from(element.childNodes).some(
+            child => child.nodeType === Node.TEXT_NODE &&
+                child.textContent.trim().length > 0
+        );
 
-            if (!hasComplexChildren && element.textContent.trim().length > 0) {
-                // Determine if we should capture this as one unit or let children be captured separately
-                // Rule: If it's a deep leaf (no children or children are just styling spans), capture as one.
-                return 'text';
-            }
+        if (hasDirectText && !element.querySelector('div, section, article, main, aside, header, footer, nav')) {
+            return 'text';
         }
 
         return 'box';
@@ -217,58 +304,6 @@ class GeometrySnapshot {
             wordBreak: computed.wordBreak
         };
 
-        // NEW: Override with explicit config styles if available
-        const dataStyleStr = element.getAttribute('data-style');
-        if (dataStyleStr) {
-            try {
-                const config = JSON.parse(dataStyleStr);
-                const safeFloat = (val) => {
-                    if (val === undefined || val === null) return undefined;
-                    return typeof val === 'number' ? val : parseFloat(val);
-                };
-
-                if (config.backgroundColor) styles.backgroundColor = config.backgroundColor;
-                if (config.color) styles.color = config.color;
-                if (config.fontFamily) styles.fontFamily = config.fontFamily;
-                if (config.fontWeight) styles.fontWeight = config.fontWeight;
-                if (config.fontStyle) styles.fontStyle = config.fontStyle;
-                if (config.textAlign) styles.textAlign = config.textAlign;
-
-                // Numbers
-                const bw = safeFloat(config.borderWidth);
-                if (bw !== undefined) styles.borderWidth = bw;
-
-                if (config.borderColor) styles.borderColor = config.borderColor;
-                if (config.borderStyle) styles.borderStyle = config.borderStyle;
-
-                const br = safeFloat(config.borderRadius);
-                if (br !== undefined) styles.borderRadius = br;
-
-                const fs = safeFloat(config.fontSize);
-                if (fs !== undefined) styles.fontSize = fs;
-
-                const lh = safeFloat(config.lineHeight);
-                if (lh !== undefined) styles.lineHeight = lh;
-
-                const ls = safeFloat(config.letterSpacing);
-                if (ls !== undefined) styles.letterSpacing = ls;
-
-                // Opacity
-                const op = safeFloat(config.opacity);
-                if (op !== undefined) styles.opacity = op;
-
-                // Box Shadow
-                if (config.boxShadow) styles.boxShadow = config.boxShadow;
-
-                // Text Properties
-                if (config.whiteSpace) styles.whiteSpace = config.whiteSpace;
-                if (config.wordBreak) styles.wordBreak = config.wordBreak;
-
-            } catch (e) {
-                // Ignore parse errors
-            }
-        }
-
         return this.compactStyles(styles);
     }
 
@@ -292,7 +327,7 @@ class GeometrySnapshot {
     }
 
     // Convert to Canvas2D rendering
-    renderToCanvas(canvas, scale = 2) {
+    renderToCanvas(canvas, scale = 8) {
         const ctx = canvas.getContext('2d');
         canvas.width = this.rootWidth * scale;
         canvas.height = this.rootHeight * scale;
@@ -415,7 +450,7 @@ class PixiRenderer {
             width: options.width || 595,
             height: options.height || 842,
             backgroundColor: options.backgroundColor || 0xffffff,
-            resolution: options.resolution || (window.devicePixelRatio || 1),
+            resolution: options.resolution || 3,
             antialias: options.antialias ?? true,
             ...options
         };
@@ -496,13 +531,13 @@ class PixiRenderer {
             const alpha = colorData.alpha !== undefined ? colorData.alpha : 1;
 
             if (graphics.fill) {
+                graphics.fill({ color: colorData.hex, alpha });
                 if (shape.type === 'circle') {
                     graphics.circle(shape.width / 2, shape.height / 2, shape.width / 2);
                 } else {
                     // Default to rect
                     graphics.rect(0, 0, shape.width, shape.height);
                 }
-                graphics.fill({ color: colorData.hex, alpha });
             } else {
                 graphics.beginFill(colorData.hex, alpha);
                 if (shape.type === 'circle') {
@@ -528,9 +563,9 @@ class PixiRenderer {
             const alpha = colorData.alpha !== undefined ? colorData.alpha : 1;
 
             if (graphics.stroke) {
+                graphics.stroke({ color: colorData.hex, width: line.thickness || 1, alpha });
                 graphics.moveTo(line.x1, line.y1);
                 graphics.lineTo(line.x2, line.y2);
-                graphics.stroke({ color: colorData.hex, width: line.thickness || 1, alpha });
             } else {
                 graphics.lineStyle(line.thickness || 1, colorData.hex, alpha);
                 graphics.moveTo(line.x1, line.y1);
@@ -582,12 +617,12 @@ class PixiRenderer {
             const fillAlpha = colorData.alpha !== undefined ? colorData.alpha : 1;
 
             if (graphics.fill) {
+                graphics.fill({ color: colorData.hex, alpha: fillAlpha });
                 if (styles.borderRadius > 0) {
                     graphics.roundRect(0, 0, width, height, styles.borderRadius);
                 } else {
                     graphics.rect(0, 0, width, height);
                 }
-                graphics.fill({ color: colorData.hex, alpha: fillAlpha });
             } else {
                 graphics.beginFill(colorData.hex, fillAlpha);
                 if (styles.borderRadius > 0) {
@@ -605,12 +640,12 @@ class PixiRenderer {
             const strokeAlpha = borderColorData.alpha !== undefined ? borderColorData.alpha : 1;
 
             if (graphics.stroke) {
+                graphics.stroke({ color: borderColorData.hex, width: styles.borderWidth, alignment: 0, alpha: strokeAlpha }); // alignment: 0 is inside (cleaner)
                 if (styles.borderRadius > 0) {
                     graphics.roundRect(0, 0, width, height, styles.borderRadius);
                 } else {
                     graphics.rect(0, 0, width, height);
                 }
-                graphics.stroke({ color: borderColorData.hex, width: styles.borderWidth, alignment: 0, alpha: strokeAlpha }); // alignment: 0 is inside (cleaner)
             } else {
                 graphics.lineStyle(styles.borderWidth, borderColorData.hex, strokeAlpha);
                 if (styles.borderRadius > 0) {
@@ -656,8 +691,8 @@ class PixiRenderer {
         for (let i = 1; i <= 3; i++) {
             const b = (blur / 3) * i;
             if (shadow.fill) {
-                shadow.roundRect(ox - b, oy - b, width + b * 2, height + b * 2, (radius || 0) + b);
                 shadow.fill({ color: shadowColorData.hex, alpha: shadowAlpha });
+                shadow.roundRect(ox - b, oy - b, width + b * 2, height + b * 2, (radius || 0) + b);
             } else {
                 shadow.beginFill(shadowColorData.hex, shadowAlpha);
                 shadow.drawRoundedRect(ox - b, oy - b, width + b * 2, height + b * 2, (radius || 0) + b);
@@ -665,7 +700,23 @@ class PixiRenderer {
             }
         }
 
-        graphics.addChildAt(shadow, 0); // Put shadow behind
+        graphics.addChild(shadow);
+        shadow.zIndex = -1; // Modern way to put behind if parent is sortable
+        // Or if not sortable, addChildAt is still okay but the warning suggests 
+        // they want us to ensure the parent is a proper Container (which Graphics is in v8)
+        // To be safe and avoid the warning, we'll just use addChild and trust zIndex or order.
+        // Actually, in v8, the order of addChild determines rendering order unless zIndex is used.
+        // So graphics.addChildAt(shadow, 0) is actually technically correct for "put at back".
+        // The warning might be because of how 'this' is being used.
+        // Let's use addChild and addChildAt based on the version if possible.
+        // For now, let's just use addChild and ensure it's added FIRST.
+        // Wait, graphics already has content? No, shadow is usually added first.
+        // I'll keep addChildAt(shadow, 0) for now but wrap it to be safe.
+        try {
+            graphics.addChildAt(shadow, 0);
+        } catch (e) {
+            graphics.addChild(shadow);
+        }
     }
 
     applyTransform(displayObject, transformStr, x, y, width, height) {
@@ -689,45 +740,57 @@ class PixiRenderer {
     }
 
     renderText(node) {
+        if (!node || !node.text) return null;
         const PIXI_LIB = PIXI || window.PIXI;
         const { x, y, width, height, text, styles } = node;
 
-        const colorData = this.parseColor(styles.color || '#000000');
-
-        // Sanitize line height: ensure it's not smaller than font size (unless explicitly 0, which is rare for text)
-        // If line height is < fontSize, it's likely unitless (e.g. 1.5) that was interpreted as pixels.
+        // Calculate proper line height
         let lineHeight = styles.lineHeight || styles.fontSize * 1.2;
-        if (lineHeight < styles.fontSize) {
-            lineHeight = styles.fontSize * 1.2;
+        if (lineHeight < styles.fontSize && lineHeight > 0 && lineHeight < 10) {
+            lineHeight = styles.fontSize * lineHeight;
         }
 
-        const textStyle = new PIXI_LIB.TextStyle({
+        const textStyleOptions = {
             fontFamily: styles.fontFamily || 'Arial',
-            fontSize: styles.fontSize || 12,
+            fontSize: styles.fontSize || 14,
             fontWeight: styles.fontWeight || 'normal',
             fontStyle: styles.fontStyle || 'normal',
-            fill: colorData.hex,
+            fill: styles.color || '#000000',
             align: styles.textAlign || 'left',
             lineHeight: lineHeight,
-            letterSpacing: styles.letterSpacing || 0,
-            wordWrap: styles.whiteSpace !== 'nowrap',
-            wordWrapWidth: width - (styles.padding?.left || 0) - (styles.padding?.right || 0),
-            breakWords: styles.wordBreak === 'break-all'
-        });
+            padding: 5
+        };
 
-        const pixiText = new PIXI_LIB.Text(text, textStyle);
+        const paddingLeft = (styles.padding?.left || 0);
+        const paddingRight = (styles.padding?.right || 0);
+        const effectiveWidth = Math.max(1, width - paddingLeft - paddingRight);
 
-        // Respect transform
-        if (styles.transform && styles.transform !== 'none') {
-            const startX = x + (styles.padding?.left || 0);
-            const startY = y + (styles.padding?.top || 0);
-            this.applyTransform(pixiText, styles.transform, startX, startY, width, height);
+        // REFINEMENT: If the browser says the text height is small, it's a single line.
+        // Disable wrapping to avoid sub-pixel math causing "User" to drop down.
+        const isSingleLine = height < lineHeight * 1.5;
+
+        if (isSingleLine || styles.whiteSpace === 'nowrap') {
+            textStyleOptions.wordWrap = false;
         } else {
-            pixiText.x = x + (styles.padding?.left || 0);
-            pixiText.y = y + (styles.padding?.top || 0);
+            textStyleOptions.wordWrap = true;
+            textStyleOptions.wordWrapWidth = effectiveWidth + 10; // Extra buffer
         }
 
-        const textAlpha = styles.opacity !== undefined ? styles.opacity : (colorData.alpha !== undefined ? colorData.alpha : 1);
+        // USE V8 CONSTRUCTOR: new Text({ text, style })
+        let pixiText;
+        try {
+            pixiText = new PIXI_LIB.Text({ text: text, style: textStyleOptions });
+        } catch (e) {
+            // Fallback for v7
+            pixiText = new PIXI_LIB.Text(text, new PIXI_LIB.TextStyle(textStyleOptions));
+        }
+
+        pixiText.x = x + paddingLeft;
+        pixiText.y = y + (styles.padding?.top || 0);
+
+        const colorData = this.parseColor(styles.color || '#000000');
+        const textAlpha = styles.opacity !== undefined ? styles.opacity :
+            (colorData.alpha !== undefined ? colorData.alpha : 1);
         pixiText.alpha = textAlpha;
 
         return pixiText;
@@ -1774,3 +1837,4 @@ class HybridRenderer {
         }
     }
 }
+
