@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import html2canvas from "html2canvas";
 import { useSelector } from "react-redux";
 import { mergeResumeData } from "./Utils";
-import { ATS_TEMPLATE_CONFIG, MODERN_TEMPLATE_CONFIG, TWO_COLUMN_TEMPLATE_CONFIG, TEMPLATE5_CONFIG } from "./TemplateConfigs";
+import { ATS_TEMPLATE_CONFIG, MODERN_TEMPLATE_CONFIG, TWO_COLUMN_TEMPLATE_CONFIG, TEMPLATE5_CONFIG, HEADER_LAYOUTS, CONTACT_LAYOUTS } from "./TemplateConfigs";
 import { defaultResumeData } from "./Utils";
 import "./UIEditor.css";
 import {
@@ -1190,37 +1190,39 @@ const UIEditor = ({ initialUseWebGL = false }) => {
         setSectionSnapshots(prev => ({ ...prev, [sectionName]: snapshot }));
 
         // 2. CAPTURE FOR KONVA (html2canvas)
-        // Keep this for now to support the existing Konva stage
-        const canvas = await html2canvas(element, {
-          backgroundColor: null,
-          scale: 8,
-          logging: false,
-          useCORS: true,
-          allowTaint: true,
-          height: element.offsetHeight,
-          letterRendering: true,
-          imageTimeout: 0,
-          onclone: (clonedDoc) => {
-            const clonedElement = clonedDoc.querySelector(`[data-section="${sectionName}"]`);
-            if (clonedElement) {
-              clonedElement.style.opacity = '1';
-              clonedElement.style.visibility = 'visible';
-              clonedElement.style.display = 'block';
+        // Only run this if NOT using WebGL to prevent double-rendering lag
+        if (!useWebGL) {
+          const canvas = await html2canvas(element, {
+            backgroundColor: null,
+            scale: 8,
+            logging: false,
+            useCORS: true,
+            allowTaint: true,
+            height: element.offsetHeight,
+            letterRendering: true,
+            imageTimeout: 0,
+            onclone: (clonedDoc) => {
+              const clonedElement = clonedDoc.querySelector(`[data-section="${sectionName}"]`);
+              if (clonedElement) {
+                clonedElement.style.opacity = '1';
+                clonedElement.style.visibility = 'visible';
+                clonedElement.style.display = 'block';
+              }
             }
-          }
-        });
+          });
 
-        // Convert canvas to image
-        const img = new Image();
-        img.width = element.offsetWidth;
-        img.height = element.offsetHeight;
+          // Convert canvas to image
+          const img = new Image();
+          img.width = element.offsetWidth;
+          img.height = element.offsetHeight;
 
-        img.onload = () => {
-          console.log(`✓ Rendered ${sectionName}: ${img.width}x${img.height}`);
-          setSectionImages(prev => ({ ...prev, [sectionName]: img }));
-        };
+          img.onload = () => {
+            console.log(`✓ Rendered ${sectionName}: ${img.width}x${img.height}`);
+            setSectionImages(prev => ({ ...prev, [sectionName]: img }));
+          };
 
-        img.src = canvas.toDataURL('image/png', 1.0);
+          img.src = canvas.toDataURL('image/png', 1.0);
+        }
 
       } catch (error) {
         console.error(`Error rendering ${sectionName}:`, error);
@@ -1289,7 +1291,21 @@ const UIEditor = ({ initialUseWebGL = false }) => {
 
 
       {/* Hidden rendering area - NOW VISIBLE FOR COMPARISON */}
-      <div className="hidden-render" style={{ position: 'absolute', left: '-9999px', visibility: 'visible', width: '794px', background: 'white', padding: '10px', height: '0', overflow: 'hidden' }}>
+      <div className="hidden-render" style={{
+        position: 'absolute',
+        right: '-100px',
+        top: '0',
+        visibility: 'visible',
+        width: '595px',
+        height: '842px',
+        background: 'white',
+        padding: '0',
+        zIndex: 10000000,
+        pointerEvents: 'none',
+        transform: 'scale(1)',
+        transformOrigin: 'top right',
+        overflow: 'hidden'
+      }}>
         {TemplateComponents && Object.entries(sectionRefs.current).map(([key, ref]) => {
           const Component = TemplateComponents[key];
           if (!Component) return null;
@@ -1349,6 +1365,54 @@ const UIEditor = ({ initialUseWebGL = false }) => {
             </select>
           </div>
         )}
+
+        {/* HEADER LAYOUTS SECTION */}
+        <h3 className="panel-title">HEADER LAYOUTS</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '20px' }}>
+          {HEADER_LAYOUTS && Object.entries(HEADER_LAYOUTS).map(([key, layout]) => (
+            <button
+              key={key}
+              onClick={() => {
+                // Merge the selected layout config into the current header config
+                setStyleConfig(prev => ({
+                  ...prev,
+                  header: {
+                    ...prev.header,
+                    ...layout.config
+                  }
+                }));
+              }}
+              className="btn-secondary"
+              style={{ fontSize: '10px', padding: '8px' }}
+            >
+              {layout.label}
+            </button>
+          ))}
+        </div>
+
+        {/* CONTACT LAYOUTS SECTION */}
+        <h3 className="panel-title">CONTACT LAYOUTS</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '20px' }}>
+          {CONTACT_LAYOUTS && Object.entries(CONTACT_LAYOUTS).map(([key, layout]) => (
+            <button
+              key={key}
+              onClick={() => {
+                // Merge the selected contact layout config into the current header config
+                setStyleConfig(prev => ({
+                  ...prev,
+                  header: {
+                    ...prev.header,
+                    ...layout.config
+                  }
+                }));
+              }}
+              className="btn-secondary"
+              style={{ fontSize: '10px', padding: '8px' }}
+            >
+              {layout.label}
+            </button>
+          ))}
+        </div>
 
         {/* BACKGROUND SHAPES SECTION */}
         <h3 className="panel-title">BACKGROUND ZONES</h3>

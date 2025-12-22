@@ -10,10 +10,7 @@
   color: #fff;
 }
 
-.hidden-render {
-  position: absolute;
-  left: -99999px;
-}
+
 
 /* ==================== DYNAMIC PERCEPTION EFFECTS ==================== */
 .tilt-section {

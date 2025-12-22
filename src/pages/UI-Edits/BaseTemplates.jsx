@@ -334,75 +334,166 @@ export const FlexibleHeaderSection = ({ resumeDetails, styleConfig }) => {
                     <FlexibleLayout
                         key="contact"
                         config={{
-                            display: config.contactLayoutType === "grid" ? "grid" : "flex",
-                            flexDirection: config.contactDirection || "row",
-                            flexWrap: config.contactWrap || "wrap",
-                            gridTemplateColumns: config.contactGridColumns,
-                            gridTemplateRows: config.contactGridRows,
-                            gap: config.contactGap || "16px",
-                            rowGap: config.contactRowGap,
-                            columnGap: config.contactColumnGap,
-                            alignItems: config.contactAlign || "center",
-                            justifyContent: config.contactJustify || "flex-start",
-                            marginTop: config.contactMarginTop || "0px",
-                            marginBottom: config.contactMarginBottom || "0px",
-                            marginLeft: config.contactMarginLeft || "0px",
-                            marginRight: config.contactMarginRight || "0px",
-                            padding: config.contactPadding || "0px",
-                            width: config.contactWidth || "auto",
-                            flex: config.contactFlex || "initial",
+                            ...config.contactLayout,
                             order: typeof config.contactOrder === 'number' ? config.contactOrder : 3,
                             ...config.contactZone,
                         }}
                     >
-                        {(config.contactItems || config.contactOrder)?.map((type, idx) => {
-                            const value = resumeDetails.contact?.[type];
-                            if (!value) return null;
+                        {/* Check if we have split groups */}
+                        {config.contactLeftGroup && config.contactRightGroup ? (
+                            <>
+                                {/* Left Group */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+                                    {config.contactLeftGroup.map((type, idx) => {
+                                        const value = resumeDetails.contact?.[type];
+                                        if (!value) return null;
 
-                            return (
-                                <FlexibleLayout
-                                    key={idx}
-                                    config={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: config.contactItemJustify || "flex-start",
-                                        padding: config.contactItemPadding || "0px",
-                                        margin: config.contactItemMargin || "0px",
-                                        ...config.contactItemContainer,
-                                    }}
-                                >
-                                    {config.showContactIcons && (
-                                        <div
-                                            style={{
-                                                marginRight: config.contactIconMarginRight || "8px",
-                                                marginLeft: config.contactIconMarginLeft || "0px",
-                                                display: "flex",
-                                                alignItems: "center"
-                                            }}
-                                        >
-                                            {(() => {
-                                                const IconComponent = contactIconMap[type] || Globe;
-                                                // Determine size: if it looks like a "dot" size (<=6), use a default icon size
-                                                const rawSize = config.contactIconSize;
-                                                const sizeNum = parseInt(rawSize) || 0;
-                                                const iconSize = (sizeNum > 6) ? rawSize : 14;
+                                        return (
+                                            <FlexibleLayout
+                                                key={idx}
+                                                config={{
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    justifyContent: config.contactItemJustify || "flex-start",
+                                                    padding: config.contactItemPadding || "0px",
+                                                    margin: config.contactItemMargin || "0px",
+                                                    ...config.contactItemContainer,
+                                                }}
+                                            >
+                                                {config.showContactIcons && (
+                                                    <div
+                                                        style={{
+                                                            marginRight: config.contactIconMarginRight || "8px",
+                                                            marginLeft: config.contactIconMarginLeft || "0px",
+                                                            display: "flex",
+                                                            alignItems: "center"
+                                                        }}
+                                                    >
+                                                        {(() => {
+                                                            const IconComponent = contactIconMap[type] || Globe;
+                                                            const rawSize = config.contactIconSize;
+                                                            const sizeNum = parseInt(rawSize) || 0;
+                                                            const iconSize = (sizeNum > 6) ? rawSize : 14;
 
-                                                return (
-                                                    <IconComponent
-                                                        size={iconSize}
-                                                        color={config.contactIconColor || "#000000"}
-                                                    />
-                                                );
-                                            })()}
-                                        </div>
-                                    )}
+                                                            return (
+                                                                <IconComponent
+                                                                    size={iconSize}
+                                                                    color={config.contactIconColor || "#000000"}
+                                                                />
+                                                            );
+                                                        })()}
+                                                    </div>
+                                                )}
 
-                                    <FlexibleText config={config.contactItemStyle}>
-                                        {value}
-                                    </FlexibleText>
-                                </FlexibleLayout>
-                            );
-                        })}
+                                                <FlexibleText config={config.contactItemStyle}>
+                                                    {value}
+                                                </FlexibleText>
+                                            </FlexibleLayout>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Right Group */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+                                    {config.contactRightGroup.map((type, idx) => {
+                                        const value = resumeDetails.contact?.[type];
+                                        if (!value) return null;
+
+                                        return (
+                                            <FlexibleLayout
+                                                key={idx}
+                                                config={{
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    justifyContent: config.contactItemJustify || "flex-start",
+                                                    padding: config.contactItemPadding || "0px",
+                                                    margin: config.contactItemMargin || "0px",
+                                                    ...config.contactItemContainer,
+                                                }}
+                                            >
+                                                {config.showContactIcons && (
+                                                    <div
+                                                        style={{
+                                                            marginRight: config.contactIconMarginRight || "8px",
+                                                            marginLeft: config.contactIconMarginLeft || "0px",
+                                                            display: "flex",
+                                                            alignItems: "center"
+                                                        }}
+                                                    >
+                                                        {(() => {
+                                                            const IconComponent = contactIconMap[type] || Globe;
+                                                            const rawSize = config.contactIconSize;
+                                                            const sizeNum = parseInt(rawSize) || 0;
+                                                            const iconSize = (sizeNum > 6) ? rawSize : 14;
+
+                                                            return (
+                                                                <IconComponent
+                                                                    size={iconSize}
+                                                                    color={config.contactIconColor || "#000000"}
+                                                                />
+                                                            );
+                                                        })()}
+                                                    </div>
+                                                )}
+
+                                                <FlexibleText config={config.contactItemStyle}>
+                                                    {value}
+                                                </FlexibleText>
+                                            </FlexibleLayout>
+                                        );
+                                    })}
+                                </div>
+                            </>
+                        ) : (
+                            /* Original single-group layout */
+                            (config.contactItems || config.contactOrder)?.map((type, idx) => {
+                                const value = resumeDetails.contact?.[type];
+                                if (!value) return null;
+
+                                return (
+                                    <FlexibleLayout
+                                        key={idx}
+                                        config={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: config.contactItemJustify || "flex-start",
+                                            padding: config.contactItemPadding || "0px",
+                                            margin: config.contactItemMargin || "0px",
+                                            ...config.contactItemContainer,
+                                        }}
+                                    >
+                                        {config.showContactIcons && (
+                                            <div
+                                                style={{
+                                                    marginRight: config.contactIconMarginRight || "8px",
+                                                    marginLeft: config.contactIconMarginLeft || "0px",
+                                                    display: "flex",
+                                                    alignItems: "center"
+                                                }}
+                                            >
+                                                {(() => {
+                                                    const IconComponent = contactIconMap[type] || Globe;
+                                                    const rawSize = config.contactIconSize;
+                                                    const sizeNum = parseInt(rawSize) || 0;
+                                                    const iconSize = (sizeNum > 6) ? rawSize : 14;
+
+                                                    return (
+                                                        <IconComponent
+                                                            size={iconSize}
+                                                            color={config.contactIconColor || "#000000"}
+                                                        />
+                                                    );
+                                                })()}
+                                            </div>
+                                        )}
+
+                                        <FlexibleText config={config.contactItemStyle}>
+                                            {value}
+                                        </FlexibleText>
+                                    </FlexibleLayout>
+                                );
+                            })
+                        )}
                     </FlexibleLayout>
                 ) : null;
 
@@ -858,7 +949,7 @@ export const FlexibleContactSection = ({ resumeDetails, styleConfig }) => {
             )}
 
             <FlexibleLayout config={config.contactLayout}>
-                {config.contactOrder.map((contactType, idx) => {
+                {(config.contactOrder || []).map((contactType, idx) => {
                     const value = resumeDetails.contact?.[contactType];
                     if (!value) return null;
 

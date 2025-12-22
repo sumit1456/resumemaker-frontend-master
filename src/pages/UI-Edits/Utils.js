@@ -361,6 +361,15 @@ export function mergeResumeData(currentResumeDetails = {}, resumeData = {}) {
           ?? "",
         email: resumeData.resumeDetails?.contact?.email
           ?? currentResumeDetails.resumeDetails?.contact?.email
+          ?? "",
+        linkedin: resumeData.resumeDetails?.contact?.linkedin
+          ?? currentResumeDetails.resumeDetails?.contact?.linkedin
+          ?? "",
+        github: resumeData.resumeDetails?.contact?.github
+          ?? currentResumeDetails.resumeDetails?.contact?.github
+          ?? "",
+        location: resumeData.resumeDetails?.contact?.location
+          ?? currentResumeDetails.resumeDetails?.contact?.location
           ?? ""
       },
       summary: resumeData.resumeDetails?.summary

@@ -408,27 +408,33 @@ export const ATS_TEMPLATE_CONFIG = {
     },
     contactLayout: {
       display: "flex",
-      flexDirection: "column",   // items stacked vertically
-      alignItems: "flex-start",  // left-aligned
-      gap: "12px",              // very large vertical space
-      flexWrap: "nowrap"
+      flexDirection: "row",      // Split into left and right
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      gap: "20px",
+      flexWrap: "nowrap",
+      marginTop: "8px"
     },
-
+    // Split contact into two groups
+    contactLeftGroup: ["phone", "email"],  // Left side items
+    contactRightGroup: ["linkedin", "github", "location"],  // Right side items
 
     nameStyle: {
       fontSize: "24px",
       fontWeight: "bold",
-      color: "#000000"
+      color: "#000000",
+      textAlign: "center"
     },
     titleStyle: {
       fontSize: "14px",
       fontWeight: "normal",
-      color: "#c53a3a"
+      color: "#c53a3a",
+      textAlign: "center"
     },
     showTitle: true,
     showContact: true,
 
-    contactOrder: ["email", "phone", "linkedin", "location"],
+    contactOrder: ["phone", "email", "linkedin", "location"],
     contactItemStyle: {
       fontSize: "9px",
       color: "#000000"
@@ -955,25 +961,29 @@ export const MODERN_TEMPLATE_CONFIG = {
     nameStyle: { fontSize: "28px", fontWeight: "900", color: "#FFFFFF", textTransform: "uppercase" },
     titleStyle: { fontSize: "14px", fontWeight: "normal", color: "#F0F0F0", marginTop: "4px" },
     showTitle: true,
-    showContact: false, // Contact section handled separately below
-    showDivider: false, // Divider handled by column structure
+    showTitle: true,
+    showContact: true,
+
+    // Contact Configuration moved to header
+    contactLayout: {
+      display: "flex",
+      flexDirection: "row",
+      gap: "12px",
+      marginTop: "8px",
+      justifyContent: "flex-start",
+      flexWrap: "wrap"
+    },
+    contactOrder: ["phone", "email", "linkedin", "location"],
+    contactItemStyle: { fontSize: "12px", color: "#FFFFFF" },
+    showContactIcons: true,
+    contactIconColor: "#FFFFFF",
+
+    // Split layout support (optional defaults)
+    contactLeftGroup: ["phone", "email"],
+    contactRightGroup: ["linkedin", "location"],
   },
 
-  // NEW SECTION: Contact (styled for the sidebar)
-  contact: {
-    container: {
-      width: "200px", // Match sidebar width
-      backgroundColor: "transparent",
-      padding: "20px 20px 20px 40px", // Left padding for alignment
-      color: "#FFFFFF",
-    },
-    showTitle: true,
-    titleStyle: { fontSize: "14px", fontWeight: "bold", color: "#FFFFFF", marginBottom: "8px", textTransform: "uppercase" },
-    contactLayout: { display: "flex", flexDirection: "column", gap: "6px" },
-    contactOrder: ["phone", "email", "linkedin", "location"],
-    contactItemStyle: { fontSize: "9px", color: "#F0F0F0" },
-    showContactIcons: true,
-  },
+  // Contact section removed (now part of header)
 
   skills: {
     container: {
@@ -1874,6 +1884,225 @@ export const TEMPLATE5_CONFIG = {
       color: "#2C3E50",
       marginBottom: "8px",
       lineHeight: "1.5"
+    }
+  }
+};
+
+export const HEADER_LAYOUTS = {
+  centered: {
+    label: "Centered Stack",
+    config: {
+      nameAlign: "center",
+      titleAlign: "center",
+      mainLayout: {
+        display: "flex",
+        flexDirection: "column",
+        gap: "8px"
+      },
+      nameSection: {
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "center"
+      },
+      contactLayout: {
+        display: "flex",
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "flex-start",
+        gap: "20px",
+        flexWrap: "nowrap",
+        marginTop: "8px"
+      },
+      contactLeftGroup: ["phone", "email"],
+      contactRightGroup: ["linkedin", "github", "location"],
+      nameStyle: {
+        textAlign: "center",
+        alignSelf: "center",
+        fontSize: "32px"
+      },
+      titleStyle: {
+        textAlign: "center",
+        alignSelf: "center",
+        fontSize: "16px"
+      }
+    }
+  },
+  leftStack: {
+    label: "Left Stack",
+    config: {
+      nameAlign: "flex-start",
+      titleAlign: "flex-start",
+      mainLayout: {
+        display: "flex",
+        flexDirection: "column",
+        gap: "8px"
+      },
+      nameSection: {
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "flex-start",
+        alignItems: "flex-start"
+      },
+      contactLayout: {
+        display: "flex",
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "flex-start",
+        gap: "20px",
+        flexWrap: "nowrap",
+        marginTop: "8px"
+      },
+      contactLeftGroup: ["phone", "email"],
+      contactRightGroup: ["linkedin", "github", "location"],
+      nameStyle: {
+        textAlign: "left",
+        alignSelf: "flex-start",
+        fontSize: "28px"
+      },
+      titleStyle: {
+        textAlign: "left",
+        alignSelf: "flex-start",
+        fontSize: "14px"
+      }
+    }
+  },
+  modernRow: {
+    label: "Modern Row",
+    config: {
+      nameAlign: "flex-start",
+      titleAlign: "flex-start",
+      mainLayout: {
+        display: "flex",
+        flexDirection: "column",
+        gap: "8px"
+      },
+      nameSection: {
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "flex-start"
+      },
+      contactLayout: {
+        display: "flex",
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "flex-start",
+        gap: "20px",
+        flexWrap: "nowrap",
+        marginTop: "8px"
+      },
+      contactLeftGroup: ["phone", "email"],
+      contactRightGroup: ["linkedin", "github", "location"],
+      nameStyle: {
+        textAlign: "left",
+        alignSelf: "flex-start",
+        fontSize: "36px"
+      },
+      titleStyle: {
+        textAlign: "left",
+        alignSelf: "flex-start",
+        fontSize: "18px"
+      }
+    }
+  },
+  split: {
+    label: "Split View",
+    config: {
+      mainLayout: {
+        display: "flex",
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: "20px"
+      },
+      nameSection: {
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "flex-start",
+        flex: 1
+      },
+      contactLayout: {
+        display: "flex",
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "flex-start",
+        gap: "20px",
+        flexWrap: "nowrap",
+        marginTop: "8px"
+      },
+      contactLeftGroup: ["phone", "email"],
+      contactRightGroup: ["linkedin", "github", "location"],
+      nameStyle: {
+        textAlign: "left",
+        fontSize: "26px"
+      },
+      titleStyle: {
+        textAlign: "left",
+        fontSize: "13px"
+      }
+    }
+  }
+};
+
+export const CONTACT_LAYOUTS = {
+  split: {
+    label: "Split (Default)",
+    config: {
+      contactLayout: {
+        display: "flex",
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "flex-start",
+        gap: "20px",
+        flexWrap: "nowrap",
+        marginTop: "8px"
+      },
+      contactLeftGroup: ["phone", "email"],
+      contactRightGroup: ["linkedin", "github", "location"]
+    }
+  },
+  row: {
+    label: "Single Row",
+    config: {
+      contactLayout: {
+        display: "flex",
+        flexDirection: "row",
+        justifyContent: "flex-start",
+        alignItems: "center",
+        gap: "12px",
+        flexWrap: "wrap",
+        marginTop: "8px"
+      },
+      contactLeftGroup: null,
+      contactRightGroup: null
+    }
+  },
+  column: {
+    label: "Column Stack",
+    config: {
+      contactLayout: {
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "flex-start",
+        gap: "4px",
+        marginTop: "8px"
+      },
+      contactLeftGroup: null,
+      contactRightGroup: null
+    }
+  },
+  grid: {
+    label: "2x2 Grid",
+    config: {
+      contactLayout: {
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: "8px",
+        marginTop: "8px"
+      },
+      contactLeftGroup: null,
+      contactRightGroup: null
     }
   }
 };
