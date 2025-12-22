@@ -36,6 +36,19 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
   const pixiApp = useRef(null);
   const [initTrigger, setInitTrigger] = useState(0);
 
+  // Robust Drag Session Ref
+  const dragSession = useRef({
+    active: false,
+    type: null,
+    id: null,
+    target: null, // The Pixi Graphics/Container object
+    offset: { x: 0, y: 0 },
+    startX: 0,
+    startY: 0,
+    dragStartX: 0,
+    dragStartY: 0
+  });
+
   useEffect(() => {
     let app;
     const initPixi = async () => {
@@ -77,9 +90,42 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
         app.stage.addChild(sectionsLayer);
         app.stage.addChild(linesLayer);
 
-        // Add background click to deselect all
+        // Global Event Listeners (Stage-level) to ensure "Pick once. Move forever"
         app.stage.interactive = true;
-        app.stage.hitArea = app.screen; // Make entire stage clickable
+        app.stage.hitArea = app.screen;
+
+        app.stage.on('pointermove', (e) => {
+          if (dragSession.current.active && dragSession.current.target) {
+            const session = dragSession.current;
+            const newPos = e.data.getLocalPosition(app.stage);
+
+            // Calculate new position based on original offset
+            const deltaX = newPos.x - session.dragStartX;
+            const deltaY = newPos.y - session.dragStartY;
+
+            session.target.x = session.startX + deltaX;
+            session.target.y = session.startY + deltaY;
+          }
+        });
+
+        const endDrag = () => {
+          if (dragSession.current.active) {
+            const session = dragSession.current;
+            const finalX = Math.round(session.target.x);
+            const finalY = Math.round(session.target.y);
+
+            console.log(`[DRAG] Global End: ${session.type} ${session.id} at (${finalX}, ${finalY})`);
+
+            onDragEnd(session.type, session.id, { x: finalX, y: finalY });
+            session.active = false;
+            session.target = null;
+          }
+        };
+
+        app.stage.on('pointerup', endDrag);
+        app.stage.on('pointerupoutside', endDrag);
+
+        // Background click to deselect
         app.stage.on('pointerdown', (e) => {
           // Only deselect if clicking directly on stage (not on children)
           if (e.target === app.stage) {
@@ -181,6 +227,7 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
       }
       graphics.x = shape.x;
       graphics.y = shape.y;
+      graphics._id = shape.id; // Added for persistence
 
       // Make interactive
       graphics.interactive = true;
@@ -188,33 +235,20 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
 
       graphics.on('pointerdown', (event) => {
         onSelect('shape', shape.id);
-        graphics.data = event.data;
-        graphics.dragging = true;
-        graphics.dragOffset = event.data.getLocalPosition(graphics.parent);
-        graphics.dragOffset.x -= graphics.x;
-        graphics.dragOffset.y -= graphics.y;
-      });
 
-      graphics.on('pointermove', () => {
-        if (graphics.dragging) {
-          const newPosition = graphics.data.getLocalPosition(graphics.parent);
-          graphics.x = newPosition.x - graphics.dragOffset.x;
-          graphics.y = newPosition.y - graphics.dragOffset.y;
-        }
-      });
+        const pointerPos = event.data.getLocalPosition(graphics.parent);
+        dragSession.current = {
+          active: true,
+          type: 'shape',
+          id: shape.id,
+          target: graphics,
+          startX: graphics.x,
+          startY: graphics.y,
+          dragStartX: pointerPos.x,
+          dragStartY: pointerPos.y
+        };
 
-      graphics.on('pointerup', () => {
-        if (graphics.dragging) {
-          graphics.dragging = false;
-          onDragEnd('shape', shape.id, { x: Math.round(graphics.x), y: Math.round(graphics.y) });
-        }
-      });
-
-      graphics.on('pointerupoutside', () => {
-        if (graphics.dragging) {
-          graphics.dragging = false;
-          onDragEnd('shape', shape.id, { x: Math.round(graphics.x), y: Math.round(graphics.y) });
-        }
+        console.log(`[DRAG] Start Shape: ${shape.id} at (${graphics.x}, ${graphics.y})`);
       });
 
       shapesLayer.addChild(graphics);
@@ -289,67 +323,22 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
         sectionContainer.on('pointerdown', (event) => {
           const pointerPos = event.data.getLocalPosition(sectionContainer.parent);
 
-          // Calculate offset from container position
-          sectionContainer._dragStartX = pointerPos.x;
-          sectionContainer._dragStartY = pointerPos.y;
-          sectionContainer._startX = sectionContainer.x;
-          sectionContainer._startY = sectionContainer.y;
-          sectionContainer.dragging = true;
-          sectionContainer.data = event.data;
+          dragSession.current = {
+            active: true,
+            type: 'section',
+            id: sectionName,
+            target: sectionContainer,
+            startX: sectionContainer.x,
+            startY: sectionContainer.y,
+            dragStartX: pointerPos.x,
+            dragStartY: pointerPos.y
+          };
 
-          console.log(`[DRAG] START: ${sectionName} at (${Math.round(sectionContainer.x)}, ${Math.round(sectionContainer.y)})`);
+          console.log(`[DRAG] Start Section: ${sectionName} at (${Math.round(sectionContainer.x)}, ${Math.round(sectionContainer.y)})`);
 
-          // Lock selection
           onSelect('section', sectionName);
           updateSelectionVisuals(true);
         });
-
-        sectionContainer.on('pointermove', () => {
-          if (sectionContainer.dragging && sectionContainer.data) {
-            const frameStart = performance.now();
-
-            const newPos = sectionContainer.data.getLocalPosition(sectionContainer.parent);
-            // Use delta from start position for stable dragging
-            const deltaX = newPos.x - sectionContainer._dragStartX;
-            const deltaY = newPos.y - sectionContainer._dragStartY;
-            sectionContainer.x = sectionContainer._startX + deltaX;
-            sectionContainer.y = sectionContainer._startY + deltaY;
-
-            // Performance logging
-            const frameEnd = performance.now();
-            const frameTime = frameEnd - frameStart;
-            const fps = 1000 / frameTime;
-
-            // Log every 10 frames to avoid spam
-            if (!sectionContainer._dragFrameCount) sectionContainer._dragFrameCount = 0;
-            sectionContainer._dragFrameCount++;
-
-            if (sectionContainer._dragFrameCount % 10 === 0) {
-              console.log(`[DRAG] Performance: ${fps.toFixed(0)} FPS, ${frameTime.toFixed(2)}ms frame time`);
-            }
-          }
-        });
-
-        const cleanupDrag = () => {
-          if (sectionContainer.dragging) {
-            sectionContainer.dragging = false;
-            sectionContainer.data = null;
-
-            const finalX = Math.round(sectionContainer.x);
-            const finalY = Math.round(sectionContainer.y);
-            console.log(`[DRAG] END: ${sectionName} at (${finalX}, ${finalY})`);
-
-            // Keep selection visuals - don't hide border
-
-            onDragEnd('section', sectionName, {
-              x: finalX,
-              y: finalY
-            });
-          }
-        };
-
-        sectionContainer.on('pointerup', cleanupDrag);
-        sectionContainer.on('pointerupoutside', cleanupDrag);
 
         // Store reference for external deselection
         sectionContainer.updateSelection = updateSelectionVisuals;
@@ -370,7 +359,19 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
       }
     });
 
-    // Sync selection state with selectedId prop
+    // RE-ATTACH DRAG TARGET IF RENDER INTERRUPTED
+    if (dragSession.current.active) {
+      const { type, id } = dragSession.current;
+      if (type === 'shape') {
+        const shapeObj = shapesLayer.children.find(c => c._id === id);
+        if (shapeObj) dragSession.current.target = shapeObj;
+      } else if (type === 'section') {
+        const sectionObj = sectionsLayer.children.find(c => c._sectionName === id);
+        if (sectionObj) dragSession.current.target = sectionObj;
+      }
+    }
+
+    // Update selection visuals for all sections
     sectionsLayer.children.forEach(container => {
       if (container.updateSelection) {
         const isSelected = selectedId === container._sectionName;
