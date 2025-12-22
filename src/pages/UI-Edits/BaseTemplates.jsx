@@ -109,7 +109,6 @@ const applyStyles = (baseStyle, configStyle) => {
  * Enhanced Flexible Container
  */
 const FlexibleContainer = ({ children, config = {} }) => {
-    // Debug logging for background color issue
     const finalStyles = applyStyles({
         width: "fit-content",
         maxWidth: "100%",
@@ -749,13 +748,6 @@ export const FlexibleExperienceSection = ({ experiences, styleConfig }) => {
 export const FlexibleProjectsSection = ({ projects, styleConfig }) => {
     const config = styleConfig.projects;
 
-    // Debug: Log projects section background config
-    console.log("[Projects Section] Container config:", {
-        containerBg: config.container?.backgroundColor,
-        itemStyleBg: config.itemStyle?.backgroundColor,
-        fullContainer: config.container
-    });
-
     return (
         <FlexibleContainer config={config.container}>
             {config.showTitle && (
@@ -820,13 +812,6 @@ export const FlexibleProjectsSection = ({ projects, styleConfig }) => {
  */
 export const FlexibleEducationSection = ({ educationList, styleConfig }) => {
     const config = styleConfig.education;
-
-    // Debug: Log education section background config
-    console.log("[Education Section] Container config:", {
-        containerBg: config.container?.backgroundColor,
-        itemStyleBg: config.itemStyle?.backgroundColor,
-        fullContainer: config.container
-    });
 
     return (
         <FlexibleContainer config={config.container}>

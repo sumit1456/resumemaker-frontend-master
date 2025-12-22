@@ -31,7 +31,7 @@ const normalizeColorForInput = (color) => {
   return color;
 };
 
-const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, onDragEnd, onSelect, selectedId, type }) => {
+const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, onDragEnd, onSelect, selectedId, type, isAnimating }) => {
   const containerRef = useRef(null);
   const pixiApp = useRef(null);
   const [initTrigger, setInitTrigger] = useState(0);
@@ -289,6 +289,46 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
 
   }, [shapes, lines, sections, sectionSnapshots, selectedId, initTrigger]);
 
+  // Animation Ticker - SEPARATE useEffect
+  useEffect(() => {
+    const app = pixiApp.current;
+    if (!app || !isAnimating) return;
+
+    let time = 0;
+    let frameCount = 0;
+    let lastLogTime = performance.now();
+
+    const animate = () => {
+      time += 0.05;
+      frameCount++;
+
+      // FPS Logging
+      const now = performance.now();
+      if (now - lastLogTime >= 1000) {
+        console.log(`[ANIMATION] FPS: ${Math.round((frameCount * 1000) / (now - lastLogTime))}`);
+        frameCount = 0;
+        lastLogTime = now;
+      }
+
+      // Animate Sections (Bounce)
+      const sectionsLayer = app.stage.children[1];
+      if (sectionsLayer) {
+        sectionsLayer.children.forEach((child, index) => {
+          // Simple sine wave bounce based on index
+          child.y += Math.sin(time + index) * 2;
+        });
+      }
+    };
+
+    app.ticker.add(animate);
+    console.log('[ANIMATION] Started');
+
+    return () => {
+      app.ticker.remove(animate);
+      console.log('[ANIMATION] Stopped');
+    };
+  }, [isAnimating, initTrigger]);
+
   return (
     <div
       ref={containerRef}
@@ -339,6 +379,7 @@ const UIEditor = ({ initialUseWebGL = false }) => {
   // Mobile responsiveness state
   const [isMobile, setIsMobile] = useState(false);
   const [activeTab, setActiveTab] = useState('controls'); // 'controls' | 'properties'
+  const [isAnimating, setIsAnimating] = useState(false); // TEST ANIMATION STATE
 
   // Mobile detection effect
   useEffect(() => {
@@ -1165,6 +1206,7 @@ const UIEditor = ({ initialUseWebGL = false }) => {
     if (!TemplateComponents || !resumeData) return;
 
     const renderSectionData = async (sectionName) => {
+      const t0 = performance.now();
       const ref = sectionRefs.current[sectionName];
       if (!ref?.current) {
         console.warn(`No ref found for ${sectionName}`);
@@ -1176,16 +1218,16 @@ const UIEditor = ({ initialUseWebGL = false }) => {
       try {
         // Wait for fonts to load
         await document.fonts.ready;
+        const t1 = performance.now();
 
         // Force layout recalculation
         element.offsetHeight; // Trigger reflow
-
-        // Small delay to ensure all styles are applied
-        await new Promise(resolve => setTimeout(resolve, 500));
+        const t2 = performance.now();
 
         // 1. CAPTURE FOR WEBGL (Geometry Snapshot)
         const scanner = new GeometrySnapshot();
         const snapshot = scanner.capture(element);
+        const t3 = performance.now();
 
         setSectionSnapshots(prev => ({ ...prev, [sectionName]: snapshot }));
 
@@ -1210,6 +1252,7 @@ const UIEditor = ({ initialUseWebGL = false }) => {
               }
             }
           });
+          const t4 = performance.now();
 
           // Convert canvas to image
           const img = new Image();
@@ -1217,11 +1260,12 @@ const UIEditor = ({ initialUseWebGL = false }) => {
           img.height = element.offsetHeight;
 
           img.onload = () => {
-            console.log(`✓ Rendered ${sectionName}: ${img.width}x${img.height}`);
             setSectionImages(prev => ({ ...prev, [sectionName]: img }));
           };
 
           img.src = canvas.toDataURL('image/png', 1.0);
+        } else {
+          // WebGL Mode - capture complete
         }
 
       } catch (error) {
@@ -1231,9 +1275,12 @@ const UIEditor = ({ initialUseWebGL = false }) => {
 
     // Render all sections in parallel
     const renderAllSections = async () => {
+      console.log('--- START RENDER ALL SECTIONS ---');
+      const tStart = performance.now();
       const sections = Object.keys(sectionRefs.current);
       await Promise.all(sections.map(sectionName => renderSectionData(sectionName)));
-      console.log('✓ All sections data captured');
+      const tEnd = performance.now();
+      console.log(`--- END RENDER ALL SECTIONS: ${(tEnd - tStart).toFixed(1)}ms ---`);
     };
 
     const timer = setTimeout(() => {
@@ -1246,7 +1293,8 @@ const UIEditor = ({ initialUseWebGL = false }) => {
     styleConfig,
     resumeData,
     sectionWidths,
-    sectionHeights
+    sectionHeights,
+    useWebGL
   ]);
 
 
@@ -1290,7 +1338,7 @@ const UIEditor = ({ initialUseWebGL = false }) => {
       {/* Hidden rendering area */}
 
 
-      {/* Hidden rendering area - NOW VISIBLE FOR COMPARISON */}
+      {/* Hidden rendering areaMATCH IS NOT APPLICABLE FOR SEARCH TOOLMPARISON */}
       <div className="hidden-render" style={{
         position: 'absolute',
         right: '-100px',
@@ -1416,6 +1464,16 @@ const UIEditor = ({ initialUseWebGL = false }) => {
 
         {/* BACKGROUND SHAPES SECTION */}
         <h3 className="panel-title">BACKGROUND ZONES</h3>
+
+        {/* ANIMATION TEST BUTTON */}
+        <button
+          onClick={() => setIsAnimating(!isAnimating)}
+          className={`btn-primary full-width ${isAnimating ? 'active-anim' : ''}`}
+          style={{ marginBottom: '10px', backgroundColor: isAnimating ? '#ef4444' : '#8b5cf6' }}
+        >
+          {isAnimating ? '⏹ STOP BOUNCE ANIMATION' : '▶ TEST BOUNCE ANIMATION'}
+        </button>
+
         <button onClick={addShape} className="btn-primary full-width">
           + ADD BACKGROUND SHAPE
         </button>
@@ -1779,6 +1837,7 @@ const UIEditor = ({ initialUseWebGL = false }) => {
                     if (type === 'section') setSelectedSection(id);
                   }}
                   selectedId={selectedShape || selectedLine || selectedSection}
+                  isAnimating={isAnimating}
                 />
               ) : (
                 <Stage
@@ -1860,6 +1919,7 @@ const UIEditor = ({ initialUseWebGL = false }) => {
                       if (type === 'section') setSelectedSection(id);
                     }}
                     selectedId={selectedShape || selectedLine || selectedSection}
+                    isAnimating={isAnimating}
                   />
                 ) : (
                   <Stage
