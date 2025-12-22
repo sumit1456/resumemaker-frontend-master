@@ -45,15 +45,25 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
       // Initialize PixiJS Application (v8 style)
       app = new PIXI_LIB.Application();
 
+      // Device-specific config
+      const isMobile = window.innerWidth < 768;
+      // On mobile, excessive resolution (like 4) combined with scaling down can cause
+      // blurriness due to browser resampling or memory limits. 
+      // Using devicePixelRatio is usually optimal.
+      const resolution = isMobile ? Math.min(window.devicePixelRatio || 2, 3) : 4;
+
       try {
         await app.init({
           width: width,
           height: height,
           background: '#ffffff',
-          resolution: 4,
+          resolution: resolution,
           autoDensity: true,
           antialias: true,
+          roundPixels: true, // Helps with text sharpness
         });
+
+        console.log(`[WebGL] Initialized. Mobile: ${isMobile}, Res: ${resolution}`);
 
         pixiApp.current = app;
         containerRef.current.appendChild(app.canvas || app.view);
@@ -66,6 +76,16 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
         app.stage.addChild(shapesLayer);
         app.stage.addChild(sectionsLayer);
         app.stage.addChild(linesLayer);
+
+        // Add background click to deselect all
+        app.stage.interactive = true;
+        app.stage.hitArea = app.screen; // Make entire stage clickable
+        app.stage.on('pointerdown', (e) => {
+          // Only deselect if clicking directly on stage (not on children)
+          if (e.target === app.stage) {
+            onSelect(null, null); // Deselect all
+          }
+        });
 
         // Force a re-render once initialized
         setInitTrigger(prev => prev + 1);
@@ -239,53 +259,124 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
         sectionContainer.y = pos.y;
         sectionContainer.interactive = true;
         sectionContainer.buttonMode = true;
+        sectionContainer.cursor = 'move';
 
+        // Store metadata
+        sectionContainer._sectionName = sectionName;
+        sectionContainer._selected = false;
+
+        // Create persistent selection border (hidden initially)
+        const borderInset = 5;
+        const selectionBorder = new PIXI.Graphics();
+        if (selectionBorder.stroke) {
+          selectionBorder.rect(-borderInset, -borderInset, snapshot.width + borderInset * 2, snapshot.height + borderInset * 2);
+          selectionBorder.stroke({ color: 0x3b82f6, width: 2, alpha: 0.8 });
+        } else {
+          selectionBorder.lineStyle(2, 0x3b82f6, 0.8);
+          selectionBorder.drawRect(-borderInset, -borderInset, snapshot.width + borderInset * 2, snapshot.height + borderInset * 2);
+        }
+        selectionBorder.name = '_selectionBorder';
+        selectionBorder.visible = false;
+        sectionContainer.addChild(selectionBorder);
+
+        // Update selection visuals based on state
+        const updateSelectionVisuals = (isSelected) => {
+          sectionContainer._selected = isSelected;
+          selectionBorder.visible = isSelected;
+        };
+
+        // SELECTION: Click to lock selection
         sectionContainer.on('pointerdown', (event) => {
-          onSelect('section', sectionName);
-          sectionContainer.data = event.data;
+          const pointerPos = event.data.getLocalPosition(sectionContainer.parent);
+
+          // Calculate offset from container position
+          sectionContainer._dragStartX = pointerPos.x;
+          sectionContainer._dragStartY = pointerPos.y;
+          sectionContainer._startX = sectionContainer.x;
+          sectionContainer._startY = sectionContainer.y;
           sectionContainer.dragging = true;
-          sectionContainer.dragOffset = event.data.getLocalPosition(sectionContainer.parent);
-          sectionContainer.dragOffset.x -= sectionContainer.x;
-          sectionContainer.dragOffset.y -= sectionContainer.y;
+          sectionContainer.data = event.data;
+
+          console.log(`[DRAG] START: ${sectionName} at (${Math.round(sectionContainer.x)}, ${Math.round(sectionContainer.y)})`);
+
+          // Lock selection
+          onSelect('section', sectionName);
+          updateSelectionVisuals(true);
         });
 
         sectionContainer.on('pointermove', () => {
-          if (sectionContainer.dragging) {
-            const newPosition = sectionContainer.data.getLocalPosition(sectionContainer.parent);
-            sectionContainer.x = newPosition.x - sectionContainer.dragOffset.x;
-            sectionContainer.y = newPosition.y - sectionContainer.dragOffset.y;
+          if (sectionContainer.dragging && sectionContainer.data) {
+            const frameStart = performance.now();
+
+            const newPos = sectionContainer.data.getLocalPosition(sectionContainer.parent);
+            // Use delta from start position for stable dragging
+            const deltaX = newPos.x - sectionContainer._dragStartX;
+            const deltaY = newPos.y - sectionContainer._dragStartY;
+            sectionContainer.x = sectionContainer._startX + deltaX;
+            sectionContainer.y = sectionContainer._startY + deltaY;
+
+            // Performance logging
+            const frameEnd = performance.now();
+            const frameTime = frameEnd - frameStart;
+            const fps = 1000 / frameTime;
+
+            // Log every 10 frames to avoid spam
+            if (!sectionContainer._dragFrameCount) sectionContainer._dragFrameCount = 0;
+            sectionContainer._dragFrameCount++;
+
+            if (sectionContainer._dragFrameCount % 10 === 0) {
+              console.log(`[DRAG] Performance: ${fps.toFixed(0)} FPS, ${frameTime.toFixed(2)}ms frame time`);
+            }
           }
         });
 
-        sectionContainer.on('pointerup', () => {
+        const cleanupDrag = () => {
           if (sectionContainer.dragging) {
             sectionContainer.dragging = false;
             sectionContainer.data = null;
-            onDragEnd('section', sectionName, { x: Math.round(sectionContainer.x), y: Math.round(sectionContainer.y) });
-          }
-        });
 
-        sectionContainer.on('pointerupoutside', () => {
-          if (sectionContainer.dragging) {
-            sectionContainer.dragging = false;
-            sectionContainer.data = null;
-            onDragEnd('section', sectionName, { x: Math.round(sectionContainer.x), y: Math.round(sectionContainer.y) });
+            const finalX = Math.round(sectionContainer.x);
+            const finalY = Math.round(sectionContainer.y);
+            console.log(`[DRAG] END: ${sectionName} at (${finalX}, ${finalY})`);
+
+            // Keep selection visuals - don't hide border
+
+            onDragEnd('section', sectionName, {
+              x: finalX,
+              y: finalY
+            });
           }
-        });
+        };
+
+        sectionContainer.on('pointerup', cleanupDrag);
+        sectionContainer.on('pointerupoutside', cleanupDrag);
+
+        // Store reference for external deselection
+        sectionContainer.updateSelection = updateSelectionVisuals;
 
         sectionsLayer.addChild(sectionContainer);
+
+        const isMobile = window.innerWidth < 768;
+        const rendererResolution = isMobile ? Math.min(window.devicePixelRatio || 2, 3) : 4;
 
         const renderer = new PixiRenderer(null, {
           width: snapshot.width,
           height: snapshot.height,
-          backgroundColor: 'transparent'
+          backgroundColor: 'transparent',
+          resolution: rendererResolution
         });
 
         renderer.render(snapshot, { targetContainer: sectionContainer });
       }
     });
 
-
+    // Sync selection state with selectedId prop
+    sectionsLayer.children.forEach(container => {
+      if (container.updateSelection) {
+        const isSelected = selectedId === container._sectionName;
+        container.updateSelection(isSelected);
+      }
+    });
 
   }, [shapes, lines, sections, sectionSnapshots, selectedId, initTrigger]);
 
@@ -302,13 +393,7 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
       time += 0.05;
       frameCount++;
 
-      // FPS Logging
-      const now = performance.now();
-      if (now - lastLogTime >= 1000) {
-        console.log(`[ANIMATION] FPS: ${Math.round((frameCount * 1000) / (now - lastLogTime))}`);
-        frameCount = 0;
-        lastLogTime = now;
-      }
+      // Animation loop (no logging)
 
       // Animate Sections (Bounce)
       const sectionsLayer = app.stage.children[1];
@@ -321,11 +406,9 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
     };
 
     app.ticker.add(animate);
-    console.log('[ANIMATION] Started');
 
     return () => {
       app.ticker.remove(animate);
-      console.log('[ANIMATION] Stopped');
     };
   }, [isAnimating, initTrigger]);
 
@@ -1343,7 +1426,7 @@ const UIEditor = ({ initialUseWebGL = false }) => {
         position: 'absolute',
         right: '-100px',
         top: '0',
-        visibility: 'visible',
+        visibility: 'hidden',
         width: '595px',
         height: '842px',
         background: 'white',
@@ -1743,6 +1826,16 @@ const UIEditor = ({ initialUseWebGL = false }) => {
         <button onClick={autoFlowSections} className="btn-primary full-width btn-auto-flow-action">
           ⚡ AUTO-FLOW CONTENT
         </button>
+
+        <div className="button-grid">
+          <button
+            onClick={() => setUseWebGL(!useWebGL)}
+            className="btn-primary full-width"
+            style={{ background: useWebGL ? '#059669' : '#4b5563' }}
+          >
+            {useWebGL ? '🚀 WebGL ACTIVE' : '🎨 CANVAS ACTIVE'}
+          </button>
+        </div>
 
         <div className="button-grid">
           <button onClick={downloadResume} className="btn-secondary">📥 PNG</button>

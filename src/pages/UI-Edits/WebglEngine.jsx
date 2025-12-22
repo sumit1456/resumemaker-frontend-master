@@ -1217,8 +1217,13 @@ class PixiRenderer {
             fill: styles.color || '#000000',
             align: styles.textAlign || 'left',
             lineHeight: lineHeight,
-            padding: 5
+            padding: 5,
         };
+
+        // Use renderer resolution for sharp text
+        if (this.options.resolution) {
+            textStyleOptions.resolution = this.options.resolution;
+        }
 
         const paddingLeft = (styles.padding?.left || 0);
         const paddingRight = (styles.padding?.right || 0);

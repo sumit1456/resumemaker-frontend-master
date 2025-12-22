@@ -13,16 +13,16 @@ import { clearResume } from "../../redux/store.js";
 export default function NavBar() {
   const naviaate = useNavigate();
   const dispatch = useDispatch();
-  const isLoggedIn = useSelector( (state) => state.auth.isLoggedIn);
+  const isLoggedIn = useSelector((state) => state.auth.isLoggedIn);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const enhancedResume = useSelector((state)=> state.resume.enhancedResume);
- 
+  const enhancedResume = useSelector((state) => state.resume.enhancedResume);
+
 
   const handleLogout = () => {
     dispatch(logOutUser());
     dispatch(clearResume());
     naviaate("/");
-   
+
   };
 
   const toggleSidebar = () => {
@@ -46,6 +46,7 @@ export default function NavBar() {
           <p><Link to="/templates">Templates</Link></p>
           <p><Link to="/about">About</Link></p>
           <p><Link to="/user-templates">User Templates</Link></p>
+          <p><Link to="/ui-editor/webgl">WebGL Editor</Link></p>
         </div>
 
         <div className="box-icons">
@@ -78,6 +79,7 @@ export default function NavBar() {
         <p><Link to="/templates" onClick={toggleSidebar}>Templates</Link></p>
         <p><Link to="/about" onClick={toggleSidebar}>About</Link></p>
         <p><Link to="/user-templates" onClick={toggleSidebar}>User Templates</Link></p>
+        <p><Link to="/ui-editor/webgl" onClick={toggleSidebar} style={{ color: '#ec4899', fontWeight: 'bold' }}>WebGL Editor ✨</Link></p>
       </div>
 
       {/* Overlay */}

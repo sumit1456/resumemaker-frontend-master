@@ -1187,10 +1187,8 @@
   .editor-container {
     display: grid;
     grid-template-columns: 1fr;
-    grid-template-rows: auto 55vh 1fr;
-    /* Increased from 40vh to 55vh to fill wasted space */
+    grid-template-rows: auto 45vh 1fr;
     height: calc(100vh - 64px);
-    /* Account for navbar if present, or just 100vh */
     overflow: hidden;
   }
 
@@ -1233,7 +1231,6 @@
     border-right: none;
     border-bottom: 1px solid #222;
     padding: 10px;
-    /* Reduced from 15px/12px to give more "width" to the fields */
     grid-row: 2;
     background: #000;
     overflow-y: auto;
@@ -1243,37 +1240,36 @@
     width: 100%;
     height: 100%;
     grid-row: 3;
-    padding: 5px;
-    /* Minimal padding to fill space */
+    padding: 10px;
     background: #111;
-    overflow: hidden;
+    overflow: auto;
     display: flex;
     flex-direction: column;
   }
 
   .canvas-scroll-wrapper {
     padding: 10px;
-    overflow: auto;
+    overflow: visible;
     display: flex;
     justify-content: center;
-    /* Center horizontally on mobile */
     align-items: flex-start;
-    height: 100%;
+    min-height: 100%;
     width: 100%;
   }
 
   .canvas-stack-layout {
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 20px;
     align-items: center;
+    padding-bottom: 60px;
   }
 
   .canvas-wrapper {
-    /* Zoom is handled by JS inline transform scale */
     box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
-    margin-bottom: 40px;
-    /* Space for page number */
+    margin-bottom: 10px;
+    width: 100%;
+    max-width: 100%;
   }
 
   .panel-title {
@@ -1299,34 +1295,49 @@
   }
 
   .zoom-controls {
+    position: fixed;
     bottom: 15px;
-    padding: 4px 10px;
-    gap: 6px;
-    background: rgba(17, 17, 17, 0.9);
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 6px 12px;
+    gap: 8px;
+    background: rgba(17, 17, 17, 0.95);
     border: 1px solid #444;
+    border-radius: 8px;
+    z-index: 1000;
   }
 
   .btn-zoom,
   .btn-zoom-reset {
-    padding: 4px 8px;
-    font-size: 11px;
+    padding: 6px 10px;
+    font-size: 12px;
   }
 
   .zoom-value {
-    font-size: 11px;
-    min-width: 35px;
+    font-size: 12px;
+    min-width: 40px;
+  }
+
+  /* Make canvas fit content better */
+  canvas {
+    display: block;
+    width: 100% !important;
+    height: auto !important;
   }
 }
 
 /* Extra small devices */
 @media (max-width: 480px) {
   .editor-container {
-    grid-template-rows: auto 60vh 1fr;
-    /* Even more for the editor on small screens */
+    grid-template-rows: auto 40vh 1fr;
   }
 
   .left-panel,
   .right-panel {
     padding: 8px;
+  }
+
+  .canvas-container {
+    padding: 5px;
   }
 }

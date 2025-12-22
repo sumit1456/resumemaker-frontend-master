@@ -1,545 +1,157 @@
-/**
- * Hybrid Canvas Layout Engine
- * Three rendering modes:
- * 1. CSS Layout Engine (manual layout building) - Original
- * 2. Geometry Snapshot (DOM capture) - NEW
- * 3. PixiJS Renderer (GPU accelerated) - NEW
- * 
- * Choose based on your needs:
- * - Mode 1: Full control, pure programmatic
- * - Mode 2: WYSIWYG, captures real DOM
- * - Mode 3: Best performance, GPU rendering
- */
 
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import html2canvas from "html2canvas";
+import { useSelector } from "react-redux";
+import { mergeResumeData } from "./Utils";
+import { ATS_TEMPLATE_CONFIG, MODERN_TEMPLATE_CONFIG, TWO_COLUMN_TEMPLATE_CONFIG, TEMPLATE5_CONFIG, HEADER_LAYOUTS, CONTACT_LAYOUTS } from "./TemplateConfigs";
+import { defaultResumeData } from "./Utils";
+import "./UIEditor.css";
+import {
+    FlexibleCertificationsSection, FlexibleContactSection,
+    FlexibleEducationSection, FlexibleExperienceSection,
+    FlexibleHeaderSection, FlexibleProjectsSection,
+    FlexibleSkillsSection, FlexibleSummarySection
+} from "./BaseTemplates.jsx";
+import { PixiRenderer, GeometrySnapshot, HybridRenderer } from "./WebglEngine.jsx";
 import * as PIXI from 'pixi.js';
 
-// ==================== UTILITY FUNCTIONS ====================
 
-function parseSize(value, base = 0) {
-    if (typeof value === 'number') return value;
-    if (!value) return 0;
 
-    const str = String(value);
-    if (str.endsWith('px')) return parseFloat(str);
-    if (str.endsWith('%')) return (parseFloat(str) / 100) * base;
-    if (str === 'auto') return 0;
-    return parseFloat(str) || 0;
-}
+import { Stage, Layer, Image as KonvaImage, Line, Rect, Transformer, Text } from 'react-konva';
 
-function parsePadding(padding) {
-    if (typeof padding === 'number') {
-        return { top: padding, right: padding, bottom: padding, left: padding };
+
+// ==================== WEBGL ENGINE COMPONENT ====================
+
+const normalizeColorForInput = (color) => {
+    if (!color || color === 'transparent') return '#ffffff';
+    if (color.startsWith('#')) {
+        if (color.length === 9) return color.slice(0, 7);
+        return color;
     }
-    if (typeof padding === 'object') {
-        return {
-            top: padding.top || 0,
-            right: padding.right || 0,
-            bottom: padding.bottom || 0,
-            left: padding.left || 0
-        };
-    }
-    return { top: 0, right: 0, bottom: 0, left: 0 };
-}
+    return color;
+};
 
-function parseMargin(margin) {
-    return parsePadding(margin);
-}
+const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, onDragEnd, onSelect, selectedId, type, isAnimating }) => {
+    const containerRef = useRef(null);
+    const pixiApp = useRef(null);
+    const [initTrigger, setInitTrigger] = useState(0);
 
-// ==================== MODE 2: GEOMETRY SNAPSHOT ENGINE ====================
-// Captures DOM layout geometry (positions, styles) without pixel data
-// Ultra-lightweight: ~10-50KB vs 50-100MB for image capture
+    useEffect(() => {
+        let app;
+        const initPixi = async () => {
+            if (!containerRef.current) return;
 
-class GeometrySnapshot {
-    constructor(options = {}) {
-        this.options = options;
-        this.nodes = [];
-        this.rootWidth = 0;
-        this.rootHeight = 0;
-    }
+            const PIXI_LIB = PIXI || window.PIXI;
+            // Initialize PixiJS Application (v8 style)
+            app = new PIXI_LIB.Application();
 
-    /**
-     * Capture DOM geometry recursively
-     * Returns: { nodes: [], width: number, height: number }
-     */
-    capture(element) {
-        if (!element) return null;
-
-        // Store original transform
-        const originalTransform = element.style.transform;
-
-        // Temporarily remove any transforms that might affect measurement
-        let current = element;
-        const transforms = [];
-        while (current && current !== document.body) {
-            if (current.style.transform && current.style.transform !== 'none') {
-                transforms.push({
-                    element: current,
-                    transform: current.style.transform
+            try {
+                await app.init({
+                    width: width,
+                    height: height,
+                    background: '#ffffff',
+                    resolution: 4,
+                    autoDensity: true,
+                    antialias: true,
                 });
-                current.style.transform = 'none';
+
+                pixiApp.current = app;
+                containerRef.current.appendChild(app.canvas || app.view);
+
+                // Create layers
+                const shapesLayer = new PIXI.Container();
+                const linesLayer = new PIXI.Container();
+                const sectionsLayer = new PIXI.Container();
+
+                app.stage.addChild(shapesLayer);
+                app.stage.addChild(sectionsLayer);
+                app.stage.addChild(linesLayer);
+
+                // Force a re-render once initialized
+                setInitTrigger(prev => prev + 1);
+
+            } catch (err) {
+                console.error("PixiJS init failed:", err);
             }
-            current = current.parentElement;
-        }
-
-        const rootRect = element.getBoundingClientRect();
-        this.rootRect = rootRect;
-        this.rootWidth = Math.ceil(rootRect.width);
-        this.rootHeight = Math.ceil(rootRect.height);
-        this.nodes = [];
-        this.processedNodes = new Set();
-
-        this.captureNode(element);
-
-        // Restore transforms
-        transforms.forEach(({ element, transform }) => {
-            element.style.transform = transform;
-        });
-
-        console.log(`📸 GeometrySnapshot: Captured ${this.nodes.length} nodes from ${element.tagName}`);
-
-        // TEST FIX: Verify layout capture
-        this.verifyCapture();
-
-        return {
-            nodes: this.nodes,
-            width: this.rootWidth,
-            height: this.rootHeight
-        };
-    }
-
-    captureNode(element) {
-        if (!element || element.nodeType !== Node.ELEMENT_NODE) return;
-        if (this.processedNodes.has(element)) return;
-
-        const rect = element.getBoundingClientRect();
-
-        // ✅ FIX: Calculate ABSOLUTE position from root
-        // This ensures all coordinates are in the same coordinate system
-        const x = Math.round((rect.left - this.rootRect.left) * 2) / 2;
-        const y = Math.round((rect.top - this.rootRect.top) * 2) / 2;
-        const width = Math.round(rect.width * 2) / 2;
-        const height = Math.round(rect.height * 2) / 2;
-
-        const computed = window.getComputedStyle(element);
-
-        // Skip hidden elements (Note: we allow visibility: hidden as it's common for off-screen capture)
-        if (computed.display === 'none' || parseFloat(computed.opacity) === 0) {
-            return;
-        }
-
-        const type = this.getNodeType(element, computed);
-        const styles = this.extractStyles(element, computed);
-
-        // Redundancy Check: Skip identical backgrounds to prevent ghosting/Z-fighting
-        if (type === 'box' && this.nodes.length > 0) {
-            const lastNode = this.nodes[this.nodes.length - 1];
-            if (lastNode.x === x && lastNode.y === y && lastNode.width === width && lastNode.height === height) {
-                if (styles.backgroundColor && lastNode.styles.backgroundColor === styles.backgroundColor) {
-                    this.processedNodes.add(element);
-                    for (const child of element.children) {
-                        this.captureNode(child); // Process children but skip this container
-                    }
-                    return;
-                }
-            }
-        }
-
-        const nodeData = {
-            type,
-            x, y, width, height,
-            styles,
-            zIndex: parseInt(computed.zIndex) || 0
         };
 
-        if (type === 'text') {
-            nodeData.text = element.textContent.trim();
-            if (!nodeData.text) return; // Skip containers that look like text but are empty
+        initPixi();
 
-            // ✅ DEBUG LOG (remove in production)
-            if (styles.fontWeight === 'bold' || styles.fontSize > 13 || nodeData.text.length < 50) {
-                console.log(`[GEO] Text: "${nodeData.text.substring(0, 20)}..."`, {
-                    x, y,
-                    w: width,
-                    h: height,
-                    fs: styles.fontSize,
-                    lh: styles.lineHeight,
-                    padL: styles.padding?.left || 0,
-                    padT: styles.padding?.top || 0,
-                    finalY: y
-                });
+        return () => {
+            if (app) {
+                app.destroy(true, { children: true, texture: true, baseTexture: true });
             }
-
-            this.markProcessedRecursive(element);
-        } else if (type === 'image') {
-            nodeData.src = element.src;
-            this.processedNodes.add(element);
-        } else {
-            this.processedNodes.add(element);
-        }
-
-        this.nodes.push(nodeData);
-
-        // Recurse into children
-        if (type !== 'text') {
-            for (const child of element.children) {
-                this.captureNode(child);
-            }
-        }
-    }
-
-    verifyCapture() {
-        console.group('🔍 Geometry Capture Verification');
-
-        // Check for suspicious patterns
-        const nodesAtOrigin = this.nodes.filter(n => n.x === 0 && n.y === 0);
-        if (nodesAtOrigin.length > 5) {
-            console.warn(`⚠️ WARNING: ${nodesAtOrigin.length} nodes at (0,0) - likely positioning bug!`);
-            console.log('Nodes at origin:', nodesAtOrigin.map(n => ({
-                type: n.type,
-                text: n.text?.substring(0, 30),
-                size: `${n.width}x${n.height}`
-            })));
-        }
-
-        // Check for overlapping text nodes
-        const textNodes = this.nodes.filter(n => n.type === 'text');
-        let overlaps = 0;
-        for (let i = 0; i < textNodes.length; i++) {
-            for (let j = i + 1; j < textNodes.length; j++) {
-                const a = textNodes[i];
-                const b = textNodes[j];
-
-                // Check if rectangles overlap
-                if (a.x < b.x + b.width && a.x + a.width > b.x &&
-                    a.y < b.y + b.height && a.y + a.height > b.y) {
-                    overlaps++;
-                    if (overlaps <= 3) { // Only show first 3
-                        console.warn('Overlapping text:', {
-                            text1: a.text?.substring(0, 20),
-                            pos1: `(${a.x}, ${a.y})`,
-                            text2: b.text?.substring(0, 20),
-                            pos2: `(${b.x}, ${b.y})`
-                        });
-                    }
-                }
-            }
-        }
-
-        if (overlaps > 0) {
-            console.warn(`⚠️ Found ${overlaps} overlapping text nodes`);
-        }
-
-        console.groupEnd();
-    }
-
-    // Recurse into children
-
-
-    markProcessedRecursive(element) {
-        this.processedNodes.add(element);
-        for (const child of element.children) {
-            this.markProcessedRecursive(child);
-        }
-    }
-
-    getNodeType(element, computed) {
-        if (element.tagName === 'IMG') return 'image';
-
-        // FIX 7: Better text node detection
-        const textContent = element.textContent.trim();
-        const hasOnlyText = element.children.length === 0 ||
-            Array.from(element.children).every(child =>
-                ['SPAN', 'STRONG', 'EM', 'B', 'I', 'MARK', 'BR'].includes(child.tagName)
-            );
-
-        const isTextElement = ['SPAN', 'P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
-            'STRONG', 'EM', 'B', 'I', 'LABEL', 'A', 'LI'].includes(element.tagName);
-
-        // If it's a text element with content and no complex children, treat as text
-        if (isTextElement && textContent.length > 0 && hasOnlyText) {
-            return 'text';
-        }
-
-        // Check for meaningful direct text
-        const hasDirectText = Array.from(element.childNodes).some(
-            child => child.nodeType === Node.TEXT_NODE &&
-                child.textContent.trim().length > 0
-        );
-
-        if (hasDirectText && !element.querySelector('div, section, article, main, aside, header, footer, nav')) {
-            return 'text';
-        }
-
-        return 'box';
-    }
-
-    extractStyles(element, computed) {
-        const styles = {
-            backgroundColor: computed.backgroundColor,
-            borderWidth: parseFloat(computed.borderWidth) || 0,
-            borderColor: computed.borderColor,
-            borderStyle: computed.borderStyle,
-            borderRadius: parseFloat(computed.borderRadius) || 0,
-            color: computed.color,
-            fontSize: parseFloat(computed.fontSize) || 12,
-            fontFamily: computed.fontFamily,
-            fontWeight: computed.fontWeight,
-            fontStyle: computed.fontStyle,
-            textAlign: computed.textAlign,
-            lineHeight: parseFloat(computed.lineHeight) || parseFloat(computed.fontSize) * 1.2,
-            letterSpacing: parseFloat(computed.letterSpacing) || 0,
-            padding: {
-                top: parseFloat(computed.paddingTop) || 0,
-                right: parseFloat(computed.paddingRight) || 0,
-                bottom: parseFloat(computed.paddingBottom) || 0,
-                left: parseFloat(computed.paddingLeft) || 0
-            },
-            opacity: parseFloat(computed.opacity) || 1,
-            boxShadow: computed.boxShadow !== 'none' ? computed.boxShadow : null,
-            transform: computed.transform !== 'none' ? computed.transform : null,
-            zIndex: computed.zIndex !== 'auto' ? parseInt(computed.zIndex) : 0,
-            overflow: computed.overflow,
-            visibility: computed.visibility,
-            whiteSpace: computed.whiteSpace,
-            wordBreak: computed.wordBreak
         };
+    }, [width, height]);
 
-        return this.compactStyles(styles);
-    }
+    const parseColor = (cssColor) => {
+        if (!cssColor || cssColor === 'transparent') return { hex: 0xffffff, alpha: 0 };
 
-    compactStyles(styles) {
-        const compact = {};
-
-        for (const [key, value] of Object.entries(styles)) {
-            if (value === null || value === undefined || value === '' || value === 0) continue;
-            if (key === 'backgroundColor' && (value === 'rgba(0, 0, 0, 0)' || value === 'transparent')) continue;
-            if (key === 'borderStyle' && value === 'none') continue;
-
-            compact[key] = value;
-        }
-
-        return compact;
-    }
-
-    estimateSize() {
-        const json = JSON.stringify({ nodes: this.nodes, width: this.rootWidth, height: this.rootHeight });
-        return Math.round(json.length / 1024 * 10) / 10;
-    }
-
-    // Convert to Canvas2D rendering
-    renderToCanvas(canvas, scale = 8) {
-        const ctx = canvas.getContext('2d');
-        canvas.width = this.rootWidth * scale;
-        canvas.height = this.rootHeight * scale;
-        ctx.scale(scale, scale);
-
-        // Clear
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, this.rootWidth, this.rootHeight);
-
-        // Render each node
-        for (const node of this.nodes) {
-            this.renderNode(ctx, node);
-        }
-
-        return canvas;
-    }
-
-    renderNode(ctx, node) {
-        const { x, y, width, height, styles, type, text } = node;
-
-        ctx.save();
-
-        // Background
-        if (styles.backgroundColor) {
-            ctx.fillStyle = styles.backgroundColor;
-            if (styles.borderRadius > 0) {
-                this.roundRect(ctx, x, y, width, height, styles.borderRadius);
-                ctx.fill();
-            } else {
-                ctx.fillRect(x, y, width, height);
-            }
-        }
-
-        // Border
-        if (styles.borderWidth > 0 && styles.borderStyle !== 'none') {
-            ctx.strokeStyle = styles.borderColor || '#000';
-            ctx.lineWidth = styles.borderWidth;
-            if (styles.borderRadius > 0) {
-                this.roundRect(ctx, x, y, width, height, styles.borderRadius);
-                ctx.stroke();
-            } else {
-                ctx.strokeRect(x, y, width, height);
-            }
-        }
-
-        // Text
-        if (type === 'text' && text) {
-            ctx.fillStyle = styles.color || '#000';
-            ctx.font = `${styles.fontStyle || ''} ${styles.fontWeight || ''} ${styles.fontSize}px ${styles.fontFamily || 'Arial'}`;
-            ctx.textBaseline = 'top';
-
-            const lines = this.wrapText(ctx, text, width - (styles.padding?.left || 0) - (styles.padding?.right || 0));
-            let currentY = y + (styles.padding?.top || 0);
-            const startX = x + (styles.padding?.left || 0);
-
-            lines.forEach(line => {
-                let alignX = startX;
-                if (styles.textAlign === 'center') {
-                    const metrics = ctx.measureText(line);
-                    alignX = x + width / 2 - metrics.width / 2;
-                } else if (styles.textAlign === 'right') {
-                    const metrics = ctx.measureText(line);
-                    alignX = x + width - (styles.padding?.right || 0) - metrics.width;
-                }
-                ctx.fillText(line, alignX, currentY);
-                currentY += styles.lineHeight;
-            });
-        }
-
-        ctx.restore();
-    }
-
-    wrapText(ctx, text, maxWidth) {
-        const words = text.split(' ');
-        const lines = [];
-        let currentLine = '';
-
-        words.forEach(word => {
-            const testLine = currentLine ? `${currentLine} ${word}` : word;
-            const metrics = ctx.measureText(testLine);
-
-            if (metrics.width > maxWidth && currentLine) {
-                lines.push(currentLine);
-                currentLine = word;
-            } else {
-                currentLine = testLine;
-            }
-        });
-
-        if (currentLine) {
-            lines.push(currentLine);
-        }
-
-        return lines;
-    }
-
-    roundRect(ctx, x, y, w, h, r) {
-        ctx.beginPath();
-        ctx.moveTo(x + r, y);
-        ctx.lineTo(x + w - r, y);
-        ctx.arcTo(x + w, y, x + w, y + r, r);
-        ctx.lineTo(x + w, y + h - r);
-        ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
-        ctx.lineTo(x + r, y + h);
-        ctx.arcTo(x, y + h, x, y + h - r, r);
-        ctx.lineTo(x, y + r);
-        ctx.arcTo(x, y, x + r, y, r);
-        ctx.closePath();
-    }
-}
-
-
-
-// ==================== MODE 3: PIXI RENDERER (GPU ACCELERATED) ====================
-
-class PixiRenderer {
-    constructor(container, options = {}) {
-        this.container = container;
-        this.options = {
-            width: options.width || 595,
-            height: options.height || 842,
-            backgroundColor: options.backgroundColor || 0xffffff,
-            resolution: options.resolution || 3,
-            antialias: options.antialias ?? true,
-            ...options
-        };
-        this.app = null;
-    }
-
-    async initialize() {
-        const PIXI = window.PIXI;
-
-        if (!PIXI) {
-            console.error('PixiJS not loaded. Add: <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>');
-            return false;
-        }
-
-        this.app = new PIXI.Application({
-            width: this.options.width,
-            height: this.options.height,
-            backgroundColor: this.options.backgroundColor,
-            resolution: this.options.resolution,
-            antialias: this.options.antialias,
-            autoDensity: true
-        });
-
-        this.container.appendChild(this.app.view);
-        return true;
-    }
-
-    async render(geometrySnapshot, options = {}) {
-        if (!this.app && !options.targetContainer) {
-            const initialized = await this.initialize();
-            if (!initialized) return null;
-        }
-
-        const stage = options.targetContainer || this.app.stage;
-
-        if (!options.targetContainer) {
-            stage.removeChildren();
-        }
-
+        // Improved parser from WebglEngine
         const PIXI_LIB = PIXI || window.PIXI;
-        const mainContainer = new PIXI_LIB.Container();
-        stage.addChild(mainContainer);
 
-        // 1. Render Shapes (Background)
-        if (options.shapes && options.shapes.length > 0) {
-            const shapesContainer = new PIXI_LIB.Container();
-            mainContainer.addChild(shapesContainer);
-            this.renderShapes(options.shapes, shapesContainer);
+        // 1. Hex
+        if (cssColor.startsWith('#')) {
+            const hex = cssColor.slice(1);
+            if (hex.length === 3) {
+                const fullHex = hex.split('').map(c => c + c).join('');
+                return { hex: parseInt(fullHex, 16), alpha: 1 };
+            }
+            if (hex.length === 8) {
+                return { hex: parseInt(hex.slice(0, 6), 16), alpha: parseInt(hex.slice(6, 8), 16) / 255 };
+            }
+            return { hex: parseInt(hex, 16), alpha: 1 };
         }
 
-        // 2. Render Content
-        if (geometrySnapshot && geometrySnapshot.nodes) {
-            const contentContainer = new PIXI_LIB.Container();
-            mainContainer.addChild(contentContainer);
-
-            const sortedNodes = [...geometrySnapshot.nodes].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
-            for (const node of sortedNodes) {
-                const displayObject = await this.renderNode(node);
-                if (displayObject) contentContainer.addChild(displayObject);
+        // 2. RGB/RGBA
+        if (cssColor.startsWith('rgb')) {
+            const values = cssColor.match(/[\d.]+/g);
+            if (values) {
+                const r = parseInt(values[0]);
+                const g = parseInt(values[1]);
+                const b = parseInt(values[2]);
+                const a = values[3] !== undefined ? parseFloat(values[3]) : 1;
+                return { hex: (r << 16) | (g << 8) | b, alpha: a };
             }
         }
 
-        // 3. Render Lines
-        if (options.lines && options.lines.length > 0) {
-            const linesContainer = new PIXI_LIB.Container();
-            mainContainer.addChild(linesContainer);
-            this.renderLines(options.lines, linesContainer);
+        // 3. Named colors (Minimal set)
+        const colors = { red: 0xff0000, blue: 0x0000ff, green: 0x00ff00, black: 0x000000, white: 0xffffff, gray: 0x888888 };
+        if (colors[cssColor.toLowerCase()]) {
+            return { hex: colors[cssColor.toLowerCase()], alpha: 1 };
         }
 
-        return mainContainer;
-    }
+        return { hex: 0xcccccc, alpha: 1 };
+    };
 
-    renderShapes(shapes, container) {
-        const PIXI_LIB = PIXI || window.PIXI;
+    // Update elements when props change
+    useEffect(() => {
+        const app = pixiApp.current;
+        if (!app) return;
+
+        const shapesLayer = app.stage.children[0];
+        const sectionsLayer = app.stage.children[1];
+        const linesLayer = app.stage.children[2];
+
+        // Clear and redraw (for simplicity in this first version)
+        shapesLayer.removeChildren();
+        linesLayer.removeChildren();
+        sectionsLayer.removeChildren();
+
+        // Render Shapes
         shapes.forEach(shape => {
-            const graphics = new PIXI_LIB.Graphics();
-            const colorData = this.parseColor(shape.color || '#cccccc');
-            const alpha = colorData.alpha !== undefined ? colorData.alpha : 1;
+            const graphics = new PIXI.Graphics();
+            const colorData = parseColor(shape.color);
 
             if (graphics.fill) {
-                graphics.fill({ color: colorData.hex, alpha });
                 if (shape.type === 'circle') {
                     graphics.circle(shape.width / 2, shape.height / 2, shape.width / 2);
                 } else {
-                    // Default to rect
                     graphics.rect(0, 0, shape.width, shape.height);
                 }
+                graphics.fill({ color: colorData.hex, alpha: colorData.alpha });
             } else {
-                graphics.beginFill(colorData.hex, alpha);
+                graphics.beginFill(colorData.hex, colorData.alpha);
                 if (shape.type === 'circle') {
                     graphics.drawCircle(shape.width / 2, shape.height / 2, shape.width / 2);
                 } else {
@@ -547,1294 +159,2172 @@ class PixiRenderer {
                 }
                 graphics.endFill();
             }
-
             graphics.x = shape.x;
             graphics.y = shape.y;
-            console.log(`   └─ Shape: ${shape.type || 'rect'} at (${shape.x}, ${shape.y}) size ${shape.width}x${shape.height} color: ${shape.color}`);
-            container.addChild(graphics);
-        });
-    }
 
-    renderLines(lines, container) {
-        const PIXI_LIB = PIXI || window.PIXI;
+            // Make interactive
+            graphics.interactive = true;
+            graphics.buttonMode = true;
+
+            graphics.on('pointerdown', (event) => {
+                onSelect('shape', shape.id);
+                graphics.data = event.data;
+                graphics.dragging = true;
+                graphics.dragOffset = event.data.getLocalPosition(graphics.parent);
+                graphics.dragOffset.x -= graphics.x;
+                graphics.dragOffset.y -= graphics.y;
+            });
+
+            graphics.on('pointermove', () => {
+                if (graphics.dragging) {
+                    const newPosition = graphics.data.getLocalPosition(graphics.parent);
+                    graphics.x = newPosition.x - graphics.dragOffset.x;
+                    graphics.y = newPosition.y - graphics.dragOffset.y;
+                }
+            });
+
+            graphics.on('pointerup', () => {
+                if (graphics.dragging) {
+                    graphics.dragging = false;
+                    onDragEnd('shape', shape.id, { x: Math.round(graphics.x), y: Math.round(graphics.y) });
+                }
+            });
+
+            graphics.on('pointerupoutside', () => {
+                if (graphics.dragging) {
+                    graphics.dragging = false;
+                    onDragEnd('shape', shape.id, { x: Math.round(graphics.x), y: Math.round(graphics.y) });
+                }
+            });
+
+            shapesLayer.addChild(graphics);
+        });
+
+        // Render Lines
         lines.forEach(line => {
-            const graphics = new PIXI_LIB.Graphics();
-            const colorData = this.parseColor(line.color || '#000000');
-            const alpha = colorData.alpha !== undefined ? colorData.alpha : 1;
+            const graphics = new PIXI.Graphics();
+            const colorData = parseColor(line.color);
+            const thickness = line.thickness || 1;
 
             if (graphics.stroke) {
-                graphics.stroke({ color: colorData.hex, width: line.thickness || 1, alpha });
                 graphics.moveTo(line.x1, line.y1);
                 graphics.lineTo(line.x2, line.y2);
+                graphics.stroke({ color: colorData.hex, width: thickness, alpha: colorData.alpha });
             } else {
-                graphics.lineStyle(line.thickness || 1, colorData.hex, alpha);
+                graphics.lineStyle(thickness, colorData.hex, colorData.alpha);
                 graphics.moveTo(line.x1, line.y1);
                 graphics.lineTo(line.x2, line.y2);
             }
-            console.log(`   └─ Line: (${line.x1}, ${line.y1}) to (${line.x2}, ${line.y2}) color: ${line.color}`);
-            container.addChild(graphics);
-        });
-    }
 
-    async renderNode(node) {
-
-        switch (node.type) {
-            case 'box':
-                return this.renderBox(node);
-            case 'text':
-                return this.renderText(node);
-            case 'image':
-                return await this.renderImage(node);
-            default:
-                return null;
-        }
-    }
-
-    renderBox(node) {
-        const PIXI_LIB = PIXI || window.PIXI;
-        const graphics = new PIXI_LIB.Graphics();
-        const { x, y, width, height, styles } = node;
-
-        // Apply visual properties
-        if (styles.opacity !== undefined) graphics.alpha = styles.opacity;
-
-        // Respect transform
-        if (styles.transform && styles.transform !== 'none') {
-            this.applyTransform(graphics, styles.transform, x, y, width, height);
-        } else {
-            graphics.x = x;
-            graphics.y = y;
-        }
-
-        // 1. BOX SHADOW (Simulated)
-        if (styles.boxShadow) {
-            this.renderShadow(graphics, styles.boxShadow, width, height, styles.borderRadius);
-        }
-
-        // 2. BACKGROUND
-        if (styles.backgroundColor) {
-            const colorData = this.parseColor(styles.backgroundColor);
-            const fillAlpha = colorData.alpha !== undefined ? colorData.alpha : 1;
-
-            if (graphics.fill) {
-                graphics.fill({ color: colorData.hex, alpha: fillAlpha });
-                if (styles.borderRadius > 0) {
-                    graphics.roundRect(0, 0, width, height, styles.borderRadius);
-                } else {
-                    graphics.rect(0, 0, width, height);
-                }
-            } else {
-                graphics.beginFill(colorData.hex, fillAlpha);
-                if (styles.borderRadius > 0) {
-                    graphics.drawRoundedRect(0, 0, width, height, styles.borderRadius);
-                } else {
-                    graphics.drawRect(0, 0, width, height);
-                }
-                graphics.endFill();
-            }
-        }
-
-        // 3. BORDER
-        if (styles.borderWidth > 0 && styles.borderStyle !== 'none') {
-            const borderColorData = this.parseColor(styles.borderColor || '#000000');
-            const strokeAlpha = borderColorData.alpha !== undefined ? borderColorData.alpha : 1;
-
-            if (graphics.stroke) {
-                graphics.stroke({ color: borderColorData.hex, width: styles.borderWidth, alignment: 0, alpha: strokeAlpha }); // alignment: 0 is inside (cleaner)
-                if (styles.borderRadius > 0) {
-                    graphics.roundRect(0, 0, width, height, styles.borderRadius);
-                } else {
-                    graphics.rect(0, 0, width, height);
-                }
-            } else {
-                graphics.lineStyle(styles.borderWidth, borderColorData.hex, strokeAlpha);
-                if (styles.borderRadius > 0) {
-                    graphics.drawRoundedRect(0, 0, width, height, styles.borderRadius);
-                } else {
-                    graphics.drawRect(0, 0, width, height);
-                }
-            }
-        }
-
-        return graphics;
-    }
-
-    renderShadow(graphics, shadowStr, width, height, radius) {
-        const PIXI_LIB = PIXI || window.PIXI;
-        // Simple parser for: "rgba(0, 0, 0, 0.2) 0px 4px 10px 0px"
-        // or "0px 4px 10px 0px rgba(0,0,0,0.2)"
-        const parts = shadowStr.split(' ');
-        let color = '#000000';
-        let alpha = 0.2;
-        let ox = 0, oy = 0, blur = 0;
-
-        for (const part of parts) {
-            if (part.includes('rgb') || part.startsWith('#')) {
-                color = part;
-                if (part.includes('rgba')) {
-                    const match = part.match(/[\d.]+/g);
-                    if (match && match[3]) alpha = parseFloat(match[3]);
-                }
-            } else if (part.endsWith('px')) {
-                const val = parseFloat(part);
-                if (ox === 0) ox = val;
-                else if (oy === 0) oy = val;
-                else if (blur === 0) blur = val;
-            }
-        }
-
-        const shadowColorData = this.parseColor(color);
-        const shadow = new PIXI_LIB.Graphics();
-
-        // Very simplified blur: draw a few transparent layers
-        const shadowAlpha = (shadowColorData.alpha || 0.2) / 3;
-        for (let i = 1; i <= 3; i++) {
-            const b = (blur / 3) * i;
-            if (shadow.fill) {
-                shadow.fill({ color: shadowColorData.hex, alpha: shadowAlpha });
-                shadow.roundRect(ox - b, oy - b, width + b * 2, height + b * 2, (radius || 0) + b);
-            } else {
-                shadow.beginFill(shadowColorData.hex, shadowAlpha);
-                shadow.drawRoundedRect(ox - b, oy - b, width + b * 2, height + b * 2, (radius || 0) + b);
-                shadow.endFill();
-            }
-        }
-
-        graphics.addChild(shadow);
-        shadow.zIndex = -1; // Modern way to put behind if parent is sortable
-        // Or if not sortable, addChildAt is still okay but the warning suggests 
-        // they want us to ensure the parent is a proper Container (which Graphics is in v8)
-        // To be safe and avoid the warning, we'll just use addChild and trust zIndex or order.
-        // Actually, in v8, the order of addChild determines rendering order unless zIndex is used.
-        // So graphics.addChildAt(shadow, 0) is actually technically correct for "put at back".
-        // The warning might be because of how 'this' is being used.
-        // Let's use addChild and addChildAt based on the version if possible.
-        // For now, let's just use addChild and ensure it's added FIRST.
-        // Wait, graphics already has content? No, shadow is usually added first.
-        // I'll keep addChildAt(shadow, 0) for now but wrap it to be safe.
-        try {
-            graphics.addChildAt(shadow, 0);
-        } catch (e) {
-            graphics.addChild(shadow);
-        }
-    }
-
-    applyTransform(displayObject, transformStr, x, y, width, height) {
-        // Handle matrix(a, b, c, d, tx, ty)
-        const matrixMatch = transformStr.match(/matrix\(([^)]+)\)/);
-        if (matrixMatch) {
-            const [a, b, c, d, tx, ty] = matrixMatch[1].split(',').map(v => parseFloat(v));
-            // Setting position based on matrix tx/ty and root offset
-            displayObject.x = x;
-            displayObject.y = y;
-            // Matrix transforms in Pixi are relative to local origin
-            // This is complex to map perfectly without the full ancestor chain,
-            // but we can try setting the scale/rotation components.
-            displayObject.scale.x = Math.sqrt(a * a + b * b);
-            displayObject.scale.y = Math.sqrt(c * c + d * d);
-            displayObject.rotation = Math.atan2(b, a);
-        } else {
-            displayObject.x = x;
-            displayObject.y = y;
-        }
-    }
-
-    renderText(node) {
-        if (!node || !node.text) return null;
-        const PIXI_LIB = PIXI || window.PIXI;
-        const { x, y, width, height, text, styles } = node;
-
-        // Calculate proper line height
-        let lineHeight = styles.lineHeight || styles.fontSize * 1.2;
-        if (lineHeight < styles.fontSize && lineHeight > 0 && lineHeight < 10) {
-            lineHeight = styles.fontSize * lineHeight;
-        }
-
-        const textStyleOptions = {
-            fontFamily: styles.fontFamily || 'Arial',
-            fontSize: styles.fontSize || 14,
-            fontWeight: styles.fontWeight || 'normal',
-            fontStyle: styles.fontStyle || 'normal',
-            fill: styles.color || '#000000',
-            align: styles.textAlign || 'left',
-            lineHeight: lineHeight,
-            padding: 5
-        };
-
-        const paddingLeft = (styles.padding?.left || 0);
-        const paddingRight = (styles.padding?.right || 0);
-        const effectiveWidth = Math.max(1, width - paddingLeft - paddingRight);
-
-        // REFINEMENT: If the browser says the text height is small, it's a single line.
-        // Disable wrapping to avoid sub-pixel math causing "User" to drop down.
-        const isSingleLine = height < lineHeight * 1.5;
-
-        if (isSingleLine || styles.whiteSpace === 'nowrap') {
-            textStyleOptions.wordWrap = false;
-        } else {
-            textStyleOptions.wordWrap = true;
-            textStyleOptions.wordWrapWidth = effectiveWidth + 10; // Extra buffer
-        }
-
-        // USE V8 CONSTRUCTOR: new Text({ text, style })
-        let pixiText;
-        try {
-            pixiText = new PIXI_LIB.Text({ text: text, style: textStyleOptions });
-        } catch (e) {
-            // Fallback for v7
-            pixiText = new PIXI_LIB.Text(text, new PIXI_LIB.TextStyle(textStyleOptions));
-        }
-
-        pixiText.x = x + paddingLeft;
-        pixiText.y = y + (styles.padding?.top || 0);
-
-        const colorData = this.parseColor(styles.color || '#000000');
-        const textAlpha = styles.opacity !== undefined ? styles.opacity :
-            (colorData.alpha !== undefined ? colorData.alpha : 1);
-        pixiText.alpha = textAlpha;
-
-        return pixiText;
-    }
-
-    async renderImage(node) {
-        const PIXI_LIB = PIXI || window.PIXI;
-        const { x, y, width, height, src, styles } = node;
-
-        try {
-            const texture = PIXI_LIB.Assets ? await PIXI_LIB.Assets.load(src) : await PIXI_LIB.Texture.fromURL(src);
-            const sprite = new PIXI_LIB.Sprite(texture);
-
-            sprite.x = x;
-            sprite.y = y;
-            sprite.width = width;
-            sprite.height = height;
-
-            if (styles.opacity !== undefined) {
-                sprite.alpha = styles.opacity;
-            }
-
-            return sprite;
-        } catch (error) {
-            console.error('Failed to load image:', src);
-            return null;
-        }
-    }
-
-    parseColor(cssColor) {
-        if (!cssColor || cssColor === 'transparent') return { hex: 0xffffff, alpha: 0 };
-
-        if (cssColor.startsWith('#')) {
-            if (cssColor.length === 9) {
-                // #rrggbbaa
-                return {
-                    hex: parseInt(cssColor.slice(1, 7), 16),
-                    alpha: parseInt(cssColor.slice(7, 9), 16) / 255
-                };
-            }
-            return { hex: parseInt(cssColor.slice(1), 16), alpha: 1 };
-        }
-
-        if (cssColor.startsWith('rgb')) {
-            const match = cssColor.match(/[\d.]+/g);
-            if (match) {
-                const r = parseInt(match[0]);
-                const g = parseInt(match[1]);
-                const b = parseInt(match[2]);
-                const a = match[3] !== undefined ? parseFloat(match[3]) : 1;
-                return {
-                    hex: (r << 16) | (g << 8) | b,
-                    alpha: a
-                };
-            }
-        }
-
-        const namedColors = {
-            white: 0xffffff, black: 0x000000, red: 0xff0000,
-            green: 0x00ff00, blue: 0x0000ff
-        };
-
-        return {
-            hex: namedColors[cssColor.toLowerCase()] || 0xffffff,
-            alpha: 1
-        };
-    }
-
-    async exportImage() {
-        if (!this.app) return null;
-        const canvas = this.app.renderer.canvas || this.app.renderer.view;
-        return canvas.toDataURL();
-    }
-
-    destroy() {
-        if (this.app) {
-            this.app.destroy(true);
-            this.app = null;
-        }
-    }
-}
-
-// ==================== MODE 1: ORIGINAL CSS LAYOUT ENGINE ====================
-// (All your original code below - keeping it intact)
-
-class LayoutNode {
-    constructor(props = {}, children = []) {
-        this.props = props;
-        this.children = Array.isArray(children) ? children : [];
-        this.bounds = null;
-        this.intrinsicSize = null;
-        this.parent = null;
-
-        this.children.forEach(child => {
-            if (child) child.parent = this;
-        });
-    }
-
-    measure(constraints) {
-        throw new Error('measure() must be implemented by subclass');
-    }
-
-    layout(bounds) {
-        throw new Error('layout() must be implemented by subclass');
-    }
-
-    render(engine) {
-        throw new Error('render() must be implemented by subclass');
-    }
-
-    getContentBox(bounds, padding) {
-        const p = parsePadding(padding);
-        return {
-            x: bounds.x + p.left,
-            y: bounds.y + p.top,
-            width: bounds.width - p.left - p.right,
-            height: bounds.height - p.top - p.bottom
-        };
-    }
-
-    renderBox(engine) {
-        if (!this.bounds) return;
-
-        const { backgroundColor, border, borderRadius = 0 } = this.props;
-
-        if (backgroundColor) {
-            engine.ctx.fillStyle = backgroundColor;
-            if (borderRadius > 0) {
-                this.roundRect(engine.ctx, this.bounds, borderRadius);
-                engine.ctx.fill();
-            } else {
-                engine.ctx.fillRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
-            }
-        }
-
-        if (border) {
-            const [width, style, color] = String(border).split(' ');
-            engine.ctx.strokeStyle = color || '#000';
-            engine.ctx.lineWidth = parseFloat(width) || 1;
-
-            if (borderRadius > 0) {
-                this.roundRect(engine.ctx, this.bounds, borderRadius);
-                engine.ctx.stroke();
-            } else {
-                engine.ctx.strokeRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
-            }
-        }
-    }
-
-    roundRect(ctx, bounds, radius) {
-        ctx.beginPath();
-        ctx.moveTo(bounds.x + radius, bounds.y);
-        ctx.lineTo(bounds.x + bounds.width - radius, bounds.y);
-        ctx.arcTo(bounds.x + bounds.width, bounds.y, bounds.x + bounds.width, bounds.y + radius, radius);
-        ctx.lineTo(bounds.x + bounds.width, bounds.y + bounds.height - radius);
-        ctx.arcTo(bounds.x + bounds.width, bounds.y + bounds.height, bounds.x + bounds.width - radius, bounds.y + bounds.height, radius);
-        ctx.lineTo(bounds.x + radius, bounds.y + bounds.height);
-        ctx.arcTo(bounds.x, bounds.y + bounds.height, bounds.x, bounds.y + bounds.height - radius, radius);
-        ctx.lineTo(bounds.x, bounds.y + radius);
-        ctx.arcTo(bounds.x, bounds.y, bounds.x + radius, bounds.y, radius);
-        ctx.closePath();
-    }
-}
-
-class FlexNode extends LayoutNode {
-    // Full FlexNode implementation from CanvasEngine
-    measure(constraints) {
-        const {
-            flexDirection = 'row',
-            gap = 0,
-            padding = 0
-        } = this.props;
-
-        const p = parsePadding(padding);
-        const isRow = flexDirection === 'row' || flexDirection === 'row-reverse';
-
-        // Measure all children
-        const childConstraints = {
-            maxWidth: constraints.maxWidth - p.left - p.right,
-            maxHeight: constraints.maxHeight - p.top - p.bottom
-        };
-
-        const childSizes = this.children.map(child => {
-            const size = child.measure(childConstraints);
-            child.intrinsicSize = size;
-            return size;
-        });
-
-        if (childSizes.length === 0) {
-            return { width: p.left + p.right, height: p.top + p.bottom };
-        }
-
-        const totalGap = gap * (this.children.length - 1);
-
-        if (isRow) {
-            const width = childSizes.reduce((sum, s) => sum + s.width, 0) + totalGap + p.left + p.right;
-            const height = Math.max(...childSizes.map(s => s.height)) + p.top + p.bottom;
-            this.intrinsicSize = { width, height };
-            return this.intrinsicSize;
-        } else {
-            const width = Math.max(...childSizes.map(s => s.width)) + p.left + p.right;
-            const height = childSizes.reduce((sum, s) => sum + s.height, 0) + totalGap + p.top + p.bottom;
-            this.intrinsicSize = { width, height };
-            return this.intrinsicSize;
-        }
-    }
-
-    layout(bounds) {
-        this.bounds = bounds;
-
-        if (this.children.length === 0) return;
-
-        const {
-            flexDirection = 'row',
-            justifyContent = 'flex-start',
-            alignItems = 'stretch',
-            gap = 0,
-            padding = 0
-        } = this.props;
-
-        const contentBox = this.getContentBox(bounds, padding);
-        const isRow = flexDirection === 'row' || flexDirection === 'row-reverse';
-        const mainAxis = isRow ? 'width' : 'height';
-        const crossAxis = isRow ? 'height' : 'width';
-
-        // Calculate flex item sizes
-        const sizes = this.calculateFlexSizes(contentBox[mainAxis], mainAxis, gap);
-
-        // Calculate main axis positions
-        const positions = this.calculateMainAxisPositions(
-            sizes,
-            justifyContent,
-            contentBox[mainAxis],
-            gap
-        );
-
-        // Layout each child
-        this.children.forEach((child, i) => {
-            const mainSize = sizes[i];
-            const crossSize = this.calculateCrossSize(child, alignItems, contentBox[crossAxis]);
-            const crossPos = this.calculateCrossPosition(child, alignItems, contentBox[crossAxis], crossSize);
-
-            let childBounds;
-            if (isRow) {
-                childBounds = {
-                    x: contentBox.x + positions[i],
-                    y: contentBox.y + crossPos,
-                    width: mainSize,
-                    height: crossSize
-                };
-            } else {
-                childBounds = {
-                    x: contentBox.x + crossPos,
-                    y: contentBox.y + positions[i],
-                    width: crossSize,
-                    height: mainSize
-                };
-            }
-
-            child.layout(childBounds);
-        });
-    }
-
-    calculateFlexSizes(availableSpace, mainAxis, gap) {
-        const totalGap = gap * (this.children.length - 1);
-        let remainingSpace = availableSpace - totalGap;
-
-        // Step 1: Calculate base sizes (flex-basis or intrinsic)
-        const baseSizes = this.children.map(child => {
-            const flexBasis = child.props.flexBasis;
-            if (flexBasis && flexBasis !== 'auto') {
-                return parseSize(flexBasis, availableSpace);
-            }
-            return child.intrinsicSize[mainAxis];
-        });
-
-        const totalBaseSize = baseSizes.reduce((sum, size) => sum + size, 0);
-        remainingSpace -= totalBaseSize;
-
-        // Step 2: Grow or shrink
-        const sizes = [...baseSizes];
-
-        if (remainingSpace > 0) {
-            // GROW
-            const totalGrow = this.children.reduce((sum, child) =>
-                sum + (parseFloat(child.props.flexGrow) || 0), 0
+            // Make lines selectable too
+            graphics.interactive = true;
+            graphics.buttonMode = true;
+            graphics.hitArea = new PIXI.Rectangle(
+                Math.min(line.x1, line.x2) - 5,
+                Math.min(line.y1, line.y2) - 5,
+                Math.abs(line.x2 - line.x1) + 10,
+                Math.abs(line.y2 - line.y1) + 10
             );
+            graphics.on('pointerdown', () => onSelect('line', line.id));
 
-            if (totalGrow > 0) {
-                this.children.forEach((child, i) => {
-                    const flexGrow = parseFloat(child.props.flexGrow) || 0;
-                    sizes[i] += (remainingSpace * flexGrow / totalGrow);
+            linesLayer.addChild(graphics);
+        });
+
+        // Render Sections (using images or snapshots)
+        sections.forEach(([sectionName, pos]) => {
+            const snapshot = sectionSnapshots[sectionName];
+            if (snapshot) {
+                const sectionContainer = new PIXI.Container();
+                sectionContainer.x = pos.x;
+                sectionContainer.y = pos.y;
+                sectionContainer.interactive = true;
+                sectionContainer.buttonMode = true;
+
+                sectionContainer.on('pointerdown', (event) => {
+                    onSelect('section', sectionName);
+                    sectionContainer.data = event.data;
+                    sectionContainer.dragging = true;
+                    sectionContainer.dragOffset = event.data.getLocalPosition(sectionContainer.parent);
+                    sectionContainer.dragOffset.x -= sectionContainer.x;
+                    sectionContainer.dragOffset.y -= sectionContainer.y;
+
+                    // Add dashed blue border when dragging starts
+                    const border = new PIXI.Graphics();
+                    if (border.stroke) {
+                        border.rect(0, 0, snapshot.width, snapshot.height);
+                        border.stroke({ color: 0x3b82f6, width: 2, alpha: 0.8 });
+                    } else {
+                        border.lineStyle(2, 0x3b82f6, 0.8);
+                        border.drawRect(0, 0, snapshot.width, snapshot.height);
+                    }
+                    border.name = '_dragBorder';
+                    sectionContainer.addChild(border);
+                });
+
+                sectionContainer.on('pointermove', () => {
+                    if (sectionContainer.dragging) {
+                        const newPosition = sectionContainer.data.getLocalPosition(sectionContainer.parent);
+                        sectionContainer.x = newPosition.x - sectionContainer.dragOffset.x;
+                        sectionContainer.y = newPosition.y - sectionContainer.dragOffset.y;
+                    }
+                });
+
+                sectionContainer.on('pointerup', () => {
+                    if (sectionContainer.dragging) {
+                        sectionContainer.dragging = false;
+                        sectionContainer.data = null;
+                        // Remove border
+                        const border = sectionContainer.children.find(c => c.name === '_dragBorder');
+                        if (border) sectionContainer.removeChild(border);
+                        onDragEnd('section', sectionName, { x: Math.round(sectionContainer.x), y: Math.round(sectionContainer.y) });
+                    }
+                });
+
+                sectionContainer.on('pointerupoutside', () => {
+                    if (sectionContainer.dragging) {
+                        sectionContainer.dragging = false;
+                        sectionContainer.data = null;
+                        // Remove border
+                        const border = sectionContainer.children.find(c => c.name === '_dragBorder');
+                        if (border) sectionContainer.removeChild(border);
+                        onDragEnd('section', sectionName, { x: Math.round(sectionContainer.x), y: Math.round(sectionContainer.y) });
+                    }
+                });
+
+                sectionsLayer.addChild(sectionContainer);
+
+                const renderer = new PixiRenderer(null, {
+                    width: snapshot.width,
+                    height: snapshot.height,
+                    backgroundColor: 'transparent'
+                });
+
+                renderer.render(snapshot, { targetContainer: sectionContainer });
+            }
+        });
+
+
+
+    }, [shapes, lines, sections, sectionSnapshots, selectedId, initTrigger]);
+
+    // Animation Ticker - SEPARATE useEffect
+    useEffect(() => {
+        const app = pixiApp.current;
+        if (!app || !isAnimating) return;
+
+        let time = 0;
+        let frameCount = 0;
+        let lastLogTime = performance.now();
+
+        const animate = () => {
+            time += 0.05;
+            frameCount++;
+
+            // FPS Logging
+            const now = performance.now();
+            if (now - lastLogTime >= 1000) {
+                console.log(`[ANIMATION] FPS: ${Math.round((frameCount * 1000) / (now - lastLogTime))}`);
+                frameCount = 0;
+                lastLogTime = now;
+            }
+
+            // Animate Sections (Bounce)
+            const sectionsLayer = app.stage.children[1];
+            if (sectionsLayer) {
+                sectionsLayer.children.forEach((child, index) => {
+                    // Simple sine wave bounce based on index
+                    child.y += Math.sin(time + index) * 2;
                 });
             }
-        } else if (remainingSpace < 0) {
-            // SHRINK
-            const totalShrink = this.children.reduce((sum, child) =>
-                sum + (parseFloat(child.props.flexShrink) || 1), 0
-            );
-
-            if (totalShrink > 0) {
-                this.children.forEach((child, i) => {
-                    const flexShrink = parseFloat(child.props.flexShrink) || 1;
-                    const shrinkAmount = Math.abs(remainingSpace) * flexShrink / totalShrink;
-                    sizes[i] = Math.max(0, sizes[i] - shrinkAmount);
-                });
-            }
-        }
-
-        return sizes;
-    }
-
-    calculateMainAxisPositions(sizes, justifyContent, availableSpace, gap) {
-        const positions = [];
-        const totalSize = sizes.reduce((sum, s) => sum + s, 0);
-        const totalGap = gap * (sizes.length - 1);
-        const freeSpace = availableSpace - totalSize - totalGap;
-
-        let currentPos = 0;
-
-        switch (justifyContent) {
-            case 'flex-start':
-                currentPos = 0;
-                break;
-            case 'flex-end':
-                currentPos = freeSpace;
-                break;
-            case 'center':
-                currentPos = freeSpace / 2;
-                break;
-            case 'space-between':
-                currentPos = 0;
-                break;
-            case 'space-around':
-                currentPos = freeSpace / (sizes.length * 2);
-                break;
-            case 'space-evenly':
-                currentPos = freeSpace / (sizes.length + 1);
-                break;
-        }
-
-        sizes.forEach((size, i) => {
-            positions.push(currentPos);
-            currentPos += size;
-
-            if (i < sizes.length - 1) {
-                if (justifyContent === 'space-between' && sizes.length > 1) {
-                    currentPos += gap + freeSpace / (sizes.length - 1);
-                } else if (justifyContent === 'space-around') {
-                    currentPos += gap + freeSpace / sizes.length;
-                } else if (justifyContent === 'space-evenly') {
-                    currentPos += gap + freeSpace / (sizes.length + 1);
-                } else {
-                    currentPos += gap;
-                }
-            }
-        });
-
-        return positions;
-    }
-
-    calculateCrossSize(child, alignItems, availableCrossSize) {
-        const alignSelf = child.props.alignSelf || alignItems;
-
-        if (alignSelf === 'stretch' && !child.props.height && !child.props.width) {
-            return availableCrossSize;
-        }
-
-        const crossAxis = (this.props.flexDirection === 'row' || this.props.flexDirection === 'row-reverse')
-            ? 'height' : 'width';
-
-        return child.intrinsicSize[crossAxis];
-    }
-
-    calculateCrossPosition(child, alignItems, availableCrossSize, crossSize) {
-        const alignSelf = child.props.alignSelf || alignItems;
-
-        switch (alignSelf) {
-            case 'flex-start':
-            case 'stretch':
-                return 0;
-            case 'flex-end':
-                return availableCrossSize - crossSize;
-            case 'center':
-                return (availableCrossSize - crossSize) / 2;
-            default:
-                return 0;
-        }
-    }
-
-    render(engine) {
-        this.renderBox(engine);
-        this.children.forEach(child => child.render(engine));
-    }
-}
-
-class GridNode extends LayoutNode {
-    measure(constraints) {
-        const {
-            gridTemplateColumns = ['1fr'],
-            gridTemplateRows = ['auto'],
-            gap = 0,
-            columnGap = gap,
-            rowGap = gap,
-            padding = 0
-        } = this.props;
-
-        const p = parsePadding(padding);
-
-        // For auto-sized grids, we need to measure children
-        const childConstraints = {
-            maxWidth: constraints.maxWidth - p.left - p.right,
-            maxHeight: constraints.maxHeight - p.top - p.bottom
         };
 
-        this.children.forEach(child => {
-            child.intrinsicSize = child.measure(childConstraints);
-        });
+        app.ticker.add(animate);
+        console.log('[ANIMATION] Started');
 
-        // Estimate size (will be resolved in layout)
-        const colCount = gridTemplateColumns.length;
-        const rowCount = gridTemplateRows.length;
-
-        const estimatedWidth = constraints.maxWidth ||
-            (colCount * 100 + parseSize(columnGap) * (colCount - 1) + p.left + p.right);
-        const estimatedHeight = constraints.maxHeight ||
-            (rowCount * 50 + parseSize(rowGap) * (rowCount - 1) + p.top + p.bottom);
-
-        this.intrinsicSize = { width: estimatedWidth, height: estimatedHeight };
-        return this.intrinsicSize;
-    }
-
-    layout(bounds) {
-        this.bounds = bounds;
-
-        if (this.children.length === 0) return;
-
-        const {
-            gridTemplateColumns = ['1fr'],
-            gridTemplateRows = ['auto'],
-            gap = 0,
-            columnGap = gap,
-            rowGap = gap,
-            padding = 0
-        } = this.props;
-
-        const contentBox = this.getContentBox(bounds, padding);
-
-        // Resolve grid tracks
-        const colSizes = this.resolveGridTracks(
-            gridTemplateColumns,
-            contentBox.width,
-            parseSize(columnGap),
-            'width'
-        );
-
-        const rowSizes = this.resolveGridTracks(
-            gridTemplateRows,
-            contentBox.height,
-            parseSize(rowGap),
-            'height'
-        );
-
-        // Calculate grid line positions
-        const colPositions = this.calculateGridLinePositions(colSizes, parseSize(columnGap));
-        const rowPositions = this.calculateGridLinePositions(rowSizes, parseSize(rowGap));
-
-        // Layout each child
-        this.children.forEach((child, i) => {
-            const placement = this.getGridPlacement(child, i, gridTemplateColumns.length);
-
-            const childBounds = {
-                x: contentBox.x + colPositions[placement.colStart],
-                y: contentBox.y + rowPositions[placement.rowStart],
-                width: colPositions[placement.colEnd] - colPositions[placement.colStart],
-                height: rowPositions[placement.rowEnd] - rowPositions[placement.rowStart]
-            };
-
-            child.layout(childBounds);
-        });
-    }
-
-    resolveGridTracks(tracks, availableSpace, gap, axis) {
-        const sizes = [];
-        let usedSpace = 0;
-        const totalGap = gap * (tracks.length - 1);
-
-        // Step 1: Calculate fixed and auto tracks
-        const frTracks = [];
-
-        tracks.forEach((track, i) => {
-            if (String(track).endsWith('fr')) {
-                frTracks.push({ index: i, value: parseFloat(track) });
-                sizes[i] = 0;
-            } else if (track === 'auto') {
-                // Calculate auto size based on content
-                const autoSize = this.calculateAutoTrackSize(i, axis);
-                sizes[i] = autoSize;
-                usedSpace += autoSize;
-            } else {
-                // Fixed size
-                const size = parseSize(track, availableSpace);
-                sizes[i] = size;
-                usedSpace += size;
-            }
-        });
-
-        // Step 2: Distribute remaining space to fr tracks
-        const remaining = availableSpace - usedSpace - totalGap;
-        const totalFr = frTracks.reduce((sum, t) => sum + t.value, 0);
-
-        if (totalFr > 0 && remaining > 0) {
-            const frUnit = remaining / totalFr;
-            frTracks.forEach(({ index, value }) => {
-                sizes[index] = frUnit * value;
-            });
-        }
-
-        return sizes;
-    }
-
-    calculateAutoTrackSize(trackIndex, axis) {
-        // Find all children in this track and get max size
-        const { gridTemplateColumns = ['1fr'] } = this.props;
-        const colCount = gridTemplateColumns.length;
-
-        let maxSize = 0;
-
-        this.children.forEach((child, i) => {
-            const placement = this.getGridPlacement(child, i, colCount);
-            const isInTrack = axis === 'width'
-                ? (placement.colStart === trackIndex)
-                : (placement.rowStart === trackIndex);
-
-            if (isInTrack && child.intrinsicSize) {
-                maxSize = Math.max(maxSize, child.intrinsicSize[axis]);
-            }
-        });
-
-        return maxSize || 50; // Default size
-    }
-
-    calculateGridLinePositions(sizes, gap) {
-        const positions = [0];
-        let current = 0;
-
-        sizes.forEach((size, i) => {
-            current += size;
-            positions.push(current);
-            if (i < sizes.length - 1) {
-                current += gap;
-            }
-        });
-
-        return positions;
-    }
-
-    getGridPlacement(child, index, colCount) {
-        // Check for explicit grid-area or grid-column/row
-        if (child.props.gridArea) {
-            return this.parseGridArea(child.props.gridArea);
-        }
-
-        if (child.props.gridColumn || child.props.gridRow) {
-            return {
-                colStart: this.parseGridLine(child.props.gridColumn, true) - 1,
-                colEnd: this.parseGridLine(child.props.gridColumn, false),
-                rowStart: this.parseGridLine(child.props.gridRow, true) - 1,
-                rowEnd: this.parseGridLine(child.props.gridRow, false)
-            };
-        }
-
-        // Auto-placement
-        const row = Math.floor(index / colCount);
-        const col = index % colCount;
-
-        return {
-            colStart: col,
-            colEnd: col + 1,
-            rowStart: row,
-            rowEnd: row + 1
+        return () => {
+            app.ticker.remove(animate);
+            console.log('[ANIMATION] Stopped');
         };
-    }
+    }, [isAnimating, initTrigger]);
 
-    parseGridArea(area) {
-        // Format: "rowStart / colStart / rowEnd / colEnd"
-        // or "row / col" (spans 1)
-        const parts = String(area).split('/').map(s => s.trim());
-
-        if (parts.length === 4) {
-            return {
-                rowStart: parseInt(parts[0]) - 1,
-                colStart: parseInt(parts[1]) - 1,
-                rowEnd: parseInt(parts[2]),
-                colEnd: parseInt(parts[3])
-            };
-        } else if (parts.length === 2) {
-            return {
-                rowStart: parseInt(parts[0]) - 1,
-                colStart: parseInt(parts[1]) - 1,
-                rowEnd: parseInt(parts[0]),
-                colEnd: parseInt(parts[1])
-            };
-        }
-
-        return { colStart: 0, colEnd: 1, rowStart: 0, rowEnd: 1 };
-    }
-
-    parseGridLine(value, isStart) {
-        if (!value) return isStart ? 1 : 2;
-
-        const parts = String(value).split('/').map(s => s.trim());
-        return parseInt(isStart ? parts[0] : (parts[1] || parts[0])) || (isStart ? 1 : 2);
-    }
-
-    render(engine) {
-        this.renderBox(engine);
-
-        // Debug: Draw grid lines
-        if (engine.debug) {
-            this.drawGridLines(engine);
-        }
-
-        this.children.forEach(child => child.render(engine));
-    }
-
-    drawGridLines(engine) {
-        // Not implemented yet - would draw grid visualization
-    }
-}
-class TextNode extends LayoutNode { constructor(content, props = {}) { super(props, []); this.content = content; } measure(constraints) { const { font = '16px Arial', maxWidth = constraints.maxWidth, lineHeight } = this.props; const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d'); ctx.font = font; const fontSize = parseInt(font) || 16; const lh = lineHeight || fontSize * 1.2; if (maxWidth === Infinity || !maxWidth) { const metrics = ctx.measureText(this.content); this.intrinsicSize = { width: metrics.width, height: lh }; } else { const lines = this.wrapText(ctx, this.content, maxWidth); this.intrinsicSize = { width: maxWidth, height: lines.length * lh }; } return this.intrinsicSize; } wrapText(ctx, text, maxWidth) { const words = text.split(' '); const lines = []; let currentLine = ''; words.forEach(word => { const testLine = currentLine ? `${currentLine} ${word}` : word; const metrics = ctx.measureText(testLine); if (metrics.width > maxWidth && currentLine) { lines.push(currentLine); currentLine = word; } else { currentLine = testLine; } }); if (currentLine) lines.push(currentLine); return lines; } layout(bounds) { this.bounds = bounds; } render(engine) { if (!this.bounds) return; const { font = '16px Arial', color = '#000000', textAlign = 'left', lineHeight } = this.props; const ctx = engine.ctx; ctx.font = font; ctx.fillStyle = color; ctx.textBaseline = 'top'; const fontSize = parseInt(font) || 16; const lh = lineHeight || fontSize * 1.2; const lines = this.wrapText(ctx, this.content, this.bounds.width); lines.forEach((line, i) => { let x = this.bounds.x; const y = this.bounds.y + (i * lh); if (textAlign === 'center') { const metrics = ctx.measureText(line); x = this.bounds.x + (this.bounds.width - metrics.width) / 2; } else if (textAlign === 'right') { const metrics = ctx.measureText(line); x = this.bounds.x + this.bounds.width - metrics.width; } ctx.fillText(line, x, y); }); } }
-class BlockNode extends LayoutNode {
-    measure(constraints) {
-        const { width, height, padding = 0, margin = 0 } = this.props;
-        const p = parsePadding(padding);
-        const m = parseMargin(margin);
-
-        // If explicit size provided
-        if (width && height) {
-            return {
-                width: parseSize(width, constraints.maxWidth) + m.left + m.right,
-                height: parseSize(height, constraints.maxHeight) + m.top + m.bottom
-            };
-        }
-
-        // Otherwise measure children
-        const childConstraints = {
-            maxWidth: width ? parseSize(width, constraints.maxWidth) - p.left - p.right :
-                constraints.maxWidth - p.left - p.right - m.left - m.right,
-            maxHeight: height ? parseSize(height, constraints.maxHeight) - p.top - p.bottom :
-                constraints.maxHeight - p.top - p.bottom - m.top - m.bottom
-        };
-
-        if (this.children.length === 0) {
-            return {
-                width: (width ? parseSize(width, constraints.maxWidth) : 0) + p.left + p.right + m.left + m.right,
-                height: (height ? parseSize(height, constraints.maxHeight) : 0) + p.top + p.bottom + m.top + m.bottom
-            };
-        }
-
-        const childSizes = this.children.map(child => {
-            const size = child.measure(childConstraints);
-            child.intrinsicSize = size;
-            return size;
-        });
-
-        const contentWidth = Math.max(...childSizes.map(s => s.width));
-        const contentHeight = childSizes.reduce((sum, s) => sum + s.height, 0);
-
-        this.intrinsicSize = {
-            width: (width ? parseSize(width, constraints.maxWidth) : contentWidth) + p.left + p.right + m.left + m.right,
-            height: (height ? parseSize(height, constraints.maxHeight) : contentHeight) + p.top + p.bottom + m.top + m.bottom
-        };
-
-        return this.intrinsicSize;
-    }
-
-    layout(bounds) {
-        const { position = 'relative', top, left, padding = 0, margin = 0 } = this.props;
-        const m = parseMargin(margin);
-
-        // Apply margin
-        this.bounds = {
-            x: bounds.x + m.left,
-            y: bounds.y + m.top,
-            width: bounds.width - m.left - m.right,
-            height: bounds.height - m.top - m.bottom
-        };
-
-        if (position === 'absolute') {
-            // Position absolutely within parent
-            const x = left !== undefined ? bounds.x + parseSize(left, bounds.width) : this.bounds.x;
-            const y = top !== undefined ? bounds.y + parseSize(top, bounds.height) : this.bounds.y;
-
-            this.bounds = { ...this.bounds, x, y };
-        }
-
-        // Layout children within content box
-        const contentBox = this.getContentBox(this.bounds, padding);
-
-        let currentY = contentBox.y;
-        this.children.forEach(child => {
-            const childHeight = child.intrinsicSize?.height || 0;
-            child.layout({
-                x: contentBox.x,
-                y: currentY,
-                width: contentBox.width,
-                height: childHeight
-            });
-            currentY += childHeight;
-        });
-    }
-
-    render(engine) {
-        this.renderBox(engine);
-        this.children.forEach(child => child.render(engine));
-    }
-}
-
-class ImageNode extends LayoutNode {
-    constructor(src, props = {}) {
-        super(props, []);
-        this.src = src;
-        this.image = null;
-        this.loaded = false;
-
-        if (typeof src === 'string') {
-            this.image = new Image();
-            this.image.onload = () => { this.loaded = true; };
-            this.image.src = src;
-        } else if (src instanceof Image) {
-            this.image = src;
-            this.loaded = src.complete;
-        }
-    }
-
-    measure(constraints) {
-        const { width, height, objectFit = 'contain' } = this.props;
-
-        if (width && height) {
-            this.intrinsicSize = {
-                width: parseSize(width, constraints.maxWidth),
-                height: parseSize(height, constraints.maxHeight)
-            };
-        } else if (this.loaded && this.image) {
-            const aspectRatio = this.image.width / this.image.height;
-
-            if (width) {
-                const w = parseSize(width, constraints.maxWidth);
-                this.intrinsicSize = { width: w, height: w / aspectRatio };
-            } else if (height) {
-                const h = parseSize(height, constraints.maxHeight);
-                this.intrinsicSize = { width: h * aspectRatio, height: h };
-            } else {
-                this.intrinsicSize = {
-                    width: Math.min(this.image.width, constraints.maxWidth),
-                    height: Math.min(this.image.height, constraints.maxHeight)
-                };
-            }
-        } else {
-            this.intrinsicSize = { width: 100, height: 100 };
-        }
-
-        return this.intrinsicSize;
-    }
-
-    layout(bounds) {
-        this.bounds = bounds;
-    }
-
-    render(engine) {
-        if (!this.loaded || !this.image || !this.bounds) return;
-
-        const { objectFit = 'contain', borderRadius = 0 } = this.props;
-
-        const ctx = engine.ctx;
-
-        // Calculate image dimensions based on objectFit
-        let sx = 0, sy = 0, sw = this.image.width, sh = this.image.height;
-        let dx = this.bounds.x, dy = this.bounds.y, dw = this.bounds.width, dh = this.bounds.height;
-
-        if (objectFit === 'cover') {
-            const scale = Math.max(dw / sw, dh / sh);
-            const scaledWidth = sw * scale;
-            const scaledHeight = sh * scale;
-            sx = (scaledWidth - dw) / (2 * scale);
-            sy = (scaledHeight - dh) / (2 * scale);
-            sw = dw / scale;
-            sh = dh / scale;
-        } else if (objectFit === 'contain') {
-            const scale = Math.min(dw / sw, dh / sh);
-            dw = sw * scale;
-            dh = sh * scale;
-            dx = this.bounds.x + (this.bounds.width - dw) / 2;
-            dy = this.bounds.y + (this.bounds.height - dh) / 2;
-        }
-
-        // Clip if borderRadius
-        if (borderRadius > 0) {
-            ctx.save();
-            this.roundRect(ctx, { x: dx, y: dy, width: dw, height: dh }, borderRadius);
-            ctx.clip();
-        }
-
-        ctx.drawImage(this.image, sx, sy, sw, sh, dx, dy, dw, dh);
-
-        if (borderRadius > 0) {
-            ctx.restore();
-        }
-    }
-}
-
-class SpacerNode extends LayoutNode {
-    constructor(size, props = {}) {
-        super(props, []);
-        this.size = size;
-    }
-
-    measure(constraints) {
-        this.intrinsicSize = {
-            width: parseSize(this.size, constraints.maxWidth),
-            height: parseSize(this.size, constraints.maxHeight)
-        };
-        return this.intrinsicSize;
-    }
-
-    layout(bounds) {
-        this.bounds = bounds;
-    }
-
-    render(engine) {
-        // Spacers don't render anything
-    }
-}
-
-
-class CanvasLayoutEngine {
-    constructor(canvas, config = {}) {
-        this.canvas = canvas;
-        this.ctx = canvas.getContext('2d');
-        this.config = config;
-        this.scale = config.scale || 1;
-        this.debug = config.debug || false;
-
-        // Cache for performance
-        this.measureCache = new Map();
-    }
-
-    initialize(width, height) {
-        this.canvas.width = width * this.scale;
-        this.canvas.height = height * this.scale;
-        this.ctx.scale(this.scale, this.scale);
-        this.ctx.imageSmoothingEnabled = true;
-        this.ctx.imageSmoothingQuality = 'high';
-
-        // Clear canvas
-        this.ctx.clearRect(0, 0, width, height);
-
-        if (this.debug) {
-            this.drawDebugGrid(width, height);
-        }
-    }
-
-    renderLayoutTree(rootNode, bounds) {
-        // Phase 1: Measure
-        rootNode.layout(bounds);
-
-        // Phase 3: Render
-        rootNode.render(this);
-    }
-
-    drawDebugGrid(width, height) {
-        this.ctx.strokeStyle = 'rgba(200, 200, 200, 0.3)';
-        this.ctx.lineWidth = 0.5;
-
-        for (let x = 0; x < width; x += 50) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(x, 0);
-            this.ctx.lineTo(x, height);
-            this.ctx.stroke();
-        }
-
-        for (let y = 0; y < height; y += 50) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(0, y);
-            this.ctx.lineTo(width, y);
-            this.ctx.stroke();
-        }
-    }
-
-    toDataURL(type = 'image/png', quality = 1.0) {
-        return this.canvas.toDataURL(type, quality);
-    }
-
-    toImage() {
-        return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.onload = () => resolve(img);
-            img.onerror = reject;
-            img.src = this.toDataURL();
-        });
-    }
-
-    download(filename = 'layout') {
-        const link = document.createElement('a');
-        link.download = `${filename}.png`;
-        link.href = this.toDataURL();
-        link.click();
-    }
-}
-
-// ==================== CONFIG PARSER ====================
-
-function parseConfigToLayout(config, data) {
-    const { display = 'block', children = [], ...props } = config;
-
-    const childNodes = children.map(child => {
-        if (typeof child === 'string') {
-            return new TextNode(child, props);
-        } else if (child.type === 'text') {
-            return new TextNode(child.content, child.props || {});
-        } else if (child.type === 'image') {
-            return new ImageNode(child.src, child.props || {});
-        } else if (child.type === 'spacer') {
-            return new SpacerNode(child.size, child.props || {});
-        } else {
-            return parseConfigToLayout(child, data);
-        }
-    });
-
-    // Create appropriate node based on display
-    if (display === 'flex') {
-        return new FlexNode(props, childNodes);
-    } else if (display === 'grid') {
-        return new GridNode(props, childNodes);
-    } else {
-        return new BlockNode(props, childNodes);
-    }
-}
-
-export {
-    CanvasLayoutEngine,
-    LayoutNode,
-    FlexNode,
-    GridNode,
-    BlockNode,
-    TextNode,
-    ImageNode,
-    SpacerNode,
-    parseConfigToLayout,
-    GeometrySnapshot,
-    PixiRenderer,
-    HybridRenderer
+    return (
+        <div
+            ref={containerRef}
+            className="webgl-stage-container"
+            style={{
+                width: width,
+                height: height,
+                boxShadow: '0 0 20px rgba(0,0,0,0.1)',
+                background: 'white'
+            }}
+        />
+    );
 };
 
-// ==================== HYBRID RENDERING ORCHESTRATOR ====================
 
-class HybridRenderer {
-    constructor(options = {}) {
-        this.mode = options.mode || 'css'; // 'css' | 'geometry' | 'pixi'
-        this.container = options.container;
-        this.canvas = null;
-        this.engine = null;
-        this.pixiRenderer = null;
-        this.geometrySnapshot = null;
-    }
+// ==================== MAIN UI EDITOR COMPONENT ====================
 
-    /**
-     * MODE 1: CSS Layout Engine (Manual Layout Building)
-     */
-    async renderWithCSSEngine(layoutTree, bounds) {
-        if (!this.canvas) {
-            this.canvas = document.createElement('canvas');
-            this.container.appendChild(this.canvas);
+const UIEditor = ({ initialUseWebGL = false }) => {
+    // Refs
+    const stageRef = useRef(null);
+    const stage2Ref = useRef(null);
+    const sectionRefs = useRef({});
+
+
+    // State
+    const [selectedLine, setSelectedLine] = useState(null);
+    const [selectedShape, setSelectedShape] = useState(null);
+    const [selectedSection, setSelectedSection] = useState(null);
+    const [showPage2, setShowPage2] = useState(false);
+    const [zoom, setZoom] = useState(1);
+    const [sectionPositions, setSectionPositions] = useState({});
+    const [lines, setLines] = useState([]);
+    const [backgroundShapes, setBackgroundShapes] = useState([]);
+    const [nextLineId, setNextLineId] = useState(1);
+    const [nextShapeId, setNextShapeId] = useState(1);
+    const [currentTemplate, setCurrentTemplate] = useState('ats');
+    const [sectionWidths, setSectionWidths] = useState({});
+    const [styleConfig, setStyleConfig] = useState(ATS_TEMPLATE_CONFIG);
+    const [sectionImages, setSectionImages] = useState({});
+    const [sectionSnapshots, setSectionSnapshots] = useState({});
+    const [TemplateComponents, setTemplateComponents] = useState(null);
+    const [useWebGL, setUseWebGL] = useState(initialUseWebGL); // Toggle for WebGL
+    const [resumeData, setResumeData] = useState(defaultResumeData);
+    const currentResume = useSelector((state) => state.resume.currentResume);
+
+    const [resumeDetails, setResumeDetails] = useState(defaultResumeData);
+
+    // Mobile responsiveness state
+    const [isMobile, setIsMobile] = useState(false);
+    const [activeTab, setActiveTab] = useState('controls'); // 'controls' | 'properties'
+    const [isAnimating, setIsAnimating] = useState(false); // TEST ANIMATION STATE
+
+    // Mobile detection effect
+    useEffect(() => {
+        const checkMobile = () => {
+            const mobile = window.innerWidth <= 768;
+            setIsMobile(mobile);
+            if (mobile) {
+                setZoom(0.55); // A better default for mobile width
+            }
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
+    useEffect(() => {
+        if (!currentResume) return;
+        setResumeData(currentResume);
+    }, [currentResume])
+
+    const TEMPLATES = {
+        ats: ATS_TEMPLATE_CONFIG,
+        modern: MODERN_TEMPLATE_CONFIG,
+        twoColumn: TWO_COLUMN_TEMPLATE_CONFIG,
+        template5: TEMPLATE5_CONFIG
+    };
+
+    // Initialize template on mount
+
+    useEffect(() => {
+        const defaultTemplate = TEMPLATES['ats'];
+        setSectionPositions(defaultTemplate.positions || {});
+        setLines(defaultTemplate.lines || []);
+        setBackgroundShapes(defaultTemplate.shapes || []);
+
+        // Initialize IDs
+        if (defaultTemplate.lines && defaultTemplate.lines.length > 0) {
+            setNextLineId(Math.max(...defaultTemplate.lines.map(l => l.id || 0)) + 1);
+        }
+        if (defaultTemplate.shapes && defaultTemplate.shapes.length > 0) {
+            setNextShapeId(Math.max(...defaultTemplate.shapes.map(s => s.id || 0)) + 1);
+        }
+    }, []);
+
+
+    // ==================== USE EFFECTS ====================
+
+    // Initialize template components
+    useEffect(() => {
+
+        setTemplateComponents({
+            header: FlexibleHeaderSection,
+            contact: FlexibleContactSection,
+            summary: FlexibleSummarySection,
+            skills: FlexibleSkillsSection,
+            experience: FlexibleExperienceSection,
+            projects: FlexibleProjectsSection,
+            education: FlexibleEducationSection,
+            certifications: FlexibleCertificationsSection
+        });
+
+        // Initialize section refs
+        const sections = ['header', 'contact', 'summary', 'skills', 'experience', 'education', 'projects', 'certifications'];
+        sections.forEach(section => {
+            if (!sectionRefs.current[section]) {
+                sectionRefs.current[section] = React.createRef();
+            }
+        });
+    }, []);
+
+
+
+    const extractWidthsAndHeightsFromConfig = (config) => {
+        const widths = {};
+        const heights = {};
+        Object.keys(config).forEach(key => {
+            if (config[key]?.container?.width) {
+                widths[key] = config[key].container.width;
+            }
+            if (config[key]?.container?.height) {
+                heights[key] = config[key].container.height;
+            }
+        });
+        return { widths, heights };
+    };
+
+
+    // Handle width change
+    const handleWidthChange = (sectionName, value) => {
+        setSectionWidths(prev => ({
+            ...prev,
+            [sectionName]: value
+        }));
+    };
+
+
+    const [sectionHeights, setSectionHeights] = useState({});
+
+    // Add this helper function with your other helper functions
+    const handleHeightChange = (sectionName, value) => {
+        setSectionHeights(prev => ({
+            ...prev,
+            [sectionName]: value
+        }));
+    };
+
+    // Add this to apply height
+    const handleHeightBlur = (sectionName) => {
+        const height = sectionHeights[sectionName];
+        setStyleConfig(prev => ({
+            ...prev,
+            [sectionName]: {
+                ...prev[sectionName],
+                container: {
+                    ...prev[sectionName]?.container,
+                    height: height
+                }
+            }
+        }));
+    };
+
+
+    // Handle width blur (apply the width)
+    const handleWidthBlur = (sectionName) => {
+        const width = sectionWidths[sectionName];
+        setStyleConfig(prev => ({
+            ...prev,
+            [sectionName]: {
+                ...prev[sectionName],
+                container: {
+                    ...prev[sectionName]?.container,
+                    width: width
+                }
+            }
+        }));
+    };
+
+    // Handle style changes
+    const handleStyleChange = (sectionName, styleType, value, property) => {
+        setStyleConfig(prev => ({
+            ...prev,
+            [sectionName]: {
+                ...prev[sectionName],
+                [styleType]: {
+                    ...prev[sectionName]?.[styleType],
+                    [property]: value
+                }
+            }
+        }));
+    };
+
+    // Add these helper methods to your component
+
+    const handleHeaderLayoutChange = (key, value) => {
+        setStyleConfig(prev => ({
+            ...prev,
+            header: {
+                ...prev.header,
+                [key]: value
+            }
+        }));
+    };
+
+    const handleHeaderStyleChange = (styleKey, property, value) => {
+        setStyleConfig(prev => ({
+            ...prev,
+            header: {
+                ...prev.header,
+                [styleKey]: {
+                    ...prev.header?.[styleKey],
+                    [property]: value
+                }
+            }
+        }));
+    };
+
+    const handleSectionOrderChange = (currentIndex, direction) => {
+        const currentOrder = styleConfig.header?.sectionOrder || ['name', 'title', 'contact'];
+        const newOrder = [...currentOrder];
+
+        if (direction === 'up' && currentIndex > 0) {
+            [newOrder[currentIndex], newOrder[currentIndex - 1]] = [newOrder[currentIndex - 1], newOrder[currentIndex]];
+        } else if (direction === 'down' && currentIndex < newOrder.length - 1) {
+            [newOrder[currentIndex], newOrder[currentIndex + 1]] = [newOrder[currentIndex + 1], newOrder[currentIndex]];
         }
 
-        this.engine = new CanvasLayoutEngine(this.canvas, { scale: 2 });
-        this.engine.initialize(bounds.width, bounds.height);
-        this.engine.renderLayoutTree(layoutTree, bounds);
+        setStyleConfig(prev => ({
+            ...prev,
+            header: {
+                ...prev.header,
+                sectionOrder: newOrder
+            }
+        }));
+    };
 
-        return this.canvas;
-    }
+    // Reset Layout
+    // const resetLayout = () => {
+    //   const template = TEMPLATES[currentTemplate];
+    //   setSectionPositions(template.positions || {});
+    //   setSectionWidths(extractWidthsFromConfig(template));
+    //   setLines(template.lines || []);
+    //   setBackgroundShapes(template.backgroundShapes || []);
+    //   setZoom(1);
 
-    /**
-     * MODE 2: Geometry Snapshot (DOM Capture)
-     */
-    async renderWithGeometrySnapshot(domElement, renderMode = 'canvas') {
-        this.geometrySnapshot = new GeometrySnapshot();
-        const snapshot = this.geometrySnapshot.capture(domElement);
+    //   // Reset line and shape ID counters
+    //   if (template.lines && template.lines.length > 0) {
+    //     setNextLineId(Math.max(...template.lines.map(l => l.id)) + 1);
+    //   } else {
+    //     setNextLineId(1);
+    //   }
+    //   if (template.backgroundShapes && template.backgroundShapes.length > 0) {
+    //     setNextShapeId(Math.max(...template.backgroundShapes.map(s => s.id)) + 1);
+    //   } else {
+    //     setNextShapeId(1);
+    //   }
+    // };
 
-        if (renderMode === 'canvas') {
-            if (!this.canvas) {
-                this.canvas = document.createElement('canvas');
-                this.container.appendChild(this.canvas);
+
+    // Reset Layout - UPDATED
+    const resetLayout = () => {
+        const template = TEMPLATES[currentTemplate];
+        setSectionPositions(template.positions || {});
+
+        const { widths, heights } = extractWidthsAndHeightsFromConfig(template);
+        setSectionWidths(widths);
+        setSectionHeights(heights);
+
+        setLines(template.lines || []);
+        setBackgroundShapes(template.shapes || []);
+        setZoom(1);
+
+        // Reset line and shape ID counters
+        if (template.lines && template.lines.length > 0) {
+            setNextLineId(Math.max(...template.lines.map(l => l.id)) + 1);
+        } else {
+            setNextLineId(1);
+        }
+        if (template.shapes && template.shapes.length > 0) {
+            setNextShapeId(Math.max(...template.shapes.map(s => s.id)) + 1);
+        } else {
+            setNextShapeId(1);
+        }
+    };
+
+    // Download as image
+    const downloadResume = () => {
+        if (!stageRef.current) return;
+
+        const uri1 = stageRef.current.toDataURL({ pixelRatio: 5 });
+        const link1 = document.createElement('a');
+        link1.download = 'resume-page1.png';
+        link1.href = uri1;
+        link1.click();
+
+        if (showPage2 && stage2Ref.current) {
+            setTimeout(() => {
+                const uri2 = stage2Ref.current.toDataURL({ pixelRatio: 5 });
+                const link2 = document.createElement('a');
+                link2.download = 'resume-page2.png';
+                link2.href = uri2;
+                link2.click();
+            }, 100);
+        }
+    };
+
+    // Handle canvas click (deselect)
+    const handleStageClick = (e) => {
+        if (e.target === e.target.getStage()) {
+            setSelectedLine(null);
+            setSelectedShape(null);
+            setSelectedSection(null);
+        }
+    };
+
+    // Separate elements by page
+    const getElementsForPage = (pageNum) => {
+        const pageStart = (pageNum - 1) * 842;
+        const pageEnd = pageNum * 842;
+
+        return {
+            sections: Object.entries(sectionPositions || {}).filter(([_, pos]) => {
+                return pos && pos.y >= pageStart && pos.y < pageEnd;
+            }),
+            lines: (lines || []).filter(line => {
+                return (line.y1 >= pageStart && line.y1 < pageEnd) ||
+                    (line.y2 >= pageStart && line.y2 < pageEnd);
+            }),
+            shapes: (backgroundShapes || []).filter(shape => {
+                return (shape.y >= pageStart && shape.y < pageEnd) ||
+                    (shape.y + shape.height > pageStart && shape.y < pageEnd);
+            })
+        };
+    };
+
+
+
+
+
+
+    // ==================== TEMPLATE SWITCHING ====================
+
+    // const handleTemplateSwitch = (templateName) => {
+    //   setCurrentTemplate(templateName);
+    //   const template = TEMPLATES[templateName];
+    //   setStyleConfig(template);
+    //   setSectionPositions(template.positions || {});
+    //   setSectionWidths(extractWidthsFromConfig(template));
+    //   setLines(template.lines || []);
+    //   setBackgroundShapes(template.backgroundShapes || []);
+    //   setZoom(1);
+    //   setSelectedLine(null);
+    //   setSelectedShape(null);
+    //   setSelectedSection(null);
+
+    //   // Reset counters
+    //   if (template.lines && template.lines.length > 0) {
+    //     setNextLineId(Math.max(...template.lines.map(l => l.id)) + 1);
+    //   } else {
+    //     setNextLineId(1);
+    //   }
+    //   if (template.backgroundShapes && template.backgroundShapes.length > 0) {
+    //     setNextShapeId(Math.max(...template.backgroundShapes.map(s => s.id)) + 1);
+    //   } else {
+    //     setNextShapeId(1);
+    //   }
+    // };
+
+
+    const handleTemplateSwitch = (templateName) => {
+        setCurrentTemplate(templateName);
+        const template = TEMPLATES[templateName];
+
+        setStyleConfig(template);
+        setSectionPositions(template.positions || {});
+
+        const { widths, heights } = extractWidthsAndHeightsFromConfig(template);
+        setSectionWidths(widths);
+        setSectionHeights(heights);
+
+        setLines(template.lines || []);
+        setBackgroundShapes(template.shapes || []);
+        setZoom(1);
+        setSelectedLine(null);
+        setSelectedShape(null);
+        setSelectedSection(null);
+
+        // Reset counters
+        if (template.lines && template.lines.length > 0) {
+            setNextLineId(Math.max(...template.lines.map(l => l.id)) + 1);
+        } else {
+            setNextLineId(1);
+        }
+        if (template.shapes && template.shapes.length > 0) {
+            setNextShapeId(Math.max(...template.shapes.map(s => s.id)) + 1);
+        } else {
+            setNextShapeId(1);
+        }
+    };
+
+
+
+
+
+    // ==================== LINE FUNCTIONS ====================
+
+    // Add line
+    const addLine = (orientation) => {
+        const newLine = {
+            id: nextLineId,
+            label: `Line ${nextLineId}`,
+            orientation: orientation,
+            x1: orientation === 'horizontal' ? 100 : 200,
+            y1: orientation === 'horizontal' ? 200 : 100,
+            x2: orientation === 'horizontal' ? 400 : 200,
+            y2: orientation === 'horizontal' ? 200 : 400,
+            thickness: 1,
+            color: '#000000'
+        };
+        setLines([...lines, newLine]);
+        setNextLineId(nextLineId + 1);
+        setSelectedLine(newLine.id);
+    };
+
+    // Delete line
+    const deleteLine = (id) => {
+        setLines(lines.filter(line => line.id !== id));
+        if (selectedLine === id) setSelectedLine(null);
+    };
+
+    // Update line property
+    const updateLine = (id, property, value) => {
+        setLines(lines.map(line =>
+            line.id === id ? { ...line, [property]: value } : line
+        ));
+    };
+
+    // Move line
+    const moveLine = (id, direction) => {
+        const step = 10;
+        setLines(lines.map(line => {
+            if (line.id !== id) return line;
+
+            switch (direction) {
+                case 'up':
+                    return { ...line, y1: line.y1 - step, y2: line.y2 - step };
+                case 'down':
+                    return { ...line, y1: line.y1 + step, y2: line.y2 + step };
+                case 'left':
+                    return { ...line, x1: line.x1 - step, x2: line.x2 - step };
+                case 'right':
+                    return { ...line, x1: line.x1 + step, x2: line.x2 + step };
+                default:
+                    return line;
+            }
+        }));
+    };
+
+    // Resize line
+    const resizeLine = (id, action) => {
+        const step = 20;
+        setLines(lines.map(line => {
+            if (line.id !== id) return line;
+
+            if (line.orientation === 'horizontal') {
+                return {
+                    ...line,
+                    x2: action === 'increase' ? line.x2 + step : line.x2 - step
+                };
+            } else {
+                return {
+                    ...line,
+                    y2: action === 'increase' ? line.y2 + step : line.y2 - step
+                };
+            }
+        }));
+    };
+
+    // Handle line drag end
+    const handleLineDragEnd = (id, newPos) => {
+        setLines(lines.map(line =>
+            line.id === id ? { ...line, ...newPos } : line
+        ));
+    };
+
+    // Handle line update
+    const handleLineUpdate = (id, updates) => {
+        setLines(lines.map(line =>
+            line.id === id ? { ...line, ...updates } : line
+        ));
+    };
+
+
+
+
+    // ==================== BACKGROUND SHAPE FUNCTIONS ====================
+
+    // Add background shape
+    const addShape = () => {
+        const newShape = {
+            id: nextShapeId,
+            label: `Shape ${nextShapeId}`,
+            x: 50,
+            y: 50,
+            width: 200,
+            height: 100,
+            color: '#e5e7eb'
+        };
+        setBackgroundShapes([...backgroundShapes, newShape]);
+        setNextShapeId(nextShapeId + 1);
+        setSelectedShape(newShape.id);
+    };
+
+    // Delete background shape
+    const deleteBackgroundShape = (id) => {
+        setBackgroundShapes(backgroundShapes.filter(shape => shape.id !== id));
+        if (selectedShape === id) setSelectedShape(null);
+    };
+
+    // Update background shape property
+    const updateBackgroundShape = (id, property, value) => {
+        setBackgroundShapes(backgroundShapes.map(shape =>
+            shape.id === id ? { ...shape, [property]: value } : shape
+        ));
+    };
+
+    // Handle shape drag end
+    const handleShapeDragEnd = (id, newPos) => {
+        setBackgroundShapes(backgroundShapes.map(shape =>
+            shape.id === id ? { ...shape, x: newPos.x, y: newPos.y } : shape
+        ));
+    };
+
+    // Handle shape update
+    const handleShapeUpdate = (id, updates) => {
+        setBackgroundShapes(backgroundShapes.map(shape =>
+            shape.id === id ? { ...shape, ...updates } : shape
+        ));
+    };
+
+
+
+
+    // ==================== SECTION FUNCTIONS ====================
+
+    // Handle section drag end
+    const handleSectionDragEnd = (sectionName, newPos) => {
+        setSectionPositions(prev => ({
+            ...prev,
+            [sectionName]: newPos
+        }));
+    };
+
+
+    // Handle section transform - COMPLETE VERSION
+    const handleSectionTransform = (sectionName, newAttrs) => {
+        console.log('Transform:', sectionName, newAttrs); // Debug log
+
+        setSectionPositions(prev => ({
+            ...prev,
+            [sectionName]: {
+                x: newAttrs.x,
+                y: newAttrs.y
+            }
+        }));
+
+        // Update WIDTH
+        if (newAttrs.width) {
+            const widthPx = `${Math.round(newAttrs.width)}px`;
+
+            setSectionWidths(prev => ({
+                ...prev,
+                [sectionName]: widthPx
+            }));
+
+            setStyleConfig(prev => ({
+                ...prev,
+                [sectionName]: {
+                    ...prev[sectionName],
+                    container: {
+                        ...prev[sectionName]?.container,
+                        width: widthPx
+                    }
+                }
+            }));
+        }
+
+        // Update HEIGHT
+        if (newAttrs.height) {
+            const heightPx = `${Math.round(newAttrs.height)}px`;
+
+            setSectionHeights(prev => ({
+                ...prev,
+                [sectionName]: heightPx
+            }));
+
+            setStyleConfig(prev => ({
+                ...prev,
+                [sectionName]: {
+                    ...prev[sectionName],
+                    container: {
+                        ...prev[sectionName]?.container,
+                        height: heightPx
+                    }
+                }
+            }));
+        }
+    };
+
+    // Auto-flow sections - WITH PAGINATION
+    const autoFlowSections = () => {
+        let currentY = 50;
+        const spacing = 20;
+        const PAGE_HEIGHT = 842;
+        const PAGE_MARGIN = 50;
+        let currentPage = 1;
+
+        // Sort by current Y position to maintain relative order
+        const sortedSections = Object.keys(sectionPositions).sort((a, b) => {
+            const posA = sectionPositions[a];
+            const posB = sectionPositions[b];
+            return (posA?.y || 0) - (posB?.y || 0);
+        });
+
+        const newPositions = {};
+
+        sortedSections.forEach(sectionName => {
+            const img = sectionImages[sectionName];
+            const height = img ? img.height : 100;
+            const currentX = sectionPositions[sectionName]?.x || 40;
+
+            // Check if we need to break to next page
+            // If currentY + height exceeds page boundary
+            if (currentPage === 1 && (currentY + height) > (PAGE_HEIGHT - PAGE_MARGIN)) {
+                currentPage = 2;
+                currentY = PAGE_HEIGHT + PAGE_MARGIN; // Start at Page 2 top (842 + 50)
+                setShowPage2(true);
             }
 
-            this.geometrySnapshot.renderToCanvas(this.canvas);
-            return this.canvas;
-        } else if (renderMode === 'pixi') {
-            return this.renderSnapshotWithPixi(snapshot);
-        }
+            newPositions[sectionName] = {
+                x: currentX, // Keep X position (respect columns)
+                y: currentY
+            };
 
-        return snapshot;
-    }
-
-    /**
-     * MODE 3: PixiJS Renderer (GPU Accelerated)
-     */
-    async renderWithPixi(geometrySnapshot, config = {}) {
-        if (!this.pixiRenderer) {
-            this.pixiRenderer = new PixiRenderer(this.container, {
-                width: geometrySnapshot.width,
-                height: geometrySnapshot.height
-            });
-            await this.pixiRenderer.initialize();
-        }
-
-        await this.pixiRenderer.render(geometrySnapshot, {
-            shapes: config.shapes,
-            lines: config.lines
+            currentY += height + spacing;
         });
-        return this.pixiRenderer;
-    }
 
-    async renderSnapshotWithPixi(snapshot, config = {}) {
-        return this.renderWithPixi(snapshot, config);
-    }
+        setSectionPositions(newPositions);
+    };
 
-    async exportImage() {
-        if (this.pixiRenderer) {
-            return await this.pixiRenderer.exportImage();
-        } else if (this.canvas) {
-            return this.canvas.toDataURL();
-        }
-        return null;
-    }
 
-    destroy() {
-        if (this.pixiRenderer) {
-            this.pixiRenderer.destroy();
-        }
-        if (this.canvas && this.canvas.parentElement) {
-            this.canvas.parentElement.removeChild(this.canvas);
-        }
-    }
-}
 
+    // ==================== DRAGGABLE COMPONENTS ====================
+
+    // Draggable Line Component
+    const DraggableLine = ({ line, onDragEnd, onUpdate, isSelected, onSelect }) => {
+        const lineRef = useRef();
+        const trRef = useRef();
+
+        useEffect(() => {
+            if (isSelected && trRef.current && lineRef.current) {
+                trRef.current.nodes([lineRef.current]);
+                trRef.current.getLayer().batchDraw();
+            }
+        }, [isSelected]);
+
+        return (
+            <>
+                <Line
+                    ref={lineRef}
+                    points={[line.x1, line.y1, line.x2, line.y2]}
+                    stroke={line.color}
+                    strokeWidth={line.thickness}
+                    draggable
+                    onClick={onSelect}
+                    onTap={onSelect}
+                    onDragEnd={(e) => {
+                        const node = e.target;
+                        node.scaleX(1);
+                        node.scaleY(1);
+
+                        const dx = node.x();
+                        const dy = node.y();
+
+                        onDragEnd(line.id, {
+                            x1: line.x1 + dx,
+                            y1: line.y1 + dy,
+                            x2: line.x2 + dx,
+                            y2: line.y2 + dy
+                        });
+
+                        node.position({ x: 0, y: 0 });
+                    }}
+                    onTransformEnd={() => {
+                        const node = lineRef.current;
+                        const scaleX = node.scaleX();
+                        const scaleY = node.scaleY();
+
+                        node.scaleX(1);
+                        node.scaleY(1);
+
+                        onUpdate(line.id, {
+                            x2: line.x1 + (line.x2 - line.x1) * scaleX,
+                            y2: line.y1 + (line.y2 - line.y1) * scaleY
+                        });
+                    }}
+                />
+                {isSelected && (
+                    <Transformer
+                        ref={trRef}
+                        rotateEnabled={false}
+                        enabledAnchors={line.orientation === 'horizontal' ? ['middle-left', 'middle-right'] : ['top-center', 'bottom-center']}
+                    />
+                )}
+            </>
+        );
+    };
+
+    // Draggable Shape Component
+    const DraggableShape = ({ shape, onDragEnd, onUpdate, isSelected, onSelect }) => {
+        const shapeRef = useRef();
+        const trRef = useRef();
+
+        useEffect(() => {
+            if (isSelected && trRef.current && shapeRef.current) {
+                trRef.current.nodes([shapeRef.current]);
+                trRef.current.getLayer().batchDraw();
+            }
+        }, [isSelected]);
+
+        return (
+            <>
+                <Rect
+                    ref={shapeRef}
+                    x={shape.x}
+                    y={shape.y}
+                    width={shape.width}
+                    height={shape.height}
+                    fill={shape.color}
+                    draggable
+                    onClick={onSelect}
+                    onTap={onSelect}
+                    onDragEnd={(e) => {
+                        onDragEnd(shape.id, {
+                            x: Math.round(e.target.x()),
+                            y: Math.round(e.target.y())
+                        });
+                    }}
+                    onTransformEnd={() => {
+                        const node = shapeRef.current;
+                        const scaleX = node.scaleX();
+                        const scaleY = node.scaleY();
+
+                        node.scaleX(1);
+                        node.scaleY(1);
+
+                        onUpdate(shape.id, {
+                            width: Math.max(10, Math.round(shape.width * scaleX)),
+                            height: Math.max(10, Math.round(shape.height * scaleY))
+                        });
+                    }}
+                />
+                {isSelected && <Transformer ref={trRef} rotateEnabled={false} />}
+            </>
+        );
+    };
+
+    // Draggable Section Component - WITH VISIBLE RESIZE HANDLES
+    const DraggableSection = ({ sectionName, image, position, onDragEnd, onTransform, isSelected, onSelect }) => {
+        const imageRef = useRef();
+        const trRef = useRef();
+
+        useEffect(() => {
+            if (isSelected && trRef.current && imageRef.current) {
+                trRef.current.nodes([imageRef.current]);
+                trRef.current.getLayer().batchDraw();
+            }
+        }, [isSelected]);
+
+        if (!image) return null;
+
+        return (
+            <>
+                <KonvaImage
+                    ref={imageRef}
+                    image={image}
+                    x={position.x}
+                    y={position.y}
+                    draggable
+                    onClick={onSelect}
+                    onTap={onSelect}
+                    onDragEnd={(e) => {
+                        onDragEnd(sectionName, {
+                            x: Math.round(e.target.x()),
+                            y: Math.round(e.target.y())
+                        });
+                    }}
+                    onTransformEnd={() => {
+                        const node = imageRef.current;
+                        const scaleX = node.scaleX();
+                        const scaleY = node.scaleY();
+
+                        const newWidth = Math.max(50, Math.round(node.width() * scaleX));
+                        const newHeight = Math.max(20, Math.round(node.height() * scaleY));
+
+                        onTransform(sectionName, {
+                            x: Math.round(node.x()),
+                            y: Math.round(node.y()),
+                            width: newWidth,
+                            height: newHeight
+                        });
+
+                        node.scaleX(1);
+                        node.scaleY(1);
+                    }}
+                />
+                {isSelected && (
+                    <Transformer
+                        ref={trRef}
+                        rotateEnabled={false}
+                        keepRatio={false}
+                        enabledAnchors={[
+                            'top-left',
+                            'top-center',
+                            'top-right',
+                            'middle-right',
+                            'bottom-right',
+                            'bottom-center',
+                            'bottom-left',
+                            'middle-left'
+                        ]}
+                        // Make anchors MORE VISIBLE
+                        anchorSize={10}
+                        anchorStroke="#3b82f6"
+                        anchorFill="#ffffff"
+                        anchorStrokeWidth={2}
+                        anchorCornerRadius={2}
+                        borderStroke="#3b82f6"
+                        borderStrokeWidth={2}
+                        borderDash={[4, 4]}
+                        boundBoxFunc={(oldBox, newBox) => {
+                            // Minimum sizes
+                            if (newBox.width < 50) {
+                                newBox.width = 50;
+                            }
+                            if (newBox.height < 20) {
+                                newBox.height = 20;
+                            }
+                            return newBox;
+                        }}
+                    />
+                )}
+            </>
+        );
+    };
+
+
+
+    // ==================== USE EFFECTS ====================
+
+    // Initialize template components
+
+
+    useEffect(() => {
+        if (!TemplateComponents || !resumeData) return;
+
+        const renderSectionData = async (sectionName) => {
+            const t0 = performance.now();
+            const ref = sectionRefs.current[sectionName];
+            if (!ref?.current) {
+                console.warn(`No ref found for ${sectionName}`);
+                return;
+            }
+
+            const element = ref.current;
+
+            try {
+                // Wait for fonts to load
+                await document.fonts.ready;
+                const t1 = performance.now();
+
+                // Force layout recalculation
+                element.offsetHeight; // Trigger reflow
+                const t2 = performance.now();
+
+                // 1. CAPTURE FOR WEBGL (Geometry Snapshot)
+                const scanner = new GeometrySnapshot();
+                const snapshot = scanner.capture(element);
+                const t3 = performance.now();
+
+                setSectionSnapshots(prev => ({ ...prev, [sectionName]: snapshot }));
+
+                // 2. CAPTURE FOR KONVA (html2canvas)
+                // Only run this if NOT using WebGL to prevent double-rendering lag
+                if (!useWebGL) {
+                    const canvas = await html2canvas(element, {
+                        backgroundColor: null,
+                        scale: 8,
+                        logging: false,
+                        useCORS: true,
+                        allowTaint: true,
+                        height: element.offsetHeight,
+                        letterRendering: true,
+                        imageTimeout: 0,
+                        onclone: (clonedDoc) => {
+                            const clonedElement = clonedDoc.querySelector(`[data-section="${sectionName}"]`);
+                            if (clonedElement) {
+                                clonedElement.style.opacity = '1';
+                                clonedElement.style.visibility = 'visible';
+                                clonedElement.style.display = 'block';
+                            }
+                        }
+                    });
+                    const t4 = performance.now();
+
+                    // Convert canvas to image
+                    const img = new Image();
+                    img.width = element.offsetWidth;
+                    img.height = element.offsetHeight;
+
+                    img.onload = () => {
+                        setSectionImages(prev => ({ ...prev, [sectionName]: img }));
+                    };
+
+                    img.src = canvas.toDataURL('image/png', 1.0);
+                } else {
+                    // WebGL Mode - capture complete
+                }
+
+            } catch (error) {
+                console.error(`Error rendering ${sectionName}:`, error);
+            }
+        };
+
+        // Render all sections in parallel
+        const renderAllSections = async () => {
+            console.log('--- START RENDER ALL SECTIONS ---');
+            const tStart = performance.now();
+            const sections = Object.keys(sectionRefs.current);
+            await Promise.all(sections.map(sectionName => renderSectionData(sectionName)));
+            const tEnd = performance.now();
+            console.log(`--- END RENDER ALL SECTIONS: ${(tEnd - tStart).toFixed(1)}ms ---`);
+        };
+
+        const timer = setTimeout(() => {
+            renderAllSections();
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [
+        TemplateComponents,
+        styleConfig,
+        resumeData,
+        sectionWidths,
+        sectionHeights,
+        useWebGL
+    ]);
+
+
+
+
+    // Initialize layout on mount
+    useEffect(() => {
+        console.log('Initial layout reset');
+        resetLayout();
+    }, [currentTemplate]);
+
+    // Calculate page elements
+    const page1Elements = getElementsForPage(1);
+    const page2Elements = showPage2 ? getElementsForPage(2) : { sections: [], lines: [], shapes: [] };
+
+
+
+
+    // ==================== JSX RETURN ====================
+
+    return (
+        <div className="editor-container">
+            {/* Mobile Tab Navigation */}
+            {isMobile && (
+                <div className="mobile-tabs">
+                    <button
+                        className={`mobile-tab ${activeTab === 'controls' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('controls')}
+                    >
+                        Controls
+                    </button>
+                    <button
+                        className={`mobile-tab ${activeTab === 'properties' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('properties')}
+                    >
+                        Styles
+                    </button>
+                </div>
+            )}
+
+            {/* Hidden rendering area */}
+
+
+            {/* Hidden rendering areaMATCH IS NOT APPLICABLE FOR SEARCH TOOLMPARISON */}
+            <div className="hidden-render" style={{
+                position: 'absolute',
+                right: '-100px',
+                top: '0',
+                visibility: 'visible',
+                width: '595px',
+                height: '842px',
+                background: 'white',
+                padding: '0',
+                zIndex: 10000000,
+                pointerEvents: 'none',
+                transform: 'scale(1)',
+                transformOrigin: 'top right',
+                overflow: 'hidden'
+            }}>
+                {TemplateComponents && Object.entries(sectionRefs.current).map(([key, ref]) => {
+                    const Component = TemplateComponents[key];
+                    if (!Component) return null;
+
+                    // Map data according to your FlexibleSection component props
+                    const propsMap = {
+                        header: { resumeDetails: resumeData?.resumeDetails, styleConfig: styleConfig },
+                        contact: { resumeDetails: resumeData?.resumeDetails, styleConfig: styleConfig },
+                        summary: { summary: resumeData?.resumeDetails?.summary, styleConfig: styleConfig },
+                        skills: { skills: resumeData?.skills, styleConfig: styleConfig },
+                        experience: { experiences: resumeData?.experiences, styleConfig: styleConfig },
+                        projects: { projects: resumeData?.projects, styleConfig: styleConfig },
+                        education: { educationList: resumeData?.educationList, styleConfig: styleConfig },
+                        certifications: { certifications: resumeData?.certifications, styleConfig: styleConfig }
+                    };
+
+                    return (
+                        <div
+                            key={key}
+                            ref={ref}
+                            data-section={key}
+                            style={{
+                                width: styleConfig[key]?.container?.width || 'auto',
+                                height: styleConfig[key]?.container?.height || 'auto',
+                                minHeight: styleConfig[key]?.container?.height || 'auto',
+                                maxHeight: styleConfig[key]?.container?.height || 'none',
+                                overflow: 'visible',
+                                boxSizing: 'border-box',
+                                position: 'relative',
+                                minWidth: 0,
+                            }}>
+                            <Component {...propsMap[key]} />
+                        </div>
+                    );
+                })}
+            </div>
+
+
+
+            {/* LEFT PANEL - Section Controls */}
+            <div className={`left-panel ${isMobile && activeTab !== 'controls' ? 'mobile-hidden' : ''}`}>
+                <h3 className="panel-title">TEMPLATE SELECT</h3>
+
+                {TEMPLATES && Object.keys(TEMPLATES).length > 0 && (
+                    <div className="control-group">
+                        <label className="control-label">Choose Template</label>
+                        <select
+                            value={currentTemplate}
+                            onChange={(e) => handleTemplateSwitch(e.target.value)}
+                            className="control-select"
+                        >
+                            {Object.keys(TEMPLATES).map(key => (
+                                <option key={key} value={key}>
+                                    {key.charAt(0).toUpperCase() + key.slice(1)}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                )}
+
+                {/* HEADER LAYOUTS SECTION */}
+                <h3 className="panel-title">HEADER LAYOUTS</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '20px' }}>
+                    {HEADER_LAYOUTS && Object.entries(HEADER_LAYOUTS).map(([key, layout]) => (
+                        <button
+                            key={key}
+                            onClick={() => {
+                                // Merge the selected layout config into the current header config
+                                setStyleConfig(prev => ({
+                                    ...prev,
+                                    header: {
+                                        ...prev.header,
+                                        ...layout.config
+                                    }
+                                }));
+                            }}
+                            className="btn-secondary"
+                            style={{ fontSize: '10px', padding: '8px' }}
+                        >
+                            {layout.label}
+                        </button>
+                    ))}
+                </div>
+
+                {/* CONTACT LAYOUTS SECTION */}
+                <h3 className="panel-title">CONTACT LAYOUTS</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '20px' }}>
+                    {CONTACT_LAYOUTS && Object.entries(CONTACT_LAYOUTS).map(([key, layout]) => (
+                        <button
+                            key={key}
+                            onClick={() => {
+                                // Merge the selected contact layout config into the current header config
+                                setStyleConfig(prev => ({
+                                    ...prev,
+                                    header: {
+                                        ...prev.header,
+                                        ...layout.config
+                                    }
+                                }));
+                            }}
+                            className="btn-secondary"
+                            style={{ fontSize: '10px', padding: '8px' }}
+                        >
+                            {layout.label}
+                        </button>
+                    ))}
+                </div>
+
+                {/* BACKGROUND SHAPES SECTION */}
+                <h3 className="panel-title">BACKGROUND ZONES</h3>
+
+                {/* ANIMATION TEST BUTTON */}
+                <button
+                    onClick={() => setIsAnimating(!isAnimating)}
+                    className={`btn-primary full-width ${isAnimating ? 'active-anim' : ''}`}
+                    style={{ marginBottom: '10px', backgroundColor: isAnimating ? '#ef4444' : '#8b5cf6' }}
+                >
+                    {isAnimating ? '⏹ STOP BOUNCE ANIMATION' : '▶ TEST BOUNCE ANIMATION'}
+                </button>
+
+                <button onClick={addShape} className="btn-primary full-width">
+                    + ADD BACKGROUND SHAPE
+                </button>
+
+                {backgroundShapes.length > 0 && backgroundShapes.map(shape => (
+                    <div key={shape.id} className={`shape-control ${selectedShape === shape.id ? 'selected' : ''}`}>
+                        <div className="line-header">
+                            <span className="line-label">{shape.label}</span>
+                            <button onClick={() => deleteBackgroundShape(shape.id)} className="btn-delete">✕</button>
+                        </div>
+
+                        <div className="shape-properties">
+                            <div className="property-control">
+                                <label className="control-label">X Position</label>
+                                <input
+                                    type="number"
+                                    value={shape.x}
+                                    onChange={(e) => updateBackgroundShape(shape.id, 'x', parseInt(e.target.value))}
+                                    className="control-input"
+                                />
+                            </div>
+                            <div className="property-control">
+                                <label className="control-label">Y Position</label>
+                                <input
+                                    type="number"
+                                    value={shape.y}
+                                    onChange={(e) => updateBackgroundShape(shape.id, 'y', parseInt(e.target.value))}
+                                    className="control-input"
+                                />
+                            </div>
+                            <div className="property-control">
+                                <label className="control-label">Width</label>
+                                <input
+                                    type="number"
+                                    value={shape.width}
+                                    onChange={(e) => updateBackgroundShape(shape.id, 'width', parseInt(e.target.value))}
+                                    className="control-input"
+                                />
+                            </div>
+                            <div className="property-control">
+                                <label className="control-label">Height</label>
+                                <input
+                                    type="number"
+                                    value={shape.height}
+                                    onChange={(e) => updateBackgroundShape(shape.id, 'height', parseInt(e.target.value))}
+                                    className="control-input"
+                                />
+                            </div>
+                            <div className="property-control">
+                                <label className="control-label">Color</label>
+                                <input
+                                    type="color"
+                                    value={shape.color}
+                                    onChange={(e) => updateBackgroundShape(shape.id, 'color', e.target.value)}
+                                    className="control-color"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                ))}
+
+
+
+                <h3 className="panel-title">SECTION SIZES & POSITIONS</h3>
+                <div className="section-widths-container">
+                    {Object.keys(sectionWidths).map(sectionName => {
+                        const isTransparent = styleConfig[sectionName]?.container?.backgroundColor === 'transparent';
+                        const position = sectionPositions[sectionName] || { x: 0, y: 0 };
+                        const isOnPage2 = position.y >= 800;
+                        return (
+                            <details key={sectionName} className="section-detail" open>
+                                <summary className="section-summary">
+                                    {sectionName}
+                                    {isTransparent && <span className="transparent-badge">TRANSPARENT</span>}
+                                    {isOnPage2 && <span className="transparent-badge" style={{ background: '#3b82f6' }}>PAGE 2</span>}
+                                </summary>
+
+                                <div className="position-controls-wrapper">
+                                    <div className="position-grid-layout">
+                                        <div className="control-item">
+                                            <label className="control-label-small">X Position</label>
+                                            <input
+                                                type="number"
+                                                value={Math.round(position.x)}
+                                                onChange={(e) => {
+                                                    setSectionPositions(p => ({
+                                                        ...p,
+                                                        [sectionName]: { ...p[sectionName], x: parseInt(e.target.value) || 0 }
+                                                    }));
+                                                }}
+                                                className="control-input-small"
+                                            />
+                                        </div>
+                                        <div className="control-item">
+                                            <label className="control-label-small">Y Position</label>
+                                            <input
+                                                type="number"
+                                                value={Math.round(position.y)}
+                                                onChange={(e) => {
+                                                    setSectionPositions(p => ({
+                                                        ...p,
+                                                        [sectionName]: { ...p[sectionName], y: parseInt(e.target.value) || 0 }
+                                                    }));
+                                                }}
+                                                className="control-input-small"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '4px' }}>
+                                        <button
+                                            onClick={() => {
+                                                setSectionPositions(p => ({
+                                                    ...p,
+                                                    [sectionName]: { ...p[sectionName], y: 50 }
+                                                }));
+                                            }}
+                                            className="btn-secondary btn-page-nav"
+                                        >
+                                            → Page 1
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setSectionPositions(p => ({
+                                                    ...p,
+                                                    [sectionName]: { ...p[sectionName], y: 900 }
+                                                }));
+                                                setShowPage2(true);
+                                            }}
+                                            className="btn-secondary btn-page-nav"
+                                        >
+                                            → Page 2
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="section-controls-grid">
+                                    <div className="control-item">
+                                        <label className="control-label-small">Width (px)</label>
+                                        <input
+                                            type="text"
+                                            value={sectionWidths[sectionName]}
+                                            onChange={(e) => handleWidthChange(sectionName, e.target.value)}
+                                            onBlur={() => handleWidthBlur(sectionName)}
+                                            className="control-input-small"
+                                            placeholder="Width"
+                                        />
+                                    </div>
+
+
+
+                                    <div className="control-item">
+                                        <label className="control-label-small">Height (px)</label>
+                                        <input
+                                            type="text"
+                                            value={sectionHeights[sectionName] || '300px'}
+                                            onChange={(e) => handleHeightChange(sectionName, e.target.value)}
+                                            onBlur={() => handleHeightBlur(sectionName)}
+                                            className="control-input-small"
+                                            placeholder="auto or px"
+                                        />
+                                    </div>
+
+
+
+
+                                    <div className="control-item">
+                                        <label className="control-label-small">Padding (px)</label>
+                                        <input
+                                            type="number"
+                                            value={parseInt(styleConfig[sectionName]?.container?.padding) || 0}
+                                            onChange={(e) => {
+                                                const newPadding = `${e.target.value}px`;
+                                                handleStyleChange(sectionName, 'container', newPadding, 'padding');
+                                            }}
+                                            className="control-input-small"
+                                            min="0"
+                                            max="50"
+                                        />
+                                    </div>
+
+                                    <div className="control-item">
+                                        <label className="control-label-small">Background</label>
+                                        <div className="color-with-transparent">
+                                            <input
+                                                type="color"
+                                                value={styleConfig[sectionName]?.container?.backgroundColor === 'transparent' ? '#FFFFFF' : (styleConfig[sectionName]?.container?.backgroundColor || '#FFFFFF')}
+                                                onChange={(e) => handleStyleChange(sectionName, 'container', e.target.value, 'backgroundColor')}
+                                                className="control-color-small"
+                                                disabled={styleConfig[sectionName]?.container?.backgroundColor === 'transparent'}
+                                            />
+                                            <button
+                                                onClick={() => {
+                                                    const currentBg = styleConfig[sectionName]?.container?.backgroundColor;
+                                                    handleStyleChange(sectionName, 'container', currentBg === 'transparent' ? '#FFFFFF' : 'transparent', 'backgroundColor');
+                                                }}
+                                                className={`btn-transparent ${styleConfig[sectionName]?.container?.backgroundColor === 'transparent' ? 'active' : ''}`}
+                                                title="Toggle Transparent"
+                                            >
+                                                {styleConfig[sectionName]?.container?.backgroundColor === 'transparent' ? '⊘' : 'T'}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {styleConfig[sectionName]?.titleStyle && (
+                                        <>
+                                            <div className="control-item">
+                                                <label className="control-label-small">Title Size</label>
+                                                <input
+                                                    type="number"
+                                                    value={parseInt(styleConfig[sectionName]?.titleStyle?.fontSize) || 12}
+                                                    onChange={(e) => handleStyleChange(sectionName, 'titleStyle', `${e.target.value}px`, 'fontSize')}
+                                                    className="control-input-small"
+                                                    min="8"
+                                                    max="32"
+                                                />
+                                            </div>
+
+                                            <div className="control-item">
+                                                <label className="control-label-small">Title Color</label>
+                                                <input
+                                                    type="color"
+                                                    value={styleConfig[sectionName]?.titleStyle?.color || '#000000'}
+                                                    onChange={(e) => handleStyleChange(sectionName, 'titleStyle', e.target.value, 'color')}
+                                                    className="control-color-small"
+                                                />
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {styleConfig[sectionName]?.bodyStyle && (
+                                        <>
+                                            <div className="control-item">
+                                                <label className="control-label-small">Body Size</label>
+                                                <input
+                                                    type="number"
+                                                    value={parseInt(styleConfig[sectionName]?.bodyStyle?.fontSize) || 10}
+                                                    onChange={(e) => handleStyleChange(sectionName, 'bodyStyle', `${e.target.value}px`, 'fontSize')}
+                                                    className="control-input-small"
+                                                    min="6"
+                                                    max="24"
+                                                />
+                                            </div>
+
+                                            <div className="control-item">
+                                                <label className="control-label-small">Body Color</label>
+                                                <input
+                                                    type="color"
+                                                    value={styleConfig[sectionName]?.bodyStyle?.color || '#000000'}
+                                                    onChange={(e) => handleStyleChange(sectionName, 'bodyStyle', e.target.value, 'color')}
+                                                    className="control-color-small"
+                                                />
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            </details>
+                        );
+                    })}
+                </div>
+
+
+
+                <button onClick={resetLayout} className="btn-primary full-width">
+                    ↻ RESET LAYOUT
+                </button>
+
+                <button onClick={autoFlowSections} className="btn-primary full-width btn-auto-flow-action">
+                    ⚡ AUTO-FLOW CONTENT
+                </button>
+
+                <div className="button-grid">
+                    <button onClick={downloadResume} className="btn-secondary">📥 PNG</button>
+                </div>
+
+                <h3 className="panel-title">DIVIDER LINES</h3>
+                <div className="button-grid">
+                    <button onClick={() => addLine('horizontal')} className="btn-secondary">─ H</button>
+                    <button onClick={() => addLine('vertical')} className="btn-secondary">│ V</button>
+                </div>
+
+                {lines.length > 0 && lines.map(line => (
+                    <div key={line.id} className={`line-control ${selectedLine === line.id ? 'selected' : ''}`}>
+                        <div className="line-header">
+                            <span className="line-label">{line.label}</span>
+                            <button onClick={() => deleteLine(line.id)} className="btn-delete">✕</button>
+                        </div>
+
+                        <div className="line-move-control">
+                            <label className="control-label">Move Position</label>
+                            <div className="arrow-grid">
+                                <div></div>
+                                <button onClick={() => moveLine(line.id, 'up')} className="btn-arrow">↑</button>
+                                <div></div>
+                                <button onClick={() => moveLine(line.id, 'left')} className="btn-arrow">←</button>
+                                <div className="arrow-center">MOVE</div>
+                                <button onClick={() => moveLine(line.id, 'right')} className="btn-arrow">→</button>
+                                <div></div>
+                                <button onClick={() => moveLine(line.id, 'down')} className="btn-arrow">↓</button>
+                                <div></div>
+                            </div>
+                        </div>
+
+                        <div className="line-resize-control">
+                            <label className="control-label">
+                                Resize {line.orientation === 'vertical' ? 'Height' : 'Width'}
+                            </label>
+                            <div className="resize-buttons">
+                                <button onClick={() => resizeLine(line.id, 'decrease')} className="btn-resize">−</button>
+                                <button onClick={() => resizeLine(line.id, 'increase')} className="btn-resize">+</button>
+                            </div>
+                        </div>
+
+                        <div className="line-properties">
+                            <div className="property-control">
+                                <label className="control-label">Thickness</label>
+                                <input
+                                    type="number"
+                                    value={line.thickness}
+                                    onChange={(e) => updateLine(line.id, 'thickness', parseFloat(e.target.value))}
+                                    step="0.5"
+                                    className="control-input"
+                                />
+                            </div>
+                            <div className="property-control">
+                                <label className="control-label">Color</label>
+                                <input
+                                    type="color"
+                                    value={normalizeColorForInput(line.color)}
+                                    onChange={(e) => updateLine(line.id, 'color', e.target.value)}
+                                    className="control-color"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+
+            {/* MIDDLE - Canvas */}
+            <div className="canvas-container">
+                <div className="canvas-scroll-wrapper">
+                    <div className="canvas-stack-layout">
+                        {/* Page 1 */}
+                        <div className="canvas-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
+                            {useWebGL ? (
+                                <WebGLStage
+                                    width={595}
+                                    height={842}
+                                    shapes={page1Elements.shapes}
+                                    lines={page1Elements.lines}
+                                    sections={page1Elements.sections}
+                                    sectionSnapshots={sectionSnapshots}
+                                    onDragEnd={(type, id, pos) => {
+                                        if (type === 'section') handleSectionDragEnd(id, pos);
+                                        if (type === 'shape') handleShapeDragEnd(id, pos);
+                                        if (type === 'line') handleLineDragEnd(id, pos);
+                                    }}
+                                    onSelect={(type, id) => {
+                                        if (type === 'shape') setSelectedShape(id);
+                                        if (type === 'line') setSelectedLine(id);
+                                        if (type === 'section') setSelectedSection(id);
+                                    }}
+                                    selectedId={selectedShape || selectedLine || selectedSection}
+                                    isAnimating={isAnimating}
+                                />
+                            ) : (
+                                <Stage
+                                    ref={stageRef}
+                                    width={595}
+                                    height={842}
+                                    onClick={handleStageClick}
+                                    onTap={handleStageClick}
+                                >
+                                    {/* Background Layer */}
+                                    <Layer>
+                                        {page1Elements.shapes.map(shape => (
+                                            <DraggableShape
+                                                key={shape.id}
+                                                shape={shape}
+                                                onDragEnd={handleShapeDragEnd}
+                                                onUpdate={handleShapeUpdate}
+                                                isSelected={selectedShape === shape.id}
+                                                onSelect={() => setSelectedShape(shape.id)}
+                                            />
+                                        ))}
+                                    </Layer>
+
+                                    {/* Lines Layer */}
+                                    <Layer>
+                                        {page1Elements.lines.map(line => (
+                                            <DraggableLine
+                                                key={line.id}
+                                                line={line}
+                                                onDragEnd={handleLineDragEnd}
+                                                onUpdate={handleLineUpdate}
+                                                isSelected={selectedLine === line.id}
+                                                onSelect={() => setSelectedLine(line.id)}
+                                            />
+                                        ))}
+                                    </Layer>
+
+                                    {/* Content Layer */}
+                                    <Layer>
+                                        {page1Elements.sections.map(([sectionName, pos]) => (
+                                            <DraggableSection
+                                                key={sectionName}
+                                                sectionName={sectionName}
+                                                image={sectionImages[sectionName]}
+                                                position={pos}
+                                                onDragEnd={handleSectionDragEnd}
+                                                onTransform={handleSectionTransform}
+                                                isSelected={selectedSection === sectionName}
+                                                onSelect={() => setSelectedSection(sectionName)}
+                                            />
+                                        ))}
+                                    </Layer>
+                                </Stage>
+                            )}
+                            <div className="page-number">Page 1</div>
+                        </div>
+
+
+
+                        {/* Page 2 */}
+                        {showPage2 && (
+                            <div className="canvas-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
+                                {useWebGL ? (
+                                    <WebGLStage
+                                        width={595}
+                                        height={842}
+                                        shapes={page2Elements.shapes}
+                                        lines={page2Elements.lines}
+                                        sections={page2Elements.sections}
+                                        sectionSnapshots={sectionSnapshots}
+                                        onDragEnd={(type, id, pos) => {
+                                            if (type === 'section') handleSectionDragEnd(id, pos);
+                                            if (type === 'shape') handleShapeDragEnd(id, pos);
+                                            if (type === 'line') handleLineDragEnd(id, pos);
+                                        }}
+                                        onSelect={(type, id) => {
+                                            if (type === 'shape') setSelectedShape(id);
+                                            if (type === 'line') setSelectedLine(id);
+                                            if (type === 'section') setSelectedSection(id);
+                                        }}
+                                        selectedId={selectedShape || selectedLine || selectedSection}
+                                        isAnimating={isAnimating}
+                                    />
+                                ) : (
+                                    <Stage
+                                        ref={stage2Ref}
+                                        width={595}
+                                        height={842}
+                                        onClick={handleStageClick}
+                                        onTap={handleStageClick}
+                                    >
+                                        <Layer>
+                                            {page2Elements.shapes.map(shape => {
+                                                const adjustedShape = { ...shape, y: shape.y - 842 };
+                                                return (
+                                                    <DraggableShape
+                                                        key={shape.id}
+                                                        shape={adjustedShape}
+                                                        onDragEnd={(id, pos) => handleShapeDragEnd(id, { ...pos, y: pos.y + 842 })}
+                                                        onUpdate={handleShapeUpdate}
+                                                        isSelected={selectedShape === shape.id}
+                                                        onSelect={() => setSelectedShape(shape.id)}
+                                                    />
+                                                );
+                                            })}
+                                        </Layer>
+
+                                        <Layer>
+                                            {page2Elements.lines.map(line => {
+                                                const adjustedLine = { ...line, y1: line.y1 - 842, y2: line.y2 - 842 };
+                                                return (
+                                                    <DraggableLine
+                                                        key={line.id}
+                                                        line={adjustedLine}
+                                                        onDragEnd={(id, pos) => handleLineDragEnd(id, {
+                                                            x1: pos.x1, y1: pos.y1 + 842,
+                                                            x2: pos.x2, y2: pos.y2 + 842
+                                                        })}
+                                                        onUpdate={handleLineUpdate}
+                                                        isSelected={selectedLine === line.id}
+                                                        onSelect={() => setSelectedLine(line.id)}
+                                                    />
+                                                );
+                                            })}
+                                        </Layer>
+
+                                        <Layer>
+                                            {page2Elements.sections.map(([sectionName, pos]) => {
+                                                const adjustedPos = { ...pos, y: pos.y - 842 };
+                                                return (
+                                                    <DraggableSection
+                                                        key={sectionName}
+                                                        sectionName={sectionName}
+                                                        image={sectionImages[sectionName]}
+                                                        position={adjustedPos}
+                                                        onDragEnd={(name, newPos) => handleSectionDragEnd(name, { ...newPos, y: newPos.y + 842 })}
+                                                        onTransform={handleSectionTransform}
+                                                        isSelected={selectedSection === sectionName}
+                                                        onSelect={() => setSelectedSection(sectionName)}
+                                                    />
+                                                );
+                                            })}
+                                        </Layer>
+                                    </Stage>
+                                )}
+                                <div className="page-number">Page 2</div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+
+
+                <div className="zoom-controls">
+                    <button
+                        onClick={() => setUseWebGL(!useWebGL)}
+                        className={`btn-zoom-reset ${useWebGL ? 'active' : ''}`}
+                        style={{ marginRight: '10px', background: useWebGL ? '#10b981' : '#6b7280', color: 'white', fontWeight: 'bold' }}
+                    >
+                        {useWebGL ? '🚀 WEBGL ON' : '⚙️ WEBGL OFF'}
+                    </button>
+                    <button onClick={() => setZoom(Math.max(0.3, zoom - 0.1))} className="btn-zoom">−</button>
+                    <span className="zoom-value">{Math.round(zoom * 100)}%</span>
+                    <button onClick={() => setZoom(Math.min(2, zoom + 0.1))} className="btn-zoom">+</button>
+                    <button onClick={() => setZoom(1)} className="btn-zoom-reset">100%</button>
+                    <button onClick={() => setZoom(0.7)} className="btn-zoom-reset">FIT</button>
+                    <button
+                        onClick={() => setShowPage2(!showPage2)}
+                        className={`btn-zoom-reset ${showPage2 ? 'active' : ''}`}
+                        style={{ marginLeft: '10px' }}
+                    >
+                        {showPage2 ? '1 PAGE' : '2 PAGES'}
+                    </button>
+                </div>
+
+                <div className="canvas-hint">💡 DRAG & RESIZE • Scroll to see more</div>
+                <div className="template-badge">
+                    {currentTemplate === 'ats' ? '📄 ATS' : currentTemplate === 'modern' ? '✨ MODERN' : '📑 TWO COLUMN'}
+                </div>
+            </div>
+
+            {/* ======================= RIGHT PANEL START ======================= */}
+
+
+
+            <div className={`right-panel ${isMobile && activeTab !== 'properties' ? 'mobile-hidden' : ''}`}>
+                <h3 className="panel-title">QUICK STYLE</h3>
+
+                {selectedSection ? (
+                    <div style={{ padding: '12px' }}>
+                        <div style={{
+                            background: '#f3f4f6',
+                            padding: '8px 12px',
+                            borderRadius: '6px',
+                            marginBottom: '16px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            color: '#1f2937'
+                        }}>
+                            📝 {selectedSection.toUpperCase()}
+                        </div>
+
+                        {/* Font Size Quick Controls */}
+                        <div style={{ marginBottom: '16px' }}>
+                            <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                                Font Size
+                            </label>
+                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                <button
+                                    onClick={() => {
+                                        const current = parseInt(styleConfig[selectedSection]?.bodyStyle?.fontSize) || 10;
+                                        handleStyleChange(selectedSection, 'bodyStyle', `${Math.max(6, current - 1)}px`, 'fontSize');
+                                    }}
+                                    className="btn-secondary"
+                                    style={{ padding: '8px 14px', fontSize: '16px', flex: 1 }}
+                                >
+                                    −
+                                </button>
+                                <span style={{
+                                    fontSize: '14px',
+                                    fontWeight: '600',
+                                    minWidth: '40px',
+                                    textAlign: 'center',
+                                    background: 'white',
+                                    padding: '8px',
+                                    borderRadius: '4px',
+                                    border: '1px solid #e5e7eb'
+                                }}>
+                                    {parseInt(styleConfig[selectedSection]?.bodyStyle?.fontSize) || 10}
+                                </span>
+                                <button
+                                    onClick={() => {
+                                        const current = parseInt(styleConfig[selectedSection]?.bodyStyle?.fontSize) || 10;
+                                        handleStyleChange(selectedSection, 'bodyStyle', `${Math.min(32, current + 1)}px`, 'fontSize');
+                                    }}
+                                    className="btn-secondary"
+                                    style={{ padding: '8px 14px', fontSize: '16px', flex: 1 }}
+                                >
+                                    +
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Title Font Size (if applicable) */}
+                        {styleConfig[selectedSection]?.titleStyle && (
+                            <div style={{ marginBottom: '16px' }}>
+                                <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                                    Title Font Size
+                                </label>
+                                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                    <button
+                                        onClick={() => {
+                                            const current = parseInt(styleConfig[selectedSection]?.titleStyle?.fontSize) || 14;
+                                            handleStyleChange(selectedSection, 'titleStyle', `${Math.max(8, current - 1)}px`, 'fontSize');
+                                        }}
+                                        className="btn-secondary"
+                                        style={{ padding: '8px 14px', fontSize: '16px', flex: 1 }}
+                                    >
+                                        −
+                                    </button>
+                                    <span style={{
+                                        fontSize: '14px',
+                                        fontWeight: '600',
+                                        minWidth: '40px',
+                                        textAlign: 'center',
+                                        background: 'white',
+                                        padding: '8px',
+                                        borderRadius: '4px',
+                                        border: '1px solid #e5e7eb'
+                                    }}>
+                                        {parseInt(styleConfig[selectedSection]?.titleStyle?.fontSize) || 14}
+                                    </span>
+                                    <button
+                                        onClick={() => {
+                                            const current = parseInt(styleConfig[selectedSection]?.titleStyle?.fontSize) || 14;
+                                            handleStyleChange(selectedSection, 'titleStyle', `${Math.min(36, current + 1)}px`, 'fontSize');
+                                        }}
+                                        className="btn-secondary"
+                                        style={{ padding: '8px 14px', fontSize: '16px', flex: 1 }}
+                                    >
+                                        +
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Text Color */}
+                        <div style={{ marginBottom: '16px' }}>
+                            <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                                Text Color
+                            </label>
+                            <input
+                                type="color"
+                                value={normalizeColorForInput(styleConfig[selectedSection]?.bodyStyle?.color)}
+                                onChange={(e) => handleStyleChange(selectedSection, 'bodyStyle', e.target.value, 'color')}
+                                style={{
+                                    width: '100%',
+                                    height: '40px',
+                                    border: '1px solid #d1d5db',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer'
+                                }}
+                            />
+                        </div>
+
+                        {/* Title Color (if applicable) */}
+                        {styleConfig[selectedSection]?.titleStyle && (
+                            <div style={{ marginBottom: '16px' }}>
+                                <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                                    Title Color
+                                </label>
+                                <input
+                                    type="color"
+                                    value={normalizeColorForInput(styleConfig[selectedSection]?.titleStyle?.color)}
+                                    onChange={(e) => handleStyleChange(selectedSection, 'titleStyle', e.target.value, 'color')}
+                                    style={{
+                                        width: '100%',
+                                        height: '40px',
+                                        border: '1px solid #d1d5db',
+                                        borderRadius: '6px',
+                                        cursor: 'pointer'
+                                    }}
+                                />
+                            </div>
+                        )}
+
+                        {/* Background Color */}
+                        <div style={{ marginBottom: '16px' }}>
+                            <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                                Background
+                            </label>
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                                <input
+                                    type="color"
+                                    value={normalizeColorForInput(styleConfig[selectedSection]?.container?.backgroundColor)}
+                                    onChange={(e) => handleStyleChange(selectedSection, 'container', e.target.value, 'backgroundColor')}
+                                    disabled={styleConfig[selectedSection]?.container?.backgroundColor === 'transparent'}
+                                    style={{
+                                        flex: 1,
+                                        height: '40px',
+                                        border: '1px solid #d1d5db',
+                                        borderRadius: '6px',
+                                        cursor: 'pointer',
+                                        opacity: styleConfig[selectedSection]?.container?.backgroundColor === 'transparent' ? 0.5 : 1
+                                    }}
+                                />
+                                <button
+                                    onClick={() => {
+                                        const currentBg = styleConfig[selectedSection]?.container?.backgroundColor;
+                                        handleStyleChange(selectedSection, 'container', currentBg === 'transparent' ? '#FFFFFF' : 'transparent', 'backgroundColor');
+                                    }}
+                                    className="btn-secondary"
+                                    style={{
+                                        padding: '0 16px',
+                                        fontSize: '12px',
+                                        fontWeight: '600',
+                                        background: styleConfig[selectedSection]?.container?.backgroundColor === 'transparent' ? '#3b82f6' : 'white',
+                                        color: styleConfig[selectedSection]?.container?.backgroundColor === 'transparent' ? 'white' : '#374151',
+                                        border: styleConfig[selectedSection]?.container?.backgroundColor === 'transparent' ? '1px solid #3b82f6' : '1px solid #d1d5db'
+                                    }}
+                                >
+                                    {styleConfig[selectedSection]?.container?.backgroundColor === 'transparent' ? '⊘' : 'T'}
+                                </button>
+                            </div>
+                            <span style={{ fontSize: '10px', color: '#6b7280', marginTop: '4px', display: 'block' }}>
+                                {styleConfig[selectedSection]?.container?.backgroundColor === 'transparent' ? 'Transparent' : 'Solid'}
+                            </span>
+                        </div>
+
+                        {/* Padding */}
+                        <div style={{ marginBottom: '16px' }}>
+                            <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                                Padding
+                            </label>
+                            <input
+                                type="range"
+                                min="0"
+                                max="50"
+                                value={parseInt(styleConfig[selectedSection]?.container?.padding) || 0}
+                                onChange={(e) => {
+                                    const newPadding = `${e.target.value}px`;
+                                    handleStyleChange(selectedSection, 'container', newPadding, 'padding');
+                                }}
+                                style={{ width: '100%' }}
+                            />
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#6b7280', marginTop: '4px' }}>
+                                <span>0px</span>
+                                <span style={{ fontWeight: '600', color: '#1f2937' }}>
+                                    {parseInt(styleConfig[selectedSection]?.container?.padding) || 0}px
+                                </span>
+                                <span>50px</span>
+                            </div>
+                        </div>
+
+                        {/* Width (range slider) */}
+                        <div style={{ marginBottom: '16px' }}>
+                            <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                                Width
+                            </label>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <input
+                                    type="range"
+                                    min={200}
+                                    max={595}
+                                    value={parseInt(sectionWidths[selectedSection]) || 515}
+                                    onChange={(e) => handleWidthChange(selectedSection, `${e.target.value}px`)}
+                                    onMouseUp={() => handleWidthBlur(selectedSection)}
+                                    onTouchEnd={() => handleWidthBlur(selectedSection)}
+                                    style={{ width: '100%' }}
+                                />
+                                <div style={{ minWidth: '64px', textAlign: 'right', fontSize: '13px', color: '#374151' }}>
+                                    {(parseInt(sectionWidths[selectedSection]) || 515) + 'px'}
+                                </div>
+                            </div>
+                        </div>
+
+
+
+                        <div style={{
+                            background: '#fef3c7',
+                            padding: '12px',
+                            borderRadius: '6px',
+                            border: '1px solid #fbbf24',
+                            marginTop: '20px'
+                        }}>
+                            <p style={{ fontSize: '11px', color: '#92400e', margin: 0, lineHeight: '1.5' }}>
+                                💡 <strong>Tip:</strong> Select a section on canvas to quickly adjust its style here!
+                            </p>
+                        </div>
+                    </div>
+                ) : (
+                    <div style={{ padding: '12px' }}>
+                        <div style={{
+                            background: '#f3f4f6',
+                            padding: '20px',
+                            borderRadius: '8px',
+                            textAlign: 'center',
+                            color: '#6b7280',
+                            fontSize: '12px'
+                        }}>
+                            <div style={{ fontSize: '32px', marginBottom: '8px' }}>🎨</div>
+                            <p style={{ margin: 0 }}>
+                                Click on a section in the canvas to edit its styles
+                            </p>
+                        </div>
+
+                        <div style={{ marginTop: '20px', padding: '12px', background: '#eff6ff', borderRadius: '6px', border: '1px solid #3b82f6' }}>
+                            <h4 style={{ fontSize: '11px', fontWeight: '600', color: '#1e40af', margin: '0 0 8px 0' }}>
+                                Quick Actions:
+                            </h4>
+                            <ul style={{ fontSize: '11px', color: '#1e40af', margin: 0, paddingLeft: '20px', lineHeight: '1.8' }}>
+                                <li>Drag sections to reposition</li>
+                                <li>Resize using corner handles</li>
+                                <li>Click to select and style</li>
+                                <li>Use left panel for advanced controls</li>
+                            </ul>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+
+            {/* ======================= RIGHT PANEL END ========================= */}
+
+
+
+
+        </div>
+    );
+};
+
+export default UIEditor;
