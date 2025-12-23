@@ -1,9 +1,11 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import html2canvas from "html2canvas";
-import { useSelector } from "react-redux";
+import { useNavigate, useParams } from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
+import { setCurrentResume, setCurrentResumeId } from "../../redux/store.js";
 import { mergeResumeData } from "./Utils";
-import { ATS_TEMPLATE_CONFIG, MODERN_TEMPLATE_CONFIG, TWO_COLUMN_TEMPLATE_CONFIG, TEMPLATE5_CONFIG, HEADER_LAYOUTS, CONTACT_LAYOUTS } from "./TemplateConfigs";
+import { ATS_TEMPLATE_CONFIG, MODERN_TEMPLATE_CONFIG, TWO_COLUMN_TEMPLATE_CONFIG, TEMPLATE5_CONFIG, HEADER_LAYOUTS, CONTACT_LAYOUTS, SKILLS_LAYOUTS } from "./TemplateConfigs";
 import { defaultResumeData } from "./Utils";
 import "./UIEditor.css";
 import {
@@ -31,7 +33,7 @@ const normalizeColorForInput = (color) => {
   return color;
 };
 
-const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, onDragEnd, onSelect, selectedId, type, isAnimating }) => {
+const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, onDragEnd, onSelect, selectedId, type, isAnimating, onHeaderContainerReady, headerAnimating, headerAnimationRef, setHeaderAnimating, skillsAnimating, skillsAnimationRef, setSkillsAnimating, onSkillsContainerReady }) => {
   const containerRef = useRef(null);
   const pixiApp = useRef(null);
   const [initTrigger, setInitTrigger] = useState(0);
@@ -115,6 +117,20 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
             const finalY = Math.round(session.target.y);
 
             console.log(`[DRAG] Global End: ${session.type} ${session.id} at (${finalX}, ${finalY})`);
+
+            // 🎯 LOG HEADER SECTION FINAL POSITION AFTER DRAG
+            if (session.id === 'header') {
+              console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+              console.log('🎨 HEADER DRAG COMPLETE - Final WebGL Coordinates');
+              console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+              console.log('📍 Final Position:');
+              console.log(`   X: ${finalX}px`);
+              console.log(`   Y: ${finalY}px`);
+              console.log('📊 Drag Delta:');
+              console.log(`   ΔX: ${finalX - session.startX}px`);
+              console.log(`   ΔY: ${finalY - session.startY}px`);
+              console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            }
 
             onDragEnd(session.type, session.id, { x: finalX, y: finalY });
             session.active = false;
@@ -292,6 +308,37 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
           sectionContainer.cursor = 'move';
           sectionContainer._sectionName = sectionName;
 
+          // 🎯 LOG HEADER SECTION COORDINATES FOR GPU ANIMATION
+          if (sectionName === 'header') {
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('🎨 HEADER SECTION - WebGL Rendering Coordinates');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('📍 Position:');
+            console.log(`   X: ${pos.x}px`);
+            console.log(`   Y: ${pos.y}px`);
+            console.log('📐 Dimensions:');
+            console.log(`   Width: ${snapshot.width}px`);
+            console.log(`   Height: ${snapshot.height}px`);
+            console.log('🔲 Bounding Box:');
+            console.log(`   Top-Left: (${pos.x}, ${pos.y})`);
+            console.log(`   Top-Right: (${pos.x + snapshot.width}, ${pos.y})`);
+            console.log(`   Bottom-Left: (${pos.x}, ${pos.y + snapshot.height})`);
+            console.log(`   Bottom-Right: (${pos.x + snapshot.width}, ${pos.y + snapshot.height})`);
+            console.log('🎯 Container Properties:');
+            console.log(`   Container X: ${sectionContainer.x}`);
+            console.log(`   Container Y: ${sectionContainer.y}`);
+            console.log(`   Interactive: ${sectionContainer.interactive}`);
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          }
+
+          // 🎬 Store header container reference for animations
+          if (sectionName === 'header' && onHeaderContainerReady) {
+            onHeaderContainerReady(sectionContainer);
+          }
+          if (sectionName === 'skills' && onSkillsContainerReady) {
+            onSkillsContainerReady(sectionContainer);
+          }
+
           const borderInset = 5;
           const selectionBorder = new PIXI.Graphics();
           if (selectionBorder.stroke) {
@@ -366,8 +413,11 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
       const sectionsLayer = app.stage.children[1];
       if (sectionsLayer) {
         sectionsLayer.children.forEach((child, index) => {
+          // 🚫 Skip header if it's currently doing a layout animation
+          if (child._sectionName === 'header' && headerAnimating) return;
+
           // Simple sine wave bounce based on index
-          child.y += Math.sin(time + index) * 2;
+          child.y += Math.sin(time + index) * 4;
         });
       }
     };
@@ -378,6 +428,84 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
       app.ticker.remove(animate);
     };
   }, [isAnimating, initTrigger]);
+
+  // 🎬 Header Layout Animation Ticker
+  useEffect(() => {
+    const app = pixiApp.current;
+    if (!app || !headerAnimating) return;
+
+    let frameCount = 0; // Local frame counter for this ticker
+
+    const animateHeaderLayout = () => {
+      const anim = headerAnimationRef.current;
+      const sectionsLayer = app.stage.children[1];
+      const headerContainer = sectionsLayer?.children.find(c => c._sectionName === 'header');
+
+      if (!anim.active) return;
+
+      if (!headerContainer) {
+        frameCount++;
+        if (frameCount % 60 === 0) console.warn('⚠️ [ANIM] Header container not found in stage!');
+        return;
+      }
+
+      const elapsed = performance.now() - anim.startTime;
+      const progress = Math.min(elapsed / anim.duration, 1);
+
+      // Simple linear or ease-in fade
+      const alpha = 1 - progress;
+
+      // Force apply alpha to the container
+      headerContainer.alpha = alpha;
+
+      // Diagnostic logging
+      const progressPercent = Math.round(progress * 100);
+      if (progressPercent % 10 === 0 && progressPercent !== anim.lastLoggedPercent) {
+        console.log(`🎬 [FADE] ${progressPercent}% | Alpha: ${alpha.toFixed(2)}`);
+        anim.lastLoggedPercent = progressPercent;
+      }
+
+      if (progress >= 1) {
+        anim.active = false;
+        headerContainer.alpha = 1.0; // Reset to visible
+        if (setHeaderAnimating) setHeaderAnimating(false);
+        console.log('✅ Header fade-out (decoupled) complete!');
+      }
+    };
+
+    app.ticker.add(animateHeaderLayout);
+    return () => app.ticker.remove(animateHeaderLayout);
+  }, [headerAnimating, initTrigger]);
+
+  // 🎬 Skills Layout Animation Ticker
+  useEffect(() => {
+    const app = pixiApp.current;
+    if (!app || !skillsAnimating) return;
+
+    const animateSkillsLayout = () => {
+      const anim = skillsAnimationRef.current;
+      if (!anim.active) return;
+
+      const sectionsLayer = app.stage.children[1];
+      const skillsContainer = sectionsLayer?.children.find(c => c._sectionName === 'skills');
+      if (!skillsContainer) return;
+
+      const elapsed = performance.now() - anim.startTime;
+      const progress = Math.min(elapsed / anim.duration, 1);
+
+      // Fade out for skills too
+      skillsContainer.alpha = 1 - progress;
+
+      if (progress >= 1) {
+        anim.active = false;
+        skillsContainer.alpha = 1.0; // Reset to visible
+        if (setSkillsAnimating) setSkillsAnimating(false);
+      }
+    };
+
+    app.ticker.add(animateSkillsLayout);
+    return () => app.ticker.remove(animateSkillsLayout);
+  }, [skillsAnimating, initTrigger]);
 
   return (
     <div
@@ -404,6 +532,15 @@ const UIEditor = ({ initialUseWebGL = false }) => {
 
 
   // State
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { resumeId } = useParams();
+  const userId = useSelector((s) => s.auth.userId);
+
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+
   const [selectedLine, setSelectedLine] = useState(null);
   const [selectedShape, setSelectedShape] = useState(null);
   const [selectedSection, setSelectedSection] = useState(null);
@@ -423,8 +560,121 @@ const UIEditor = ({ initialUseWebGL = false }) => {
   const [useWebGL, setUseWebGL] = useState(initialUseWebGL); // Toggle for WebGL
   const [resumeData, setResumeData] = useState(defaultResumeData);
   const currentResume = useSelector((state) => state.resume.currentResume);
+  const currentResumeId = useSelector((state) => state.resume.resumeId);
 
   const [resumeDetails, setResumeDetails] = useState(defaultResumeData);
+  const API_BASE_URL2 = 'http://localhost:8080';
+  const API_BASE_URL = 'https://resumemaker-1.onrender.com';
+
+  // 🎬 GPU Animation State
+  const [headerAnimating, setHeaderAnimating] = useState(false);
+  const [skillsAnimating, setSkillsAnimating] = useState(false); // New state for skills
+  const headerContainerRef = useRef(null);
+  const skillsContainerRef = useRef(null); // New ref for skills container
+
+  const headerAnimationRef = useRef({
+    active: false,
+    startTime: 0,
+    duration: 500, // 🎬 Reduced for decoupled feel
+  });
+
+  const skillsAnimationRef = useRef({
+    active: false,
+    startTime: 0,
+    duration: 500, // 🎬 Reduced for decoupled feel
+  });
+
+  const handleSaveAll = async () => {
+    if (userId == null) {
+      // Assuming simple alert or toast if window.showMessage not available, 
+      // but strictly following user pattern:
+      if (window.showMessage) window.showMessage('Please Login First.', 'warning');
+      else alert('Please Login First.');
+      return;
+    }
+    setSaving(true);
+    setSaveError("");
+    setSuccessMessage("");
+
+    try {
+      // 1. Merge layout state into styleConfig
+      const updatedConfig = {
+        ...styleConfig,
+        positions: sectionPositions,
+        lines: lines,
+        shapes: backgroundShapes,
+        // You might want to store widths/heights if not already in styleConfig
+      };
+
+      const API_BASE_URL = `${API_BASE_URL}/saveAllConfig-ResumeData`;
+
+      // 2. Build Payload
+      const payload = {
+        title: resumeDetails.resumeDetails?.title || "My Resume",
+        templateId: "custom", // Or whatever logic you have
+        userId: userId,
+        details: {
+          name: resumeDetails.resumeDetails?.name,
+          title: resumeDetails.resumeDetails?.title,
+          summary: resumeDetails.resumeDetails?.summary,
+          styleConfig: updatedConfig // <--- STORING CONFIG HERE
+        },
+        contact: resumeDetails.resumeDetails?.contact,
+        skills: resumeDetails.skills,
+        experiences: resumeDetails.experiences,
+        projects: resumeDetails.projects,
+        educationList: resumeDetails.educationList,
+        certifications: resumeDetails.certifications,
+        showSummary: true, // You might want to make these dynamic
+        showSkills: true,
+        showExperience: true,
+        showProjects: true,
+        showEducation: true,
+        showCertifications: true,
+        customSections: resumeDetails.customSections || [],
+        sectionTitles: resumeDetails.sectionTitles || {} // Add if you have state for this
+      };
+
+      const targetResumeId = resumeId || currentResumeId;
+      const endpoint = targetResumeId
+        ? `${API_BASE_URL}/update/${targetResumeId}`
+        : `${API_BASE_URL}/saveall`;
+
+      const method = targetResumeId ? "PUT" : "POST";
+
+      const res = await fetch(endpoint, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        throw new Error(errorData?.message || `Save failed: ${res.status}`);
+      }
+
+      const data = await res.json();
+
+      // Update Redux
+      if (!targetResumeId && data.resumeId) {
+        dispatch(setCurrentResumeId(data.resumeId));
+      }
+
+      const msg = "Resume configuration saved successfully!";
+      setSuccessMessage(msg);
+      if (window.showMessage) window.showMessage('Success', msg, 'success', 1500);
+
+    } catch (err) {
+      console.error("Save error:", err);
+      setSaveError(err.message);
+      if (window.showMessage) window.showMessage('Error', err.message, 'error', 1500);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // Mobile responsiveness state
   const [isMobile, setIsMobile] = useState(false);
@@ -454,7 +704,101 @@ const UIEditor = ({ initialUseWebGL = false }) => {
   useEffect(() => {
     if (!currentResume) return;
     setResumeData(currentResume);
+    setResumeDetails(currentResume); // Sync local resumeDetails state
+
+    // If the resume has a saved style configuration, load it
+    if (currentResume.details?.styleConfig) {
+      const savedConfig = currentResume.details.styleConfig;
+      setStyleConfig(savedConfig);
+
+      if (savedConfig.positions) setSectionPositions(savedConfig.positions);
+      if (savedConfig.lines) setLines(savedConfig.lines);
+      if (savedConfig.shapes) setBackgroundShapes(savedConfig.shapes);
+
+      // You might also want to load widths/heights if you decide to store them
+      // setSectionWidths(savedConfig.widths || {}); 
+    }
   }, [currentResume])
+
+  // 🎬 GPU Header Layout Animation Handler
+  const animateHeaderLayoutChange = async (newLayoutConfig) => {
+    if (!headerContainerRef.current) {
+      // Fallback: instant update if no WebGL container
+      setStyleConfig(prev => ({
+        ...prev,
+        header: { ...prev.header, ...newLayoutConfig }
+      }));
+      return;
+    }
+
+    // 🚀 Start animating IMMEDIATELY to block DOM re-capture
+    setHeaderAnimating(true);
+
+    // 1. Capture current position
+    const startX = headerContainerRef.current.x;
+    const startY = headerContainerRef.current.y;
+
+    // 2. Update config (this triggers DOM update for new snapshot)
+    setStyleConfig(prev => ({
+      ...prev,
+      header: {
+        ...prev.header,
+        ...newLayoutConfig,
+        // Deep merge styles
+        nameStyle: { ...prev.header?.nameStyle, ...newLayoutConfig.nameStyle },
+        titleStyle: { ...prev.header?.titleStyle, ...newLayoutConfig.titleStyle }
+      }
+    }));
+
+    // 3. Wait for new coordinates to be calculated (DOM -> Snapshot -> WebGL Layout)
+    // We use a shorter delay to ensure we catch the re-render frame early
+    setTimeout(() => {
+      // Find the header position in the freshly updated sectionPositions
+      const endPos = sectionPositions.header || { x: startX, y: startY };
+
+      // 4. Update GPU animation parameters for FADE-OUT
+      headerAnimationRef.current = {
+        active: true,
+        startTime: performance.now(),
+        duration: 800, // 800ms fade-out
+        lastLoggedPercent: -1
+      };
+
+      setHeaderAnimating(true);
+      console.log('🎬 FADE-OUT STARTED (2s)');
+    }, 40); // Catch it quickly
+  };
+
+  // 🎬 GPU Skills Layout Animation Handler
+  const animateSkillsLayoutChange = async (newLayoutConfig) => {
+    if (!skillsContainerRef.current) {
+      setStyleConfig(prev => ({
+        ...prev,
+        skills: { ...prev.skills, ...newLayoutConfig }
+      }));
+      return;
+    }
+
+    setSkillsAnimating(true);
+
+    // Fade out
+    skillsAnimationRef.current = {
+      active: true,
+      startTime: performance.now(),
+      duration: 500,
+      lastLoggedPercent: -1
+    };
+
+    setStyleConfig(prev => ({
+      ...prev,
+      skills: { ...prev.skills, ...newLayoutConfig }
+    }));
+
+    // Reset after animation
+    setTimeout(() => {
+      setSkillsAnimating(false);
+    }, 600);
+  };
 
   const TEMPLATES = {
     ats: ATS_TEMPLATE_CONFIG,
@@ -1261,6 +1605,9 @@ const UIEditor = ({ initialUseWebGL = false }) => {
   useEffect(() => {
     if (!TemplateComponents || !resumeData) return;
 
+    // 🎬 Do not recapture while animating!
+    // 🎬 Animations are now decoupled - we recapture even if animating
+    // if (headerAnimating) return;
     const renderSectionData = async (sectionName) => {
       const t0 = performance.now();
       const ref = sectionRefs.current[sectionName];
@@ -1281,9 +1628,11 @@ const UIEditor = ({ initialUseWebGL = false }) => {
         const t2 = performance.now();
 
         // 1. CAPTURE FOR WEBGL (Geometry Snapshot)
+        console.log(`📸 [RE-CAPTURE] Starting DOM capture for: ${sectionName}...`);
         const scanner = new GeometrySnapshot();
         const snapshot = await scanner.capture(element);
         const t3 = performance.now();
+        console.log(`✅ [RE-CAPTURE] Done capturing ${sectionName} in ${(t3 - t2).toFixed(1)}ms`);
 
         setSectionSnapshots(prev => ({ ...prev, [sectionName]: snapshot }));
 
@@ -1341,7 +1690,7 @@ const UIEditor = ({ initialUseWebGL = false }) => {
 
     const timer = setTimeout(() => {
       renderAllSections();
-    }, 500);
+    }, 0);
 
     return () => clearTimeout(timer);
   }, [
@@ -1350,7 +1699,7 @@ const UIEditor = ({ initialUseWebGL = false }) => {
     resumeData,
     sectionWidths,
     sectionHeights,
-    useWebGL
+    useWebGL,
   ]);
 
 
@@ -1476,28 +1825,44 @@ const UIEditor = ({ initialUseWebGL = false }) => {
           {HEADER_LAYOUTS && Object.entries(HEADER_LAYOUTS).map(([key, layout]) => (
             <button
               key={key}
-              onClick={() => {
-                // Deep merge layout config while preserving existing styles (colors, fontWeight, etc.)
-                setStyleConfig(prev => ({
-                  ...prev,
-                  header: {
-                    ...prev.header,
-                    ...layout.config,
-                    // Deep merge nameStyle to preserve colors and other customizations
-                    nameStyle: {
-                      ...prev.header?.nameStyle,
-                      ...layout.config.nameStyle
-                    },
-                    // Deep merge titleStyle to preserve colors and other customizations
-                    titleStyle: {
-                      ...prev.header?.titleStyle,
-                      ...layout.config.titleStyle
-                    }
-                  }
-                }));
-              }}
+              onClick={() => setStyleConfig(prev => ({
+                ...prev,
+                header: {
+                  ...prev.header,
+                  ...layout.config,
+                  // Deep merge styles
+                  nameStyle: { ...prev.header?.nameStyle, ...layout.config.nameStyle },
+                  titleStyle: { ...prev.header?.titleStyle, ...layout.config.titleStyle }
+                }
+              }))}
               className="btn-secondary"
-              style={{ fontSize: '10px', padding: '8px' }}
+              style={{
+                fontSize: '10px',
+                padding: '8px',
+                border: styleConfig.header?.nameAlign === layout.config.nameAlign ? '2px solid #3b82f6' : '1px solid #ddd'
+              }}
+            >
+              {layout.label}
+            </button>
+          ))}
+        </div>
+
+        {/* SKILLS LAYOUTS SECTION */}
+        <h3 className="panel-title">SKILLS LAYOUTS</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '20px' }}>
+          {SKILLS_LAYOUTS && Object.entries(SKILLS_LAYOUTS).map(([key, layout]) => (
+            <button
+              key={key}
+              onClick={() => setStyleConfig(prev => ({
+                ...prev,
+                skills: { ...prev.skills, ...layout.config }
+              }))}
+              className="btn-secondary"
+              style={{
+                fontSize: '10px',
+                padding: '8px',
+                border: styleConfig.skills?.categoryValueSeparator === layout.config.categoryValueSeparator ? '2px solid #3b82f6' : '1px solid #ddd'
+              }}
             >
               {layout.label}
             </button>
@@ -1510,16 +1875,7 @@ const UIEditor = ({ initialUseWebGL = false }) => {
           {CONTACT_LAYOUTS && Object.entries(CONTACT_LAYOUTS).map(([key, layout]) => (
             <button
               key={key}
-              onClick={() => {
-                // Merge the selected contact layout config into the current header config
-                setStyleConfig(prev => ({
-                  ...prev,
-                  header: {
-                    ...prev.header,
-                    ...layout.config
-                  }
-                }));
-              }}
+              onClick={() => animateHeaderLayoutChange(layout.config)}
               className="btn-secondary"
               style={{ fontSize: '10px', padding: '8px' }}
             >
@@ -1822,6 +2178,14 @@ const UIEditor = ({ initialUseWebGL = false }) => {
 
         <div className="button-grid">
           <button onClick={downloadResume} className="btn-secondary">📥 PNG</button>
+          <button
+            onClick={handleSaveAll}
+            className="btn-primary"
+            style={{ background: '#2563eb' }}
+            disabled={saving}
+          >
+            {saving ? 'Saving...' : '💾 SAVE TEMPLATE'}
+          </button>
         </div>
 
         <h3 className="panel-title">DIVIDER LINES</h3>
@@ -1914,6 +2278,18 @@ const UIEditor = ({ initialUseWebGL = false }) => {
                   }}
                   selectedId={selectedShape || selectedLine || selectedSection}
                   isAnimating={isAnimating}
+                  onHeaderContainerReady={(container) => {
+                    headerContainerRef.current = container;
+                  }}
+                  headerAnimating={headerAnimating}
+                  headerAnimationRef={headerAnimationRef}
+                  setHeaderAnimating={setHeaderAnimating}
+                  skillsAnimating={skillsAnimating}
+                  skillsAnimationRef={skillsAnimationRef}
+                  setSkillsAnimating={setSkillsAnimating}
+                  onSkillsContainerReady={(container) => {
+                    skillsContainerRef.current = container;
+                  }}
                 />
               ) : (
                 <Stage

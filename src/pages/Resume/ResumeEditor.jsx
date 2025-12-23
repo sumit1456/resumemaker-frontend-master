@@ -1270,7 +1270,9 @@ export default function ResumeEditor({ resume: propsResume }) {
         details: {
           name: resumeDetails.name,
           title: resumeDetails.title,
-          summary: resumeDetails.summary
+          summary: resumeDetails.summary,
+          styleConfig: resumeDetails.styleConfig || {},
+          sectionTitles: sectionTitles || {}
         },
         contact: resumeDetails.contact,
         skills: transformedSkills,
@@ -1284,8 +1286,7 @@ export default function ResumeEditor({ resume: propsResume }) {
         showProjects,
         showEducation,
         showCertifications,
-        customSections,
-        sectionTitles
+        customSections
       };
 
 

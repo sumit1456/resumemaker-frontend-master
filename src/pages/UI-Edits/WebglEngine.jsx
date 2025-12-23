@@ -489,7 +489,7 @@ class GeometrySnapshot {
     }
 
     // Convert to Canvas2D rendering
-    renderToCanvas(canvas, scale = 8) {
+    renderToCanvas(canvas, scale = 1) {
         const ctx = canvas.getContext('2d');
         canvas.width = this.rootWidth * scale;
         canvas.height = this.rootHeight * scale;

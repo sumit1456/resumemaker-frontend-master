@@ -2106,3 +2106,55 @@ export const CONTACT_LAYOUTS = {
     }
   }
 };
+
+export const SKILLS_LAYOUTS = {
+  stacked: {
+    label: "Stacked",
+    config: {
+      displayMode: "categories",
+      showCategories: true,
+      categoryValueSeparator: "",
+      categoryLayout: {
+        display: "flex",
+        flexDirection: "column",
+        gap: "2px",
+        marginBottom: "8px"
+      },
+      categoryStyle: {
+        fontWeight: "bold",
+        fontSize: "10px",
+        marginBottom: "2px"
+      },
+      valueStyle: {
+        fontSize: "9px",
+        lineHeight: "1.4"
+      }
+    }
+  },
+  sideBySide: {
+    label: "Side-by-Side",
+    config: {
+      displayMode: "categories",
+      showCategories: true,
+      categoryValueSeparator: ": ",
+      categoryLayout: {
+        display: "flex",
+        flexDirection: "row",
+        alignItems: "baseline",
+        gap: "6px",
+        marginBottom: "6px",
+        flexWrap: "wrap"
+      },
+      categoryStyle: {
+        fontWeight: "bold",
+        fontSize: "10px",
+        whiteSpace: "nowrap"
+      },
+      valueStyle: {
+        fontSize: "10px",
+        lineHeight: "1.4",
+        flex: 1
+      }
+    }
+  }
+};

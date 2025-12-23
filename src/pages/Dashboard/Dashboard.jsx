@@ -3,8 +3,8 @@ import { Routes, Route } from "react-router-dom";
 import DashboardMain from "./DashboardMain";
 import ResumeEditor from "../Resume/ResumeEditor";
 import { RoseIcon } from "lucide-react";
-import UIEditor from "../UI-Edits/UIEditor";
-
+import ResumeEditorv2 from "../Resume/ResumeEditorv2.jsx";
+import "./css-files/dashboard.css";
 
 
 export default function ResumeDashboard({ userId }) {
@@ -16,15 +16,15 @@ export default function ResumeDashboard({ userId }) {
       {/* Dashboard main page */}
       <Route index element={<DashboardMain userId={userId} />} />
 
-      
 
-    
+
+
 
       {/* Resume editor (blank / new resume) */}
       <Route
         path="resume-editor"
         element={
-          <ResumeEditor
+          <ResumeEditorv2
             resume={resume}
             setResume={setResume}
             resumeId={resumeId}
@@ -34,7 +34,20 @@ export default function ResumeDashboard({ userId }) {
         }
       />
 
-   
+      {/* <Route
+        path="resume-editorv2"
+        element={
+          <ResumeEditorv2
+            resume={resume}
+            setResume={setResume}
+            resumeId={resumeId}
+            setResumeId={setResumeId}
+            userId={userId}
+          />
+        }
+      /> */}
+
+
 
       {/* Resume editor (edit existing resume) */}
       <Route
