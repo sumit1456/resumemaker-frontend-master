@@ -701,6 +701,7 @@ const UIEditor = ({ initialUseWebGL = false }) => {
       setIsMobile(mobile);
       if (mobile) {
         setZoom(0.55); // A better default for mobile width
+        setActiveTab('preview'); // Default to preview for clean look
       }
     };
     checkMobile();
@@ -1416,6 +1417,11 @@ const UIEditor = ({ initialUseWebGL = false }) => {
         trRef.current.nodes([lineRef.current]);
         trRef.current.getLayer().batchDraw();
       }
+      return () => {
+        if (trRef.current) {
+          trRef.current.nodes([]);
+        }
+      };
     }, [isSelected]);
 
     return (
@@ -1480,6 +1486,11 @@ const UIEditor = ({ initialUseWebGL = false }) => {
         trRef.current.nodes([shapeRef.current]);
         trRef.current.getLayer().batchDraw();
       }
+      return () => {
+        if (trRef.current) {
+          trRef.current.nodes([]);
+        }
+      };
     }, [isSelected]);
 
     return (
@@ -1529,6 +1540,11 @@ const UIEditor = ({ initialUseWebGL = false }) => {
         trRef.current.nodes([imageRef.current]);
         trRef.current.getLayer().batchDraw();
       }
+      return () => {
+        if (trRef.current) {
+          trRef.current.nodes([]);
+        }
+      };
     }, [isSelected]);
 
     if (!image) return null;
@@ -1735,21 +1751,36 @@ const UIEditor = ({ initialUseWebGL = false }) => {
 
   return (
     <div className="editor-container">
-      {/* Mobile Tab Navigation */}
+      {/* Mobile Header / Top Bar */}
       {isMobile && (
-        <div className="mobile-tabs">
+        <div className="mobile-top-bar">
+          <div className="mobile-view-title">
+            {activeTab === 'preview' ? 'LIVE PREVIEW' : 'ADVANCED EDITOR'}
+          </div>
           <button
-            className={`mobile-tab ${activeTab === 'controls' ? 'active' : ''}`}
-            onClick={() => setActiveTab('controls')}
+            className="btn-advanced-editor"
+            onClick={() => setActiveTab(activeTab === 'preview' ? 'controls' : 'preview')}
           >
-            Controls
+            {activeTab === 'preview' ? 'Advanced Editor' : 'Back to Preview'}
           </button>
-          <button
-            className={`mobile-tab ${activeTab === 'properties' ? 'active' : ''}`}
-            onClick={() => setActiveTab('properties')}
+        </div>
+      )}
+
+      {/* Mobile Template Selector (Only in Preview) */}
+      {isMobile && activeTab === 'preview' && (
+        <div className="mobile-template-selector">
+          <label className="control-label">CHOOSE TEMPLATE:</label>
+          <select
+            value={currentTemplate}
+            onChange={(e) => handleTemplateSwitch(e.target.value)}
+            className="control-select"
           >
-            Styles
-          </button>
+            {Object.keys(TEMPLATES).map(key => (
+              <option key={key} value={key}>
+                {key.charAt(0).toUpperCase() + key.slice(1)}
+              </option>
+            ))}
+          </select>
         </div>
       )}
 
@@ -1813,7 +1844,7 @@ const UIEditor = ({ initialUseWebGL = false }) => {
 
       {/* LEFT PANEL - Section Controls */}
       <div className={`left-panel ${isMobile && activeTab !== 'controls' ? 'mobile-hidden' : ''}`}>
-        <h3 className="panel-title">TEMPLATE SELECT</h3>
+        {!isMobile && <h3 className="panel-title">TEMPLATE SELECT</h3>}
 
         {TEMPLATES && Object.keys(TEMPLATES).length > 0 && (
           <div className="control-group">
@@ -2280,7 +2311,7 @@ const UIEditor = ({ initialUseWebGL = false }) => {
 
 
       {/* MIDDLE - Canvas */}
-      <div className="canvas-container">
+      <div className={`canvas-container ${isMobile && activeTab !== 'preview' ? 'mobile-hidden' : ''}`}>
         <div className="canvas-scroll-wrapper">
           <div className="canvas-stack-layout">
             {/* Page 1 */}

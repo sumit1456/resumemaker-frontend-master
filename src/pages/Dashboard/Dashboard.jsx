@@ -4,7 +4,7 @@ import DashboardMain from "./DashboardMain";
 import ResumeEditor from "../Resume/ResumeEditor";
 import { RoseIcon } from "lucide-react";
 import ResumeEditorv2 from "../Resume/ResumeEditorv2.jsx";
-import "./css-files/dashboard.css";
+
 
 
 export default function ResumeDashboard({ userId }) {
