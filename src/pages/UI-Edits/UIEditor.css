@@ -1068,7 +1068,7 @@
 
 .page-number {
   position: absolute;
-  bottom: -30px;
+  bottom: 10px;
   left: 50%;
   transform: translateX(-50%);
   background: #667eea;
@@ -1439,6 +1439,7 @@
     min-height: 100vh;
     background: #000 !important;
     overflow-y: auto !important;
+
   }
 
   .mobile-top-bar {
@@ -1450,14 +1451,13 @@
     border-bottom: 1px solid #222;
     z-index: 100;
     position: sticky;
-    top: 0;
+    top: 80px;
   }
 
   .canvas-container {
-    height: 880px !important;
-    /* Roughly same as 100% zoom preview height */
+    height: 50vh !important;
     overflow: auto;
-    padding: 15px;
+    padding: 10px;
     background: #0a0a0a;
     display: block !important;
     flex: none !important;
