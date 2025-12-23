@@ -12,7 +12,7 @@ import {
   FlexibleHeaderSection, FlexibleProjectsSection,
   FlexibleSkillsSection, FlexibleSummarySection
 } from "./BaseTemplates.jsx";
-import { PixiRenderer, GeometrySnapshot, HybridRenderer } from "./WebglEngine.jsx";
+import { PixiRenderer, GeometrySnapshotWithWorkers as GeometrySnapshot, HybridRenderer, initializeWorkers } from "./WebglEngineWithWorkers.js";
 import * as PIXI from 'pixi.js';
 
 
@@ -60,10 +60,10 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
 
       // Device-specific config
       const isMobile = window.innerWidth < 768;
-      // On mobile, excessive resolution (like 4) combined with scaling down can cause
-      // blurriness due to browser resampling or memory limits. 
-      // Using devicePixelRatio is usually optimal.
-      const resolution = isMobile ? Math.min(window.devicePixelRatio || 2, 3) : 4;
+      // On mobile, using devicePixelRatio is essential for sharpness on high-DPI screens.
+      // We had a logic that capped it at 3 or 2, but modern phones handle higher DPR fine for 2D.
+      // However, to be safe but sharp, we'll aim for at least 2, and max out at devicePixelRatio.
+      const resolution = isMobile ? Math.max(window.devicePixelRatio || 2, 2) : 4;
 
       try {
         await app.init({
@@ -199,187 +199,153 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
     const sectionsLayer = app.stage.children[1];
     const linesLayer = app.stage.children[2];
 
-    // Clear and redraw (for simplicity in this first version)
-    shapesLayer.removeChildren();
-    linesLayer.removeChildren();
-    sectionsLayer.removeChildren();
+    const renderAll = async () => {
+      // Clear and redraw
+      shapesLayer.removeChildren();
+      linesLayer.removeChildren();
+      sectionsLayer.removeChildren();
 
-    // Render Shapes
-    shapes.forEach(shape => {
-      const graphics = new PIXI.Graphics();
-      const colorData = parseColor(shape.color);
+      // Render Shapes
+      shapes.forEach(shape => {
+        const graphics = new PIXI.Graphics();
+        const colorData = parseColor(shape.color);
 
-      if (graphics.fill) {
-        if (shape.type === 'circle') {
-          graphics.circle(shape.width / 2, shape.height / 2, shape.width / 2);
+        if (graphics.fill) {
+          if (shape.type === 'circle') {
+            graphics.circle(shape.width / 2, shape.height / 2, shape.width / 2);
+          } else {
+            graphics.rect(0, 0, shape.width, shape.height);
+          }
+          graphics.fill({ color: colorData.hex, alpha: colorData.alpha });
         } else {
-          graphics.rect(0, 0, shape.width, shape.height);
+          graphics.beginFill(colorData.hex, colorData.alpha);
+          if (shape.type === 'circle') {
+            graphics.drawCircle(shape.width / 2, shape.height / 2, shape.width / 2);
+          } else {
+            graphics.drawRect(0, 0, shape.width, shape.height);
+          }
+          graphics.endFill();
         }
-        graphics.fill({ color: colorData.hex, alpha: colorData.alpha });
-      } else {
-        graphics.beginFill(colorData.hex, colorData.alpha);
-        if (shape.type === 'circle') {
-          graphics.drawCircle(shape.width / 2, shape.height / 2, shape.width / 2);
-        } else {
-          graphics.drawRect(0, 0, shape.width, shape.height);
-        }
-        graphics.endFill();
-      }
-      graphics.x = shape.x;
-      graphics.y = shape.y;
-      graphics._id = shape.id; // Added for persistence
+        graphics.x = shape.x;
+        graphics.y = shape.y;
+        graphics._id = shape.id;
 
-      // Make interactive
-      graphics.interactive = true;
-      graphics.buttonMode = true;
+        graphics.interactive = true;
+        graphics.buttonMode = true;
 
-      graphics.on('pointerdown', (event) => {
-        onSelect('shape', shape.id);
-
-        const pointerPos = event.data.getLocalPosition(graphics.parent);
-        dragSession.current = {
-          active: true,
-          type: 'shape',
-          id: shape.id,
-          target: graphics,
-          startX: graphics.x,
-          startY: graphics.y,
-          dragStartX: pointerPos.x,
-          dragStartY: pointerPos.y
-        };
-
-        console.log(`[DRAG] Start Shape: ${shape.id} at (${graphics.x}, ${graphics.y})`);
-      });
-
-      shapesLayer.addChild(graphics);
-    });
-
-    // Render Lines
-    lines.forEach(line => {
-      const graphics = new PIXI.Graphics();
-      const colorData = parseColor(line.color);
-      const thickness = line.thickness || 1;
-
-      if (graphics.stroke) {
-        graphics.moveTo(line.x1, line.y1);
-        graphics.lineTo(line.x2, line.y2);
-        graphics.stroke({ color: colorData.hex, width: thickness, alpha: colorData.alpha });
-      } else {
-        graphics.lineStyle(thickness, colorData.hex, colorData.alpha);
-        graphics.moveTo(line.x1, line.y1);
-        graphics.lineTo(line.x2, line.y2);
-      }
-
-      // Make lines selectable too
-      graphics.interactive = true;
-      graphics.buttonMode = true;
-      graphics.hitArea = new PIXI.Rectangle(
-        Math.min(line.x1, line.x2) - 5,
-        Math.min(line.y1, line.y2) - 5,
-        Math.abs(line.x2 - line.x1) + 10,
-        Math.abs(line.y2 - line.y1) + 10
-      );
-      graphics.on('pointerdown', () => onSelect('line', line.id));
-
-      linesLayer.addChild(graphics);
-    });
-
-    // Render Sections (using images or snapshots)
-    sections.forEach(([sectionName, pos]) => {
-      const snapshot = sectionSnapshots[sectionName];
-      if (snapshot) {
-        const sectionContainer = new PIXI.Container();
-        sectionContainer.x = pos.x;
-        sectionContainer.y = pos.y;
-        sectionContainer.interactive = true;
-        sectionContainer.buttonMode = true;
-        sectionContainer.cursor = 'move';
-
-        // Store metadata
-        sectionContainer._sectionName = sectionName;
-        sectionContainer._selected = false;
-
-        // Create persistent selection border (hidden initially)
-        const borderInset = 5;
-        const selectionBorder = new PIXI.Graphics();
-        if (selectionBorder.stroke) {
-          selectionBorder.rect(-borderInset, -borderInset, snapshot.width + borderInset * 2, snapshot.height + borderInset * 2);
-          selectionBorder.stroke({ color: 0x3b82f6, width: 2, alpha: 0.8 });
-        } else {
-          selectionBorder.lineStyle(2, 0x3b82f6, 0.8);
-          selectionBorder.drawRect(-borderInset, -borderInset, snapshot.width + borderInset * 2, snapshot.height + borderInset * 2);
-        }
-        selectionBorder.name = '_selectionBorder';
-        selectionBorder.visible = false;
-        sectionContainer.addChild(selectionBorder);
-
-        // Update selection visuals based on state
-        const updateSelectionVisuals = (isSelected) => {
-          sectionContainer._selected = isSelected;
-          selectionBorder.visible = isSelected;
-        };
-
-        // SELECTION: Click to lock selection
-        sectionContainer.on('pointerdown', (event) => {
-          const pointerPos = event.data.getLocalPosition(sectionContainer.parent);
-
+        graphics.on('pointerdown', (event) => {
+          onSelect('shape', shape.id);
+          const pointerPos = event.data.getLocalPosition(graphics.parent);
           dragSession.current = {
             active: true,
-            type: 'section',
-            id: sectionName,
-            target: sectionContainer,
-            startX: sectionContainer.x,
-            startY: sectionContainer.y,
+            type: 'shape',
+            id: shape.id,
+            target: graphics,
+            startX: graphics.x,
+            startY: graphics.y,
             dragStartX: pointerPos.x,
             dragStartY: pointerPos.y
           };
-
-          console.log(`[DRAG] Start Section: ${sectionName} at (${Math.round(sectionContainer.x)}, ${Math.round(sectionContainer.y)})`);
-
-          onSelect('section', sectionName);
-          updateSelectionVisuals(true);
         });
 
-        // Store reference for external deselection
-        sectionContainer.updateSelection = updateSelectionVisuals;
+        shapesLayer.addChild(graphics);
+      });
 
-        sectionsLayer.addChild(sectionContainer);
+      // Render Lines
+      lines.forEach(line => {
+        const graphics = new PIXI.Graphics();
+        const colorData = parseColor(line.color);
+        const thickness = line.thickness || 1;
 
-        const isMobile = window.innerWidth < 768;
-        const rendererResolution = isMobile ? Math.min(window.devicePixelRatio || 2, 3) : 4;
+        if (graphics.stroke) {
+          graphics.moveTo(line.x1, line.y1);
+          graphics.lineTo(line.x2, line.y2);
+          graphics.stroke({ color: colorData.hex, width: thickness, alpha: colorData.alpha });
+        } else {
+          graphics.lineStyle(thickness, colorData.hex, colorData.alpha);
+          graphics.moveTo(line.x1, line.y1);
+          graphics.lineTo(line.x2, line.y2);
+        }
 
-        const renderer = new PixiRenderer(null, {
-          width: snapshot.width,
-          height: snapshot.height,
-          backgroundColor: 'transparent',
-          resolution: rendererResolution
-        });
+        graphics.interactive = true;
+        graphics.buttonMode = true;
+        graphics.hitArea = new PIXI.Rectangle(
+          Math.min(line.x1, line.x2) - 5,
+          Math.min(line.y1, line.y2) - 5,
+          Math.abs(line.x2 - line.x1) + 10,
+          Math.abs(line.y2 - line.y1) + 10
+        );
+        graphics.on('pointerdown', () => onSelect('line', line.id));
 
-        renderer.render(snapshot, { targetContainer: sectionContainer });
+        linesLayer.addChild(graphics);
+      });
+
+      // Render Sections
+      for (const [sectionName, pos] of sections) {
+        const snapshot = sectionSnapshots[sectionName];
+        if (snapshot) {
+          const sectionContainer = new PIXI.Container();
+          sectionContainer.x = pos.x;
+          sectionContainer.y = pos.y;
+          sectionContainer.interactive = true;
+          sectionContainer.buttonMode = true;
+          sectionContainer.cursor = 'move';
+          sectionContainer._sectionName = sectionName;
+
+          const borderInset = 5;
+          const selectionBorder = new PIXI.Graphics();
+          if (selectionBorder.stroke) {
+            selectionBorder.rect(-borderInset, -borderInset, snapshot.width + borderInset * 2, snapshot.height + borderInset * 2);
+            selectionBorder.stroke({ color: 0x3b82f6, width: 2, alpha: 0.8 });
+          } else {
+            selectionBorder.lineStyle(2, 0x3b82f6, 0.8);
+            selectionBorder.drawRect(-borderInset, -borderInset, snapshot.width + borderInset * 2, snapshot.height + borderInset * 2);
+          }
+          selectionBorder.name = '_selectionBorder';
+          selectionBorder.visible = selectedId === sectionName;
+          sectionContainer.addChild(selectionBorder);
+
+          sectionContainer.on('pointerdown', (event) => {
+            const pointerPos = event.data.getLocalPosition(sectionContainer.parent);
+            dragSession.current = {
+              active: true,
+              type: 'section',
+              id: sectionName,
+              target: sectionContainer,
+              startX: sectionContainer.x,
+              startY: sectionContainer.y,
+              dragStartX: pointerPos.x,
+              dragStartY: pointerPos.y
+            };
+            onSelect('section', sectionName);
+          });
+
+          sectionsLayer.addChild(sectionContainer);
+
+          const renderer = new PixiRenderer(null, {
+            width: snapshot.width,
+            height: snapshot.height,
+            backgroundColor: 'transparent',
+            resolution: window.innerWidth < 768 ? Math.max(window.devicePixelRatio || 2, 2) : 4
+          });
+
+          await renderer.render(snapshot, { targetContainer: sectionContainer });
+        }
       }
-    });
 
-    // RE-ATTACH DRAG TARGET IF RENDER INTERRUPTED
-    if (dragSession.current.active) {
-      const { type, id } = dragSession.current;
-      if (type === 'shape') {
-        const shapeObj = shapesLayer.children.find(c => c._id === id);
-        if (shapeObj) dragSession.current.target = shapeObj;
-      } else if (type === 'section') {
-        const sectionObj = sectionsLayer.children.find(c => c._sectionName === id);
-        if (sectionObj) dragSession.current.target = sectionObj;
+      // Restore drag target if active
+      if (dragSession.current.active) {
+        const { type, id } = dragSession.current;
+        if (type === 'shape') {
+          dragSession.current.target = shapesLayer.children.find(c => c._id === id);
+        } else if (type === 'section') {
+          dragSession.current.target = sectionsLayer.children.find(c => c._sectionName === id);
+        }
       }
-    }
+    };
 
-    // Update selection visuals for all sections
-    sectionsLayer.children.forEach(container => {
-      if (container.updateSelection) {
-        const isSelected = selectedId === container._sectionName;
-        container.updateSelection(isSelected);
-      }
-    });
-
-  }, [shapes, lines, sections, sectionSnapshots, selectedId, initTrigger]);
+    renderAll();
+  }, [shapes, lines, sections, sectionSnapshots, selectedId, initTrigger, isAnimating]);
 
   // Animation Ticker - SEPARATE useEffect
   useEffect(() => {
@@ -478,6 +444,12 @@ const UIEditor = ({ initialUseWebGL = false }) => {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Initialize Web Workers
+  useEffect(() => {
+    initializeWorkers().catch(err => console.error('Failed to initialize workers:', err));
+  }, []);
+
 
   useEffect(() => {
     if (!currentResume) return;
@@ -1310,7 +1282,7 @@ const UIEditor = ({ initialUseWebGL = false }) => {
 
         // 1. CAPTURE FOR WEBGL (Geometry Snapshot)
         const scanner = new GeometrySnapshot();
-        const snapshot = scanner.capture(element);
+        const snapshot = await scanner.capture(element);
         const t3 = performance.now();
 
         setSectionSnapshots(prev => ({ ...prev, [sectionName]: snapshot }));
@@ -1505,12 +1477,22 @@ const UIEditor = ({ initialUseWebGL = false }) => {
             <button
               key={key}
               onClick={() => {
-                // Merge the selected layout config into the current header config
+                // Deep merge layout config while preserving existing styles (colors, fontWeight, etc.)
                 setStyleConfig(prev => ({
                   ...prev,
                   header: {
                     ...prev.header,
-                    ...layout.config
+                    ...layout.config,
+                    // Deep merge nameStyle to preserve colors and other customizations
+                    nameStyle: {
+                      ...prev.header?.nameStyle,
+                      ...layout.config.nameStyle
+                    },
+                    // Deep merge titleStyle to preserve colors and other customizations
+                    titleStyle: {
+                      ...prev.header?.titleStyle,
+                      ...layout.config.titleStyle
+                    }
                   }
                 }));
               }}

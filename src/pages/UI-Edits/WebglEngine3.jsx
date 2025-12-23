@@ -53,36 +53,45 @@ class GeometrySnapshot {
     constructor(options = {}) {
         this.options = {
             mode: 'performance', // 'performance' (fast) or 'deep' (high fidelity)
+            useWorkers: !!options.styleWorker, // Auto-enable if workers provided
             ...options
         };
         this.nodes = [];
         this.rootWidth = 0;
         this.rootHeight = 0;
+
+        // Workers for offloading heavy processing
+        this.styleWorker = options.styleWorker;
+        this.gradientWorker = options.gradientWorker;
+
+        // Promise queues for async worker resolution
+        this.stylePromises = [];
+        this.gradientPromises = [];
+        this.captureStartTime = 0;
     }
 
     /**
      * Capture DOM geometry recursively
      * Returns: { nodes: [], width: number, height: number }
      */
-    capture(element, overrideOptions = {}) {
+    async capture(element, overrideOptions = {}) {
         if (!element) return null;
 
-        // Merge options for this specific capture
+        this.captureStartTime = performance.now();
         const options = { ...this.options, ...overrideOptions };
         this.currentMode = options.mode;
+        const useWorkers = options.useWorkers && this.styleWorker;
 
         // Store original transform
         const originalTransform = element.style.transform;
 
         // Temporarily remove any transforms that might affect measurement
-        let current = element;
         const transforms = [];
+        let current = element;
         while (current && current !== document.body) {
-            if (current.style.transform && current.style.transform !== 'none') {
-                transforms.push({
-                    element: current,
-                    transform: current.style.transform
-                });
+            const transform = current.style.transform;
+            if (transform && transform !== 'none') {
+                transforms.push({ element: current, transform });
                 current.style.transform = 'none';
             }
             current = current.parentElement;
@@ -94,34 +103,60 @@ class GeometrySnapshot {
         this.rootHeight = Math.ceil(rootRect.height);
         this.nodes = [];
         this.processedNodes = new Set();
+        this.stylePromises = [];
+        this.gradientPromises = [];
 
+        // START RECURSIVE CAPTURE
         this.captureNode(element);
 
-        // Restore transforms
+        // RESTORE TRANSFORMS IMMEDIATELY
         transforms.forEach(({ element, transform }) => {
             element.style.transform = transform;
         });
 
-        console.log(`📸 GeometrySnapshot: Captured ${this.nodes.length} nodes from ${element.tagName}`);
+        // RESOLVE ASYNC TASKS (Workers)
+        const workerStartTime = performance.now();
 
-        // TEST FIX: Verify layout capture
+        // 1. Resolve Styles
+        if (this.stylePromises.length > 0) {
+            console.log(`⏳ Resolving ${this.stylePromises.length} worker style batches...`);
+            await Promise.all(this.stylePromises);
+        }
+
+        // 2. Resolve Gradients
+        if (this.gradientPromises.length > 0) {
+            console.log(`⏳ Resolving ${this.gradientPromises.length} gradient tasks...`);
+            await Promise.all(this.gradientPromises);
+        }
+
+        const totalTime = performance.now() - this.captureStartTime;
+        const workerWait = performance.now() - workerStartTime;
+
+        console.log(`📸 GeometrySnapshot: Captured ${this.nodes.length} nodes in ${totalTime.toFixed(1)}ms (Worker wait: ${workerWait.toFixed(1)}ms)`);
+
+        if (totalTime > 50) {
+            console.warn('⚡ BOTTLENECK DETECTED: Geometry capture exceeded 50ms!', {
+                nodeCount: this.nodes.length,
+                totalTime: `${totalTime.toFixed(1)}ms`,
+                workerWait: `${workerWait.toFixed(1)}ms`
+            });
+        }
+
         this.verifyCapture();
 
         return {
             nodes: this.nodes,
             width: this.rootWidth,
-            height: this.rootHeight
+            height: this.rootHeight,
+            stats: { nodeCount: this.nodes.length, captureTime: totalTime }
         };
     }
 
-    captureNode(element) {
+    captureNode(element, batchContext = null) {
         if (!element || element.nodeType !== Node.ELEMENT_NODE) return;
         if (this.processedNodes.has(element)) return;
 
         const rect = element.getBoundingClientRect();
-
-        // ✅ FIX: Calculate ABSOLUTE position from root
-        // This ensures all coordinates are in the same coordinate system
         const x = Math.round((rect.left - this.rootRect.left) * 2) / 2;
         const y = Math.round((rect.top - this.rootRect.top) * 2) / 2;
         const width = Math.round(rect.width * 2) / 2;
@@ -129,53 +164,29 @@ class GeometrySnapshot {
 
         const computed = window.getComputedStyle(element);
 
-        // Skip hidden elements (Note: we allow visibility: hidden as it's common for off-screen capture)
         if (computed.display === 'none' || parseFloat(computed.opacity) === 0) {
             return;
         }
 
         const type = this.getNodeType(element, computed);
-        const styles = this.extractStyles(element, computed);
 
-        // Redundancy Check: Skip identical backgrounds to prevent ghosting/Z-fighting
-        if (type === 'box' && this.nodes.length > 0) {
-            const lastNode = this.nodes[this.nodes.length - 1];
-            if (lastNode.x === x && lastNode.y === y && lastNode.width === width && lastNode.height === height) {
-                if (styles.backgroundColor && lastNode.styles.backgroundColor === styles.backgroundColor) {
-                    this.processedNodes.add(element);
-                    for (const child of element.children) {
-                        this.captureNode(child); // Process children but skip this container
-                    }
-                    return;
-                }
-            }
-        }
+        // Threshold for batching styles
+        const useWorkers = this.options.useWorkers && this.styleWorker;
+        const isSmallElement = rect.width < 1 && rect.height < 1;
 
         const nodeData = {
             type,
             x, y, width, height,
-            styles,
+            styles: {}, // Will be populated by extractStyles
             zIndex: parseInt(computed.zIndex) || 0
         };
 
+        // Populate styles (Directly or via Worker)
+        this.extractStyles(element, computed, nodeData, batchContext);
+
         if (type === 'text') {
             nodeData.text = element.textContent.trim();
-            if (!nodeData.text) return; // Skip containers that look like text but are empty
-
-            // ✅ DEBUG LOG (remove in production)
-            if (styles.fontWeight === 'bold' || styles.fontSize > 13 || nodeData.text.length < 50) {
-                console.log(`[GEO] Text: "${nodeData.text.substring(0, 20)}..."`, {
-                    x, y,
-                    w: width,
-                    h: height,
-                    fs: styles.fontSize,
-                    lh: styles.lineHeight,
-                    padL: styles.padding?.left || 0,
-                    padT: styles.padding?.top || 0,
-                    finalY: y
-                });
-            }
-
+            if (!nodeData.text) return;
             this.markProcessedRecursive(element);
         } else if (type === 'image') {
             nodeData.src = element.src;
@@ -184,23 +195,43 @@ class GeometrySnapshot {
             this.processedNodes.add(element);
         }
 
-        // Attach direct text to boxes if they have it
         if (type === 'box') {
             const directTextNodes = Array.from(element.childNodes)
                 .filter(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim().length > 0);
 
             if (directTextNodes.length > 0) {
-                // Optimization: If it's just one text node and no element children, it's a simple text-box
                 nodeData.text = directTextNodes.map(n => n.textContent).join(' ').trim();
             }
         }
 
         this.nodes.push(nodeData);
 
-        // Recurse into children
         if (type !== 'text') {
+            // Check if we should start a new batch for children
+            let nextBatch = batchContext;
+            if (useWorkers && !batchContext && element.children.length > 30) {
+                nextBatch = { nodes: [], rawStyles: [] };
+                this.stylePromises.push((async () => {
+                    const batch = nextBatch;
+                    try {
+                        const response = await this.styleWorker.execute('PARSE_STYLES', { rawStylesBatch: batch.rawStyles });
+                        if (response && response.processedBatch) {
+                            response.processedBatch.forEach((style, i) => {
+                                Object.assign(batch.nodes[i].styles, style);
+                            });
+                        } else {
+                            // FALLBACK: Process locally if worker returns null or fails
+                            this.processBatchLocally(batch);
+                        }
+                    } catch (error) {
+                        console.error('Style worker execution failed, falling back:', error);
+                        this.processBatchLocally(batch);
+                    }
+                })());
+            }
+
             for (const child of element.children) {
-                this.captureNode(child);
+                this.captureNode(child, nextBatch);
             }
         }
     }
@@ -263,7 +294,6 @@ class GeometrySnapshot {
     getNodeType(element, computed) {
         if (element.tagName === 'IMG') return 'image';
 
-        // CRITICAL FIX: If it has visible styles, it MUST be a box to render them
         const hasVisibleBoxStyle =
             (computed.backgroundColor !== 'rgba(0, 0, 0, 0)' && computed.backgroundColor !== 'transparent') ||
             (computed.backgroundImage && computed.backgroundImage !== 'none') ||
@@ -273,20 +303,18 @@ class GeometrySnapshot {
         if (hasVisibleBoxStyle) return 'box';
 
         const textContent = element.textContent.trim();
-        const hasOnlyText = element.children.length === 0 ||
-            Array.from(element.children).every(child =>
-                ['SPAN', 'STRONG', 'EM', 'B', 'I', 'MARK', 'BR'].includes(child.tagName)
-            );
+        // RICH TEXT FIX: Only treat as text if it's a leaf node with content
+        const hasNoElementTypeChildren = Array.from(element.children).every(child =>
+            ['BR', 'WBR'].includes(child.tagName)
+        );
 
         const isTextElement = ['SPAN', 'P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
             'STRONG', 'EM', 'B', 'I', 'LABEL', 'A', 'LI'].includes(element.tagName);
 
-        // If it's a text element with content and no complex children, treat as text
-        if (isTextElement && textContent.length > 0 && hasOnlyText) {
+        if (isTextElement && textContent.length > 0 && hasNoElementTypeChildren) {
             return 'text';
         }
 
-        // Check for meaningful direct text
         const hasDirectText = Array.from(element.childNodes).some(
             child => child.nodeType === Node.TEXT_NODE &&
                 child.textContent.trim().length > 0
@@ -299,49 +327,159 @@ class GeometrySnapshot {
         return 'box';
     }
 
-    extractStyles(element, computed) {
-        const styles = {
+    extractRawStyles(element, computed) {
+        return {
             backgroundColor: computed.backgroundColor,
             backgroundImage: computed.backgroundImage,
-            borderWidth: parseFloat(computed.borderTopWidth) || 0, // More reliable than borderWidth
-            borderColor: computed.borderTopColor || computed.borderColor,
-            borderStyle: computed.borderTopStyle || computed.borderStyle,
-            borderRadius: computed.borderRadius.includes('%') ? computed.borderRadius : (parseFloat(computed.borderRadius) || 0),
+            borderTopWidth: computed.borderTopWidth,
+            borderTopColor: computed.borderTopColor,
+            borderTopStyle: computed.borderTopStyle,
+            borderRadius: computed.borderRadius,
             color: computed.color,
-            fontSize: parseFloat(computed.fontSize) || 12,
+            fontSize: computed.fontSize,
             fontFamily: computed.fontFamily,
             fontWeight: computed.fontWeight,
             fontStyle: computed.fontStyle,
             textAlign: computed.textAlign,
             justifyContent: computed.justifyContent,
             alignItems: computed.alignItems,
-            lineHeight: parseFloat(computed.lineHeight) || parseFloat(computed.fontSize) * 1.2,
-            letterSpacing: parseFloat(computed.letterSpacing) || 0,
-            padding: {
-                top: parseFloat(computed.paddingTop) || 0,
-                right: parseFloat(computed.paddingRight) || 0,
-                bottom: parseFloat(computed.paddingBottom) || 0,
-                left: parseFloat(computed.paddingLeft) || 0
-            },
-            opacity: parseFloat(computed.opacity) || 1,
-            boxShadow: computed.boxShadow !== 'none' ? computed.boxShadow : null,
-            transform: computed.transform !== 'none' ? computed.transform : null,
-            zIndex: computed.zIndex !== 'auto' ? parseInt(computed.zIndex) : 0,
+            lineHeight: computed.lineHeight,
+            letterSpacing: computed.letterSpacing,
+            paddingTop: computed.paddingTop,
+            paddingRight: computed.paddingRight,
+            paddingBottom: computed.paddingBottom,
+            paddingLeft: computed.paddingLeft,
+            opacity: computed.opacity,
+            boxShadow: computed.boxShadow,
+            transform: computed.transform,
+            zIndex: computed.zIndex,
             overflow: computed.overflow,
             visibility: computed.visibility,
             whiteSpace: computed.whiteSpace,
             wordBreak: computed.wordBreak
         };
+    }
 
-        // If in deep mode, extract more complex properties
-        if (this.currentMode === 'deep') {
-            if (styles.backgroundImage && styles.backgroundImage !== 'none') {
-                const gradient = this.parseGradient(styles.backgroundImage);
+    processBatchLocally(batch) {
+        if (!batch || !batch.nodes) return;
+        batch.nodes.forEach((node, i) => {
+            const raw = batch.rawStyles[i];
+            Object.assign(node.styles, {
+                backgroundColor: raw.backgroundColor,
+                backgroundImage: raw.backgroundImage,
+                borderWidth: parseFloat(raw.borderTopWidth) || 0,
+                borderColor: raw.borderTopColor,
+                borderStyle: raw.borderTopStyle,
+                borderRadius: raw.borderRadius.includes('%') ? raw.borderRadius : (parseFloat(raw.borderRadius) || 0),
+                color: raw.color,
+                fontSize: parseFloat(raw.fontSize) || 12,
+                fontFamily: raw.fontFamily,
+                fontWeight: raw.fontWeight,
+                fontStyle: raw.fontStyle,
+                textAlign: raw.textAlign,
+                lineHeight: parseFloat(raw.lineHeight) || parseFloat(raw.fontSize) * 1.2,
+                padding: {
+                    top: parseFloat(raw.paddingTop) || 0,
+                    right: parseFloat(raw.paddingRight) || 0,
+                    bottom: parseFloat(raw.paddingBottom) || 0,
+                    left: parseFloat(raw.paddingLeft) || 0
+                },
+                boxShadow: raw.boxShadow !== 'none' ? raw.boxShadow : null,
+                transform: raw.transform !== 'none' ? raw.transform : null,
+                letterSpacing: parseFloat(raw.letterSpacing) || 0,
+                whiteSpace: raw.whiteSpace,
+                wordBreak: raw.wordBreak
+            });
+
+            // Also handle gradient if present
+            if (raw.backgroundImage && raw.backgroundImage !== 'none') {
+                const gradient = this.parseGradient(raw.backgroundImage);
+                if (gradient) node.styles.gradient = gradient;
+            }
+        });
+    }
+
+    extractStyles(element, computed, nodeData, batchContext = null) {
+        const styles = nodeData.styles;
+
+        // 1. Direct Style Extraction (Required for Logic or Performance)
+        styles.opacity = parseFloat(computed.opacity) || 1;
+        styles.zIndex = computed.zIndex !== 'auto' ? parseInt(computed.zIndex) : 0;
+        styles.display = computed.display;
+
+        // 2. Complex/Logic-Heavy Styles (Gradients)
+        if (computed.backgroundImage && computed.backgroundImage !== 'none') {
+            let workerTriggered = false;
+
+            if (this.gradientWorker && typeof this.gradientWorker.execute === 'function') {
+                this.gradientPromises.push((async () => {
+                    try {
+                        const response = await this.gradientWorker.execute('PARSE_GRADIENT', { backgroundImage: computed.backgroundImage });
+                        if (response && response.gradient) {
+                            nodeData.styles.gradient = response.gradient;
+                        } else {
+                            // FALLBACK: Parse locally if worker returns null (fallbackMode)
+                            const gradient = this.parseGradient(computed.backgroundImage);
+                            if (gradient) nodeData.styles.gradient = gradient;
+                        }
+                    } catch (error) {
+                        console.error('Gradient worker execution failed, falling back:', error);
+                        const gradient = this.parseGradient(computed.backgroundImage);
+                        if (gradient) nodeData.styles.gradient = gradient;
+                    }
+                })());
+                workerTriggered = true;
+            } else if (this.gradientWorker && typeof this.gradientWorker.postMessage === 'function') {
+                // Compatibility for standard Worker if provided directly
+                this.gradientPromises.push(new Promise(resolve => {
+                    this.gradientWorker.postMessage({ type: 'PARSE_GRADIENT', data: { backgroundImage: computed.backgroundImage } });
+                    this.gradientWorker.onmessage = (e) => {
+                        if (e.data && e.data.gradient) nodeData.styles.gradient = e.data.gradient;
+                        resolve();
+                    };
+                }));
+                workerTriggered = true;
+            }
+
+            if (!workerTriggered) {
+                const gradient = this.parseGradient(computed.backgroundImage);
                 if (gradient) styles.gradient = gradient;
             }
         }
 
-        return this.compactStyles(styles);
+        // 3. Batched Style Extraction (Offload to Worker)
+        if (batchContext) {
+            batchContext.nodes.push(nodeData);
+            batchContext.rawStyles.push(this.extractRawStyles(element, computed));
+        } else {
+            // Direct parsing fallback - RESTORED MISSING PROPERTIES
+            Object.assign(styles, {
+                backgroundColor: computed.backgroundColor,
+                backgroundImage: computed.backgroundImage, // Added for potential reference
+                borderWidth: parseFloat(computed.borderTopWidth) || 0,
+                borderColor: computed.borderTopColor || computed.borderColor,
+                borderStyle: computed.borderTopStyle || computed.borderStyle,
+                borderRadius: computed.borderRadius.includes('%') ? computed.borderRadius : (parseFloat(computed.borderRadius) || 0),
+                color: computed.color,
+                fontSize: parseFloat(computed.fontSize) || 12,
+                fontFamily: computed.fontFamily,
+                fontWeight: computed.fontWeight,
+                fontStyle: computed.fontStyle,
+                textAlign: computed.textAlign,
+                lineHeight: parseFloat(computed.lineHeight) || parseFloat(computed.fontSize) * 1.2,
+                padding: {
+                    top: parseFloat(computed.paddingTop) || 0,
+                    right: parseFloat(computed.paddingRight) || 0,
+                    bottom: parseFloat(computed.paddingBottom) || 0,
+                    left: parseFloat(computed.paddingLeft) || 0
+                },
+                boxShadow: computed.boxShadow !== 'none' ? computed.boxShadow : null,
+                transform: computed.transform !== 'none' ? computed.transform : null,
+                letterSpacing: parseFloat(computed.letterSpacing) || 0,
+                whiteSpace: computed.whiteSpace,
+                wordBreak: computed.wordBreak
+            });
+        }
     }
 
     parseGradient(bgImage) {
@@ -429,7 +567,6 @@ class GeometrySnapshot {
     }
 
     parseRadialGradient(content) {
-        // Robust splitting
         let parts = [];
         let depth = 0;
         let lastIdx = 0;
@@ -443,9 +580,12 @@ class GeometrySnapshot {
         }
         parts.push(content.substring(lastIdx).trim());
 
+        // Radial gradients can have a shape/size/position first
+        const hasShape = parts[0].includes('circle') || parts[0].includes('ellipse') || parts[0].includes('at ');
+
         return {
             type: 'radial',
-            stops: this.parseColorStops(parts, 1)
+            stops: this.parseColorStops(parts, hasShape ? 1 : 0)
         };
     }
 

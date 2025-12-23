@@ -10,7 +10,7 @@ import EmailVerification from "./features/auth/Verification.jsx";
 import BackendWakePopup from "./components/PopUp/Backendpopup.jsx";
 import EditorPage from "./pages/UI-Edits/EditorPage.jsx";
 import B3 from "./pages/UI-Edits/b3.jsx";
-import Demo from "./pages/UI-Edits/Demo.jsx";
+import FidelityBenchmark from "./pages/UI-Edits/FidelityBenchmark.jsx";
 
 
 
@@ -63,7 +63,7 @@ export default function App() {
         />
 
         <Route path="/verify" element={<EmailVerification />} />
-        <Route path="/demo" element={<Demo />} />
+        <Route path="/benchmark" element={<FidelityBenchmark />} />
       </Routes>
     </div>
 
