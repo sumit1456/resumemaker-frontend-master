@@ -700,7 +700,6 @@ const UIEditor = ({ initialUseWebGL = false }) => {
       const mobile = window.innerWidth <= 768;
       setIsMobile(mobile);
       if (mobile) {
-        setZoom(0.55); // A better default for mobile width
         setActiveTab('preview'); // Default to preview for clean look
       }
     };
@@ -1751,43 +1750,8 @@ const UIEditor = ({ initialUseWebGL = false }) => {
 
   return (
     <div className="editor-container">
-      {/* Mobile Header / Top Bar */}
-      {isMobile && (
-        <div className="mobile-top-bar">
-          <div className="mobile-view-title">
-            {activeTab === 'preview' ? 'LIVE PREVIEW' : 'ADVANCED EDITOR'}
-          </div>
-          <button
-            className="btn-advanced-editor"
-            onClick={() => setActiveTab(activeTab === 'preview' ? 'controls' : 'preview')}
-          >
-            {activeTab === 'preview' ? 'Advanced Editor' : 'Back to Preview'}
-          </button>
-        </div>
-      )}
-
-      {/* Mobile Template Selector (Only in Preview) */}
-      {isMobile && activeTab === 'preview' && (
-        <div className="mobile-template-selector">
-          <label className="control-label">CHOOSE TEMPLATE:</label>
-          <select
-            value={currentTemplate}
-            onChange={(e) => handleTemplateSwitch(e.target.value)}
-            className="control-select"
-          >
-            {Object.keys(TEMPLATES).map(key => (
-              <option key={key} value={key}>
-                {key.charAt(0).toUpperCase() + key.slice(1)}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
 
       {/* Hidden rendering area */}
-
-
-      {/* Hidden rendering areaMATCH IS NOT APPLICABLE FOR SEARCH TOOLMPARISON */}
       <div className="hidden-render" style={{
         position: 'absolute',
         right: '-100px',
@@ -1843,7 +1807,7 @@ const UIEditor = ({ initialUseWebGL = false }) => {
 
 
       {/* LEFT PANEL - Section Controls */}
-      <div className={`left-panel ${isMobile && activeTab !== 'controls' ? 'mobile-hidden' : ''}`}>
+      <div className="left-panel">
         {!isMobile && <h3 className="panel-title">TEMPLATE SELECT</h3>}
 
         {TEMPLATES && Object.keys(TEMPLATES).length > 0 && (
@@ -2311,7 +2275,11 @@ const UIEditor = ({ initialUseWebGL = false }) => {
 
 
       {/* MIDDLE - Canvas */}
-      <div className={`canvas-container ${isMobile && activeTab !== 'preview' ? 'mobile-hidden' : ''}`}>
+      <div className="canvas-container">
+        <div className="template-badge">
+          {currentTemplate === 'ats' ? '📄 ATS' : currentTemplate === 'modern' ? '✨ MODERN' : '📑 TWO COLUMN'}
+        </div>
+        <div className="canvas-hint">💡 DRAG & RESIZE • Scroll to see more</div>
         <div className="canvas-scroll-wrapper">
           <div className="canvas-stack-layout">
             {/* Page 1 */}
@@ -2522,18 +2490,13 @@ const UIEditor = ({ initialUseWebGL = false }) => {
             {showPage2 ? '1 PAGE' : '2 PAGES'}
           </button>
         </div>
-
-        <div className="canvas-hint">💡 DRAG & RESIZE • Scroll to see more</div>
-        <div className="template-badge">
-          {currentTemplate === 'ats' ? '📄 ATS' : currentTemplate === 'modern' ? '✨ MODERN' : '📑 TWO COLUMN'}
-        </div>
       </div>
 
       {/* ======================= RIGHT PANEL START ======================= */}
 
 
 
-      <div className={`right-panel ${isMobile && activeTab !== 'properties' ? 'mobile-hidden' : ''}`}>
+      <div className="right-panel">
         <h3 className="panel-title">QUICK STYLE</h3>
 
         {selectedSection ? (
@@ -2815,7 +2778,8 @@ const UIEditor = ({ initialUseWebGL = false }) => {
 
 
 
-    </div >
+    </div>
+
   );
 };
 

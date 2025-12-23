@@ -1428,14 +1428,17 @@
   background: #2563eb;
   color: white;
 }
+
 /* ==================== MOBILE REDESIGN ==================== */
 @media (max-width: 768px) {
   .editor-container {
     display: flex !important;
     flex-direction: column !important;
-    height: 100vh !important;
+    height: auto !important;
+    /* Allow page scroll */
+    min-height: 100vh;
     background: #000 !important;
-    grid-template-columns: 1fr !important;
+    overflow-y: auto !important;
   }
 
   .mobile-top-bar {
@@ -1446,71 +1449,58 @@
     background: #111;
     border-bottom: 1px solid #222;
     z-index: 100;
-  }
-
-  .mobile-view-title {
-    font-size: 14px;
-    font-weight: 800;
-    color: #fff;
-    letter-spacing: 0.5px;
-  }
-
-  .btn-advanced-editor {
-    background: #1a1a1a;
-    color: #fff;
-    border: 1px solid #333;
-    padding: 6px 12px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 600;
-  }
-
-  .mobile-template-selector {
-    padding: 16px;
-    background: #0a0a0a;
-    border-bottom: 1px solid #1a1a1a;
-  }
-
-  .mobile-template-selector .control-label {
-    display: block;
-    margin-bottom: 8px;
-    color: #888;
-    font-size: 11px;
-    font-weight: 700;
-  }
-
-  .mobile-template-selector .control-select {
-    width: 100%;
-    background: #1a1a1a;
-    border: 1px solid #333;
-    color: #fff;
-    padding: 10px;
-    border-radius: 8px;
-    font-size: 13px;
+    position: sticky;
+    top: 0;
   }
 
   .canvas-container {
-    flex: 1;
-    overflow-y: auto;
-    padding: 10px;
-    background: #000;
+    height: 880px !important;
+    /* Roughly same as 100% zoom preview height */
+    overflow: auto;
+    padding: 15px;
+    background: #0a0a0a;
     display: block !important;
+    flex: none !important;
+    border-bottom: 2px solid #333;
   }
 
-  .left-panel, .right-panel {
-    position: fixed;
-    top: 50px;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 99;
-    background: #000;
-    overflow-y: auto;
+  .template-badge {
+    position: static !important;
+    display: inline-block;
+    margin: 10px 0 5px 0 !important;
+    background: #2563eb !important;
+    color: white !important;
+    font-weight: 800 !important;
+    font-size: 14px !important;
+  }
+
+  .canvas-hint {
+    position: static !important;
+    display: block;
+    margin-bottom: 15px !important;
+    color: #fbbf24 !important;
+    font-weight: 600;
+  }
+
+  .left-panel,
+  .right-panel {
+    position: static !important;
+    display: block !important;
     width: 100% !important;
+    height: auto !important;
+    background: #000;
+    border-bottom: 1px solid #222;
+    padding: 20px 15px !important;
+    z-index: 1;
+    overflow-y: visible !important;
   }
 
-  .mobile-hidden {
-    display: none !important;
+  .left-panel .panel-title,
+  .right-panel .panel-title {
+    margin-top: 10px;
+    color: #3b82f6;
+    border-left: 3px solid #3b82f6;
+    padding-left: 10px;
   }
 
   .canvas-wrapper {
@@ -1520,7 +1510,9 @@
 }
 
 @media (min-width: 769px) {
-  .mobile-top-bar, .mobile-template-selector {
+
+  .mobile-top-bar,
+  .mobile-template-selector {
     display: none !important;
   }
 }
