@@ -216,10 +216,22 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
     const linesLayer = app.stage.children[2];
 
     const renderAll = async () => {
-      // Clear and redraw
-      shapesLayer.removeChildren();
-      linesLayer.removeChildren();
-      sectionsLayer.removeChildren();
+      // 🚀 HARD CLEANUP: Explicitly destroy old textures to prevent VRAM leaks
+      [shapesLayer, sectionsLayer, linesLayer].forEach(layer => {
+        if (layer && layer.children) {
+          // Clone children array because destroy(true) removes from parent
+          const children = [...layer.children];
+          children.forEach(child => {
+            try {
+              // destroy(true) cleans up children AND textures
+              child.destroy({ children: true, texture: true, baseTexture: true });
+            } catch (e) {
+              // Ignore errors during destruction
+            }
+          });
+          layer.removeChildren();
+        }
+      });
 
       // Render Shapes
       shapes.forEach(shape => {
@@ -569,6 +581,7 @@ const UIEditor = ({ initialUseWebGL = false }) => {
   // 🎬 GPU Animation State
   const [headerAnimating, setHeaderAnimating] = useState(false);
   const [skillsAnimating, setSkillsAnimating] = useState(false); // New state for skills
+  const [activeSectionAccordion, setActiveSectionAccordion] = useState('header'); // 🗂 Sub-section accordion state
   const headerContainerRef = useRef(null);
   const skillsContainerRef = useRef(null); // New ref for skills container
 
@@ -1819,6 +1832,8 @@ const UIEditor = ({ initialUseWebGL = false }) => {
           </div>
         )}
 
+        {/* --- ACCORDION SECTIONS --- */}
+
         {/* HEADER LAYOUTS SECTION */}
         <h3 className="panel-title">HEADER LAYOUTS</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '20px' }}>
@@ -1884,274 +1899,286 @@ const UIEditor = ({ initialUseWebGL = false }) => {
           ))}
         </div>
 
-        {/* BACKGROUND SHAPES SECTION */}
+        {/* BACKGROUND ZONES SECTION */}
         <h3 className="panel-title">BACKGROUND ZONES</h3>
+        <div style={{ marginBottom: '20px' }}>
+          {/* ANIMATION TEST BUTTON */}
+          <button
+            onClick={() => setIsAnimating(!isAnimating)}
+            className={`btn-primary full-width ${isAnimating ? 'active-anim' : ''}`}
+            style={{ marginBottom: '10px', backgroundColor: isAnimating ? '#ef4444' : '#8b5cf6' }}
+          >
+            {isAnimating ? '⏹ STOP BOUNCE ANIMATION' : '▶ TEST BOUNCE ANIMATION'}
+          </button>
 
-        {/* ANIMATION TEST BUTTON */}
-        <button
-          onClick={() => setIsAnimating(!isAnimating)}
-          className={`btn-primary full-width ${isAnimating ? 'active-anim' : ''}`}
-          style={{ marginBottom: '10px', backgroundColor: isAnimating ? '#ef4444' : '#8b5cf6' }}
-        >
-          {isAnimating ? '⏹ STOP BOUNCE ANIMATION' : '▶ TEST BOUNCE ANIMATION'}
-        </button>
+          <button onClick={addShape} className="btn-primary full-width">
+            + ADD BACKGROUND SHAPE
+          </button>
 
-        <button onClick={addShape} className="btn-primary full-width">
-          + ADD BACKGROUND SHAPE
-        </button>
+          {backgroundShapes.length > 0 && backgroundShapes.map(shape => (
+            <div key={shape.id} className={`shape-control ${selectedShape === shape.id ? 'selected' : ''}`}>
+              <div className="line-header">
+                <span className="line-label">{shape.label}</span>
+                <button onClick={() => deleteBackgroundShape(shape.id)} className="btn-delete">✕</button>
+              </div>
 
-        {backgroundShapes.length > 0 && backgroundShapes.map(shape => (
-          <div key={shape.id} className={`shape-control ${selectedShape === shape.id ? 'selected' : ''}`}>
-            <div className="line-header">
-              <span className="line-label">{shape.label}</span>
-              <button onClick={() => deleteBackgroundShape(shape.id)} className="btn-delete">✕</button>
+              <div className="shape-properties">
+                <div className="property-control">
+                  <label className="control-label">X Position</label>
+                  <input
+                    type="number"
+                    value={shape.x}
+                    onChange={(e) => updateBackgroundShape(shape.id, 'x', parseInt(e.target.value))}
+                    className="control-input"
+                  />
+                </div>
+                <div className="property-control">
+                  <label className="control-label">Y Position</label>
+                  <input
+                    type="number"
+                    value={shape.y}
+                    onChange={(e) => updateBackgroundShape(shape.id, 'y', parseInt(e.target.value))}
+                    className="control-input"
+                  />
+                </div>
+                <div className="property-control">
+                  <label className="control-label">Width</label>
+                  <input
+                    type="number"
+                    value={shape.width}
+                    onChange={(e) => updateBackgroundShape(shape.id, 'width', parseInt(e.target.value))}
+                    className="control-input"
+                  />
+                </div>
+                <div className="property-control">
+                  <label className="control-label">Height</label>
+                  <input
+                    type="number"
+                    value={shape.height}
+                    onChange={(e) => updateBackgroundShape(shape.id, 'height', parseInt(e.target.value))}
+                    className="control-input"
+                  />
+                </div>
+                <div className="property-control">
+                  <label className="control-label">Color</label>
+                  <input
+                    type="color"
+                    value={shape.color}
+                    onChange={(e) => updateBackgroundShape(shape.id, 'color', e.target.value)}
+                    className="control-color"
+                  />
+                </div>
+              </div>
             </div>
-
-            <div className="shape-properties">
-              <div className="property-control">
-                <label className="control-label">X Position</label>
-                <input
-                  type="number"
-                  value={shape.x}
-                  onChange={(e) => updateBackgroundShape(shape.id, 'x', parseInt(e.target.value))}
-                  className="control-input"
-                />
-              </div>
-              <div className="property-control">
-                <label className="control-label">Y Position</label>
-                <input
-                  type="number"
-                  value={shape.y}
-                  onChange={(e) => updateBackgroundShape(shape.id, 'y', parseInt(e.target.value))}
-                  className="control-input"
-                />
-              </div>
-              <div className="property-control">
-                <label className="control-label">Width</label>
-                <input
-                  type="number"
-                  value={shape.width}
-                  onChange={(e) => updateBackgroundShape(shape.id, 'width', parseInt(e.target.value))}
-                  className="control-input"
-                />
-              </div>
-              <div className="property-control">
-                <label className="control-label">Height</label>
-                <input
-                  type="number"
-                  value={shape.height}
-                  onChange={(e) => updateBackgroundShape(shape.id, 'height', parseInt(e.target.value))}
-                  className="control-input"
-                />
-              </div>
-              <div className="property-control">
-                <label className="control-label">Color</label>
-                <input
-                  type="color"
-                  value={shape.color}
-                  onChange={(e) => updateBackgroundShape(shape.id, 'color', e.target.value)}
-                  className="control-color"
-                />
-              </div>
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
 
 
 
+        {/* SECTION SIZES & POSITIONS SECTION */}
         <h3 className="panel-title">SECTION SIZES & POSITIONS</h3>
-        <div className="section-widths-container">
+        <div className="section-widths-container" style={{ marginBottom: '20px' }}>
           {Object.keys(sectionWidths).map(sectionName => {
             const isTransparent = styleConfig[sectionName]?.container?.backgroundColor === 'transparent';
             const position = sectionPositions[sectionName] || { x: 0, y: 0 };
             const isOnPage2 = position.y >= 800;
-            return (
-              <details key={sectionName} className="section-detail" open>
-                <summary className="section-summary">
-                  {sectionName}
-                  {isTransparent && <span className="transparent-badge">TRANSPARENT</span>}
-                  {isOnPage2 && <span className="transparent-badge" style={{ background: '#3b82f6' }}>PAGE 2</span>}
-                </summary>
+            const isOpen = activeSectionAccordion === sectionName;
 
-                <div className="position-controls-wrapper">
-                  <div className="position-grid-layout">
-                    <div className="control-item">
-                      <label className="control-label-small">X Position</label>
-                      <input
-                        type="number"
-                        value={Math.round(position.x)}
-                        onChange={(e) => {
-                          setSectionPositions(p => ({
-                            ...p,
-                            [sectionName]: { ...p[sectionName], x: parseInt(e.target.value) || 0 }
-                          }));
-                        }}
-                        className="control-input-small"
-                      />
-                    </div>
-                    <div className="control-item">
-                      <label className="control-label-small">Y Position</label>
-                      <input
-                        type="number"
-                        value={Math.round(position.y)}
-                        onChange={(e) => {
-                          setSectionPositions(p => ({
-                            ...p,
-                            [sectionName]: { ...p[sectionName], y: parseInt(e.target.value) || 0 }
-                          }));
-                        }}
-                        className="control-input-small"
-                      />
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: '4px' }}>
-                    <button
-                      onClick={() => {
-                        setSectionPositions(p => ({
-                          ...p,
-                          [sectionName]: { ...p[sectionName], y: 50 }
-                        }));
-                      }}
-                      className="btn-secondary btn-page-nav"
-                    >
-                      → Page 1
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSectionPositions(p => ({
-                          ...p,
-                          [sectionName]: { ...p[sectionName], y: 900 }
-                        }));
-                        setShowPage2(true);
-                      }}
-                      className="btn-secondary btn-page-nav"
-                    >
-                      → Page 2
-                    </button>
+            return (
+              <div key={sectionName} className={`sub-accordion-item ${isOpen ? 'active' : ''}`}>
+                <div
+                  className="sub-accordion-trigger"
+                  onClick={() => setActiveSectionAccordion(isOpen ? null : sectionName)}
+                >
+                  <span className="section-name">{sectionName}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {isTransparent && <span className="badge-mini">T</span>}
+                    {isOnPage2 && <span className="badge-mini blue">P2</span>}
+                    <span className="arrow">{isOpen ? '▼' : '▶'}</span>
                   </div>
                 </div>
 
-                <div className="section-controls-grid">
-                  <div className="control-item">
-                    <label className="control-label-small">Width (px)</label>
-                    <input
-                      type="text"
-                      value={sectionWidths[sectionName]}
-                      onChange={(e) => handleWidthChange(sectionName, e.target.value)}
-                      onBlur={() => handleWidthBlur(sectionName)}
-                      className="control-input-small"
-                      placeholder="Width"
-                    />
-                  </div>
-
-
-
-                  <div className="control-item">
-                    <label className="control-label-small">Height (px)</label>
-                    <input
-                      type="text"
-                      value={sectionHeights[sectionName] || '300px'}
-                      onChange={(e) => handleHeightChange(sectionName, e.target.value)}
-                      onBlur={() => handleHeightBlur(sectionName)}
-                      className="control-input-small"
-                      placeholder="auto or px"
-                    />
-                  </div>
-
-
-
-
-                  <div className="control-item">
-                    <label className="control-label-small">Padding (px)</label>
-                    <input
-                      type="number"
-                      value={parseInt(styleConfig[sectionName]?.container?.padding) || 0}
-                      onChange={(e) => {
-                        const newPadding = `${e.target.value}px`;
-                        handleStyleChange(sectionName, 'container', newPadding, 'padding');
-                      }}
-                      className="control-input-small"
-                      min="0"
-                      max="50"
-                    />
-                  </div>
-
-                  <div className="control-item">
-                    <label className="control-label-small">Background</label>
-                    <div className="color-with-transparent">
-                      <input
-                        type="color"
-                        value={styleConfig[sectionName]?.container?.backgroundColor === 'transparent' ? '#FFFFFF' : (styleConfig[sectionName]?.container?.backgroundColor || '#FFFFFF')}
-                        onChange={(e) => handleStyleChange(sectionName, 'container', e.target.value, 'backgroundColor')}
-                        className="control-color-small"
-                        disabled={styleConfig[sectionName]?.container?.backgroundColor === 'transparent'}
-                      />
+                <div className={`sub-accordion-content ${isOpen ? 'expanded' : ''}`}>
+                  <div className="position-controls-wrapper">
+                    <div className="position-grid-layout">
+                      <div className="control-item">
+                        <label className="control-label-small">X Pos</label>
+                        <input
+                          type="number"
+                          value={Math.round(position.x)}
+                          onChange={(e) => {
+                            setSectionPositions(p => ({
+                              ...p,
+                              [sectionName]: { ...p[sectionName], x: parseInt(e.target.value) || 0 }
+                            }));
+                          }}
+                          className="control-input-small"
+                        />
+                      </div>
+                      <div className="control-item">
+                        <label className="control-label-small">Y Pos</label>
+                        <input
+                          type="number"
+                          value={Math.round(position.y)}
+                          onChange={(e) => {
+                            setSectionPositions(p => ({
+                              ...p,
+                              [sectionName]: { ...p[sectionName], y: parseInt(e.target.value) || 0 }
+                            }));
+                          }}
+                          className="control-input-small"
+                        />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '4px' }}>
                       <button
                         onClick={() => {
-                          const currentBg = styleConfig[sectionName]?.container?.backgroundColor;
-                          handleStyleChange(sectionName, 'container', currentBg === 'transparent' ? '#FFFFFF' : 'transparent', 'backgroundColor');
+                          setSectionPositions(p => ({
+                            ...p,
+                            [sectionName]: { ...p[sectionName], y: 50 }
+                          }));
                         }}
-                        className={`btn-transparent ${styleConfig[sectionName]?.container?.backgroundColor === 'transparent' ? 'active' : ''}`}
-                        title="Toggle Transparent"
+                        className="btn-secondary btn-page-nav"
                       >
-                        {styleConfig[sectionName]?.container?.backgroundColor === 'transparent' ? '⊘' : 'T'}
+                        → Page 1
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSectionPositions(p => ({
+                            ...p,
+                            [sectionName]: { ...p[sectionName], y: 900 }
+                          }));
+                          setShowPage2(true);
+                        }}
+                        className="btn-secondary btn-page-nav"
+                      >
+                        → Page 2
                       </button>
                     </div>
                   </div>
 
-                  {styleConfig[sectionName]?.titleStyle && (
-                    <>
-                      <div className="control-item">
-                        <label className="control-label-small">Title Size</label>
-                        <input
-                          type="number"
-                          value={parseInt(styleConfig[sectionName]?.titleStyle?.fontSize) || 12}
-                          onChange={(e) => handleStyleChange(sectionName, 'titleStyle', `${e.target.value}px`, 'fontSize')}
-                          className="control-input-small"
-                          min="8"
-                          max="32"
-                        />
-                      </div>
+                  <div className="section-controls-grid">
+                    <div className="control-item">
+                      <label className="control-label-small">Width (px)</label>
+                      <input
+                        type="text"
+                        value={sectionWidths[sectionName]}
+                        onChange={(e) => handleWidthChange(sectionName, e.target.value)}
+                        onBlur={() => handleWidthBlur(sectionName)}
+                        className="control-input-small"
+                        placeholder="Width"
+                      />
+                    </div>
 
-                      <div className="control-item">
-                        <label className="control-label-small">Title Color</label>
+
+
+                    <div className="control-item">
+                      <label className="control-label-small">Height (px)</label>
+                      <input
+                        type="text"
+                        value={sectionHeights[sectionName] || '300px'}
+                        onChange={(e) => handleHeightChange(sectionName, e.target.value)}
+                        onBlur={() => handleHeightBlur(sectionName)}
+                        className="control-input-small"
+                        placeholder="auto or px"
+                      />
+                    </div>
+
+
+
+
+                    <div className="control-item">
+                      <label className="control-label-small">Padding (px)</label>
+                      <input
+                        type="number"
+                        value={parseInt(styleConfig[sectionName]?.container?.padding) || 0}
+                        onChange={(e) => {
+                          const newPadding = `${e.target.value}px`;
+                          handleStyleChange(sectionName, 'container', newPadding, 'padding');
+                        }}
+                        className="control-input-small"
+                        min="0"
+                        max="50"
+                      />
+                    </div>
+
+                    <div className="control-item">
+                      <label className="control-label-small">Background</label>
+                      <div className="color-with-transparent">
                         <input
                           type="color"
-                          value={styleConfig[sectionName]?.titleStyle?.color || '#000000'}
-                          onChange={(e) => handleStyleChange(sectionName, 'titleStyle', e.target.value, 'color')}
+                          value={styleConfig[sectionName]?.container?.backgroundColor === 'transparent' ? '#FFFFFF' : (styleConfig[sectionName]?.container?.backgroundColor || '#FFFFFF')}
+                          onChange={(e) => handleStyleChange(sectionName, 'container', e.target.value, 'backgroundColor')}
                           className="control-color-small"
+                          disabled={styleConfig[sectionName]?.container?.backgroundColor === 'transparent'}
                         />
+                        <button
+                          onClick={() => {
+                            const currentBg = styleConfig[sectionName]?.container?.backgroundColor;
+                            handleStyleChange(sectionName, 'container', currentBg === 'transparent' ? '#FFFFFF' : 'transparent', 'backgroundColor');
+                          }}
+                          className={`btn-transparent ${styleConfig[sectionName]?.container?.backgroundColor === 'transparent' ? 'active' : ''}`}
+                          title="Toggle Transparent"
+                        >
+                          {styleConfig[sectionName]?.container?.backgroundColor === 'transparent' ? '⊘' : 'T'}
+                        </button>
                       </div>
-                    </>
-                  )}
+                    </div>
 
-                  {styleConfig[sectionName]?.bodyStyle && (
-                    <>
-                      <div className="control-item">
-                        <label className="control-label-small">Body Size</label>
-                        <input
-                          type="number"
-                          value={parseInt(styleConfig[sectionName]?.bodyStyle?.fontSize) || 10}
-                          onChange={(e) => handleStyleChange(sectionName, 'bodyStyle', `${e.target.value}px`, 'fontSize')}
-                          className="control-input-small"
-                          min="6"
-                          max="24"
-                        />
-                      </div>
+                    {styleConfig[sectionName]?.titleStyle && (
+                      <>
+                        <div className="control-item">
+                          <label className="control-label-small">Title Size</label>
+                          <input
+                            type="number"
+                            value={parseInt(styleConfig[sectionName]?.titleStyle?.fontSize) || 12}
+                            onChange={(e) => handleStyleChange(sectionName, 'titleStyle', `${e.target.value}px`, 'fontSize')}
+                            className="control-input-small"
+                            min="8"
+                            max="32"
+                          />
+                        </div>
 
-                      <div className="control-item">
-                        <label className="control-label-small">Body Color</label>
-                        <input
-                          type="color"
-                          value={styleConfig[sectionName]?.bodyStyle?.color || '#000000'}
-                          onChange={(e) => handleStyleChange(sectionName, 'bodyStyle', e.target.value, 'color')}
-                          className="control-color-small"
-                        />
-                      </div>
-                    </>
-                  )}
+                        <div className="control-item">
+                          <label className="control-label-small">Title Color</label>
+                          <input
+                            type="color"
+                            value={styleConfig[sectionName]?.titleStyle?.color || '#000000'}
+                            onChange={(e) => handleStyleChange(sectionName, 'titleStyle', e.target.value, 'color')}
+                            className="control-color-small"
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {styleConfig[sectionName]?.bodyStyle && (
+                      <>
+                        <div className="control-item">
+                          <label className="control-label-small">Body Size</label>
+                          <input
+                            type="number"
+                            value={parseInt(styleConfig[sectionName]?.bodyStyle?.fontSize) || 10}
+                            onChange={(e) => handleStyleChange(sectionName, 'bodyStyle', `${e.target.value}px`, 'fontSize')}
+                            className="control-input-small"
+                            min="6"
+                            max="24"
+                          />
+                        </div>
+
+                        <div className="control-item">
+                          <label className="control-label-small">Body Color</label>
+                          <input
+                            type="color"
+                            value={styleConfig[sectionName]?.bodyStyle?.color || '#000000'}
+                            onChange={(e) => handleStyleChange(sectionName, 'bodyStyle', e.target.value, 'color')}
+                            className="control-color-small"
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </details>
+              </div>
             );
           })}
         </div>
@@ -2757,7 +2784,7 @@ const UIEditor = ({ initialUseWebGL = false }) => {
 
 
 
-    </div>
+    </div >
   );
 };
 

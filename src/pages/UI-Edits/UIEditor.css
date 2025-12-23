@@ -1341,3 +1341,90 @@
     padding: 5px;
   }
 }
+
+/* ==================== SUB-ACCORDION STYLING ==================== */
+.sub-accordion-item {
+  border: 1px solid #333;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  overflow: hidden;
+  background: #111;
+  transition: all 0.2s ease;
+}
+
+.sub-accordion-item:hover {
+  border-color: #444;
+}
+
+.sub-accordion-item.active {
+  border-color: #3b82f6;
+  background: #111;
+}
+
+.sub-accordion-trigger {
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  background: #1a1a1a;
+  user-select: none;
+  transition: background 0.2s ease;
+}
+
+.sub-accordion-item:not(.active) .sub-accordion-trigger:hover {
+  background: #222;
+}
+
+.sub-accordion-item.active .sub-accordion-trigger {
+  background: #1e293b;
+}
+
+.section-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: #ccc;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sub-accordion-item.active .section-name {
+  color: #fff;
+}
+
+.arrow {
+  font-size: 10px;
+  color: #666;
+  transition: transform 0.2s ease;
+}
+
+.sub-accordion-item.active .arrow {
+  color: #3b82f6;
+}
+
+.sub-accordion-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s ease;
+  padding: 0 12px;
+  background: #000;
+}
+
+.sub-accordion-content.expanded {
+  max-height: 1000px;
+  padding: 16px 12px;
+}
+
+.badge-mini {
+  font-size: 9px;
+  background: #333;
+  color: #aaa;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-weight: bold;
+}
+
+.badge-mini.blue {
+  background: #2563eb;
+  color: white;
+}
