@@ -1532,7 +1532,54 @@ class PixiRenderer {
         return canvas.toDataURL();
     }
 
+    purgeCache() {
+        if (this.textureCache) {
+            this.textureCache.forEach(texture => {
+                try {
+                    texture.destroy(true);
+                } catch (e) { }
+            });
+            this.textureCache.clear();
+        }
+    }
+
+    destroyDisplayObject(obj) {
+        if (!obj) return;
+
+        // Recurse children
+        if (obj.children && obj.children.length > 0) {
+            const children = [...obj.children];
+            children.forEach(c => this.destroyDisplayObject(c));
+        }
+
+        // Text textures should always be destroyed as they are unique to the text/style
+        const isText = (obj.text !== undefined || obj.constructor.name === 'Text' || obj.constructor.name === 'HTMLText' || obj.label !== undefined);
+
+        // Check if texture is in cache
+        let isCached = false;
+        if (obj.texture) {
+            for (const cached of this.textureCache.values()) {
+                if (cached === obj.texture) {
+                    isCached = true;
+                    break;
+                }
+            }
+        }
+
+        try {
+            // Only destroy texture if it's text or NOT in our cache (images/gradients)
+            // Actually for images from Assets, we shouldn't destroy them either.
+            // Text is the safe one to destroy every time.
+            obj.destroy({
+                children: true,
+                texture: isText,
+                baseTexture: isText
+            });
+        } catch (e) { }
+    }
+
     destroy() {
+        this.purgeCache();
         if (this.app) {
             this.app.destroy(true);
             this.app = null;

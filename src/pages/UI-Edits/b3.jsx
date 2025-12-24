@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { setCurrentResume, setCurrentResumeId } from "../../redux/store.js";
@@ -15,6 +15,7 @@ import {
 } from "./BaseTemplates.jsx";
 import { PixiRenderer, GeometrySnapshotWithWorkers as GeometrySnapshot, HybridRenderer, initializeWorkers } from "./WebglEngineWithWorkers.js";
 import * as PIXI from 'pixi.js';
+import { jsPDF } from "jspdf";
 
 
 
@@ -31,14 +32,14 @@ const normalizeColorForInput = (color) => {
   return color;
 };
 
-const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, onDragEnd, onSelect, selectedId, type, isAnimating, onHeaderContainerReady, headerAnimating, headerAnimationRef, setHeaderAnimating, skillsAnimating, skillsAnimationRef, setSkillsAnimating, onSkillsContainerReady, yOffset = 0 }) => {
-  const containerRef = useRef(null);
-  const pixiApp = useRef(null);
-  const [initTrigger, setInitTrigger] = useState(0);
-
+const WebGLStage = forwardRef(({ width, height, shapes, lines, sections, sectionSnapshots, onDragEnd, onSelect, selectedId, type, isAnimating, onHeaderContainerReady, headerAnimating, headerAnimationRef, setHeaderAnimating, skillsAnimating, skillsAnimationRef, setSkillsAnimating, onSkillsContainerReady, yOffset = 0 }, ref) => {
   // Device-specific config (Calculated once per render)
   const isMobile = window.innerWidth < 768;
   const resolution = isMobile ? Math.max(window.devicePixelRatio || 1, 1) : 2;
+
+  const containerRef = useRef(null);
+  const pixiApp = useRef(null);
+  const [initTrigger, setInitTrigger] = useState(0);
 
   // Layer Refs to avoid index-based access
   const layers = useRef({
@@ -89,7 +90,7 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
         }
 
         if (!isMounted) {
-          app.destroy(true, { children: true, texture: true, baseTexture: true });
+          app.destroy(true);
           return;
         }
 
@@ -101,23 +102,34 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
         if (containerRef.current) {
           containerRef.current.appendChild(app.canvas || app.view);
         } else {
-          app.destroy(true, { children: true, texture: true, baseTexture: true });
+          app.destroy(true);
           return;
         }
 
         // Create layers
+        const backgroundLayer = new PIXI.Container(); // 🆕 Explicit White Background
         const shapesLayer = new PIXI.Container();
         const linesLayer = new PIXI.Container();
         const sectionsLayer = new PIXI.Container();
         sectionsLayer.sortableChildren = true; // 🎯 Enable Z-index sorting
 
+        layers.current.background = backgroundLayer;
         layers.current.shapes = shapesLayer;
         layers.current.sections = sectionsLayer;
         layers.current.lines = linesLayer;
 
+        app.stage.addChild(backgroundLayer);
         app.stage.addChild(shapesLayer);
         app.stage.addChild(sectionsLayer);
         app.stage.addChild(linesLayer);
+
+
+        // ⬜ Add White Background Graphic immediately
+        const bgValues = { width: width / (isMobile ? 0.8 : 1), height: height / (isMobile ? 0.8 : 1) };
+        const bgGraphic = new PIXI.Graphics();
+        bgGraphic.rect(0, 0, bgValues.width, bgValues.height);
+        bgGraphic.fill({ color: 0xffffff, alpha: 1 });
+        backgroundLayer.addChild(bgGraphic);
 
         // Global Event Listeners (Stage-level) to ensure "Pick once. Move forever"
         app.stage.interactive = true;
@@ -192,7 +204,9 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
         try {
           // Robust destruction check
           if (app.renderer) {
-            app.destroy(true, { children: true, texture: true, baseTexture: true });
+            // 🎯 FIXED: Do not destroy textures/baseTextures here as they might be shared
+            // or still needed by Page 1 when Page 2 unmounts.
+            app.destroy(true);
           }
         } catch (e) {
           console.warn("PixiJS destruction error (likely already destroyed):", e);
@@ -202,6 +216,12 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
       }
     };
   }, [width, height]);
+
+  // Expose Pixi App to Parent
+  useImperativeHandle(ref, () => ({
+    app: pixiApp.current,
+    container: containerRef.current
+  }));
 
   const parseColor = (cssColor) => {
     if (!cssColor || cssColor === 'transparent') return { hex: 0xffffff, alpha: 0 };
@@ -243,8 +263,8 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
     return { hex: 0xcccccc, alpha: 1 };
   };
 
-  // Update elements when props change
   useEffect(() => {
+    let active = true;
     const app = pixiApp.current;
     if (!app || !app.stage) return;
 
@@ -263,22 +283,38 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
     }
 
     const renderAll = async () => {
-      // 🚀 HARD CLEANUP: Explicitly destroy old textures to prevent VRAM leaks
-      [shapesLayer, sectionsLayer, linesLayer].forEach(layer => {
-        if (layer && layer.children) {
-          // Clone children array because destroy(true) removes from parent
+      if (!active) return;
+
+      // � Memory Safeguard: Purge cache if it grows too large (indicates template switching/heavy editing)
+      if (sharedRenderer.current && sharedRenderer.current.textureCache.size > 200) {
+        console.log(`[PIXI MEMORY] Purging sharedRenderer texture cache (${sharedRenderer.current.textureCache.size} entries)`);
+        sharedRenderer.current.purgeCache();
+      }
+
+      // 🚀 SURGICAL CLEANUP: Destroy old graphics to free GPU memory
+      // Include backgroundLayer in cleanup
+      [layers.current.background, shapesLayer, sectionsLayer, linesLayer].forEach(layer => {
+        if (layer) {
           const children = [...layer.children];
           children.forEach(child => {
-            try {
-              // destroy(true) cleans up children AND textures
-              child.destroy({ children: true, texture: true, baseTexture: true });
-            } catch (e) {
-              // Ignore errors during destruction
+            if (sharedRenderer.current) {
+              sharedRenderer.current.destroyDisplayObject(child);
+            } else {
+              child.destroy({ children: true });
             }
           });
           layer.removeChildren();
         }
       });
+
+      // ⬜ Re-draw White Background Graphic (Handles resizing)
+      if (layers.current.background) {
+        const bgValues = { width: width / (isMobile ? 0.8 : 1), height: height / (isMobile ? 0.8 : 1) };
+        const bgGraphic = new PIXI.Graphics();
+        bgGraphic.rect(0, 0, bgValues.width, bgValues.height);
+        bgGraphic.fill({ color: 0xffffff, alpha: 1 });
+        layers.current.background.addChild(bgGraphic);
+      }
 
       // Render Shapes
       shapes.forEach(shape => {
@@ -471,6 +507,7 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
     };
 
     renderAll();
+    return () => { active = false; };
   }, [shapes, lines, sections, sectionSnapshots, selectedId, initTrigger, isAnimating, yOffset, width, height, resolution]);
 
   // Animation Ticker - SEPARATE useEffect
@@ -599,7 +636,7 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
       }}
     />
   );
-};
+});
 
 
 // ==================== MAIN UI EDITOR COMPONENT ====================
@@ -607,6 +644,8 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
 const UIEditor = () => {
   // Refs
   const sectionRefs = useRef({});
+  const webGLStageRef1 = useRef(null);
+  const webGLStageRef2 = useRef(null);
 
 
   // State
@@ -1119,8 +1158,11 @@ const UIEditor = () => {
 
   // Download as image
   const downloadResume = async () => {
-    const app = pixiApp.current;
-    if (!app) return;
+    const app = webGLStageRef1.current?.app;
+    if (!app) {
+      console.error("❌ WebGL App not found for Page 1");
+      return;
+    }
 
     try {
       // Use Pixi extraction for Page 1
@@ -1135,6 +1177,50 @@ const UIEditor = () => {
       console.log('✅ Resume downloaded via WebGL extraction');
     } catch (err) {
       console.error('Failed to download resume:', err);
+    }
+  };
+
+  // Download as PDF
+  const downloadPDF = async () => {
+    const app1 = webGLStageRef1.current?.app;
+    if (!app1) {
+      console.error("❌ WebGL App not found for Page 1");
+      return;
+    }
+
+    try {
+      console.log('📄 Starting PDF Generation...');
+
+      // 1. Setup PDF (A4 size in points: 595.28 x 841.89)
+      const pdf = new jsPDF('p', 'pt', 'a4');
+      const width = pdf.internal.pageSize.getWidth();
+      const height = pdf.internal.pageSize.getHeight();
+
+      // 2. Extract Page 1
+      const canvas1 = await app1.renderer.extract.canvas(app1.stage);
+      const imgData1 = canvas1.toDataURL('image/png', 1.0);
+
+      pdf.addImage(imgData1, 'PNG', 0, 0, width, height);
+
+      // 3. Extract Page 2 (if active)
+      if (showPage2) {
+        const app2 = webGLStageRef2.current?.app;
+        if (app2) {
+          console.log('📄 Adding Page 2...');
+          const canvas2 = await app2.renderer.extract.canvas(app2.stage);
+          const imgData2 = canvas2.toDataURL('image/png', 1.0);
+
+          pdf.addPage();
+          pdf.addImage(imgData2, 'PNG', 0, 0, width, height);
+        }
+      }
+
+      // 4. Save
+      pdf.save('resume-design.pdf');
+      console.log('✅ PDF downloaded successfully');
+
+    } catch (err) {
+      console.error('Failed to download PDF:', err);
     }
   };
 
@@ -1957,6 +2043,7 @@ const UIEditor = () => {
 
         <div className="button-grid">
           <button onClick={downloadResume} className="btn-secondary">📥 PNG</button>
+          <button onClick={downloadPDF} className="btn-secondary">📄 PDF</button>
           <button
             onClick={handleSaveAll}
             className="btn-primary"
@@ -2074,6 +2161,7 @@ const UIEditor = () => {
                 onSkillsContainerReady={(container) => {
                   skillsContainerRef.current = container;
                 }}
+                ref={webGLStageRef1}
               />
               <div className="page-number">Page 1</div>
             </div>
@@ -2081,39 +2169,45 @@ const UIEditor = () => {
 
 
             {/* Page 2 */}
-            {showPage2 && (
-              <div className="canvas-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
-                <WebGLStage
-                  width={isMobile ? 595 * 0.7 : 595}
-                  height={isMobile ? 842 * 0.7 : 842}
-                  shapes={page2Elements.shapes}
-                  lines={page2Elements.lines}
-                  sections={page2Elements.sections}
-                  sectionSnapshots={sectionSnapshots}
-                  yOffset={842}
-                  onDragEnd={(type, id, pos) => {
-                    const adjustedPos = { ...pos, y: pos.y + 842 };
-                    if (type === 'section') handleSectionDragEnd(id, adjustedPos);
-                    if (type === 'shape') handleShapeDragEnd(id, adjustedPos);
-                    if (type === 'line') {
-                      handleLineDragEnd(id, {
-                        ...pos,
-                        y1: pos.y1 + 842,
-                        y2: pos.y2 + 842
-                      });
-                    }
-                  }}
-                  onSelect={(type, id) => {
-                    if (type === 'shape') setSelectedShape(id);
-                    if (type === 'line') setSelectedLine(id);
-                    if (type === 'section') setSelectedSection(id);
-                  }}
-                  selectedId={selectedShape || selectedLine || selectedSection}
-                  isAnimating={isAnimating}
-                />
-                <div className="page-number">Page 2</div>
-              </div>
-            )}
+            <div
+              className="canvas-wrapper"
+              style={{
+                transform: `scale(${zoom})`,
+                transformOrigin: 'top left',
+                display: showPage2 ? 'block' : 'none'
+              }}
+            >
+              <WebGLStage
+                width={isMobile ? 595 * 0.7 : 595}
+                height={isMobile ? 842 * 0.7 : 842}
+                shapes={page2Elements.shapes}
+                lines={page2Elements.lines}
+                sections={page2Elements.sections}
+                sectionSnapshots={sectionSnapshots}
+                yOffset={842}
+                onDragEnd={(type, id, pos) => {
+                  const adjustedPos = { ...pos, y: pos.y + 842 };
+                  if (type === 'section') handleSectionDragEnd(id, adjustedPos);
+                  if (type === 'shape') handleShapeDragEnd(id, adjustedPos);
+                  if (type === 'line') {
+                    handleLineDragEnd(id, {
+                      ...pos,
+                      y1: pos.y1 + 842,
+                      y2: pos.y2 + 842
+                    });
+                  }
+                }}
+                onSelect={(type, id) => {
+                  if (type === 'shape') setSelectedShape(id);
+                  if (type === 'line') setSelectedLine(id);
+                  if (type === 'section') setSelectedSection(id);
+                }}
+                selectedId={selectedShape || selectedLine || selectedSection}
+                isAnimating={isAnimating}
+                ref={webGLStageRef2}
+              />
+              <div className="page-number">Page 2</div>
+            </div>
           </div>
         </div>
 
