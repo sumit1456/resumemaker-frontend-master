@@ -822,7 +822,7 @@ export const FlexibleEducationSection = ({ educationList, styleConfig }) => {
                 />
             )}
 
-            {educationList.map((edu, idx) => (
+            {educationList && Array.isArray(educationList) && educationList.map((edu, idx) => (
                 <FlexibleContainer
                     key={idx}
                     config={config.itemStyle || { marginBottom: config.itemMarginBottom || "10px" }}

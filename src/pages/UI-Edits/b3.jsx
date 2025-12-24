@@ -1,13 +1,12 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import html2canvas from "html2canvas";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { setCurrentResume, setCurrentResumeId } from "../../redux/store.js";
 import { mergeResumeData } from "./Utils";
 import { ATS_TEMPLATE_CONFIG, MODERN_TEMPLATE_CONFIG, TWO_COLUMN_TEMPLATE_CONFIG, TEMPLATE5_CONFIG, HEADER_LAYOUTS, CONTACT_LAYOUTS, SKILLS_LAYOUTS } from "./TemplateConfigs";
 import { defaultResumeData } from "./Utils";
-import "./UIEditor.css";
+import "./b3.css";
 import {
   FlexibleCertificationsSection, FlexibleContactSection,
   FlexibleEducationSection, FlexibleExperienceSection,
@@ -19,7 +18,6 @@ import * as PIXI from 'pixi.js';
 
 
 
-import { Stage, Layer, Image as KonvaImage, Line, Rect, Transformer, Text } from 'react-konva';
 
 
 // ==================== WEBGL ENGINE COMPONENT ====================
@@ -38,12 +36,17 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
   const pixiApp = useRef(null);
   const [initTrigger, setInitTrigger] = useState(0);
 
+  // Device-specific config (Calculated once per render)
+  const isMobile = window.innerWidth < 768;
+  const resolution = isMobile ? Math.max(window.devicePixelRatio || 1, 1) : 2;
+
   // Layer Refs to avoid index-based access
   const layers = useRef({
     shapes: null,
     sections: null,
     lines: null
   });
+  const sharedRenderer = useRef(null);
 
   // Robust Drag Session Ref
   const dragSession = useRef({
@@ -69,12 +72,6 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
       // Initialize PixiJS Application (v8 style)
       app = new PIXI_LIB.Application();
 
-      // Device-specific config
-      const isMobile = window.innerWidth < 768;
-      // On mobile, using devicePixelRatio is essential for sharpness on high-DPI screens.
-      // We had a logic that capped it at 3 or 2, but modern phones handle higher DPR fine for 2D.
-      // However, to be safe but sharp, we'll aim for at least 2, and max out at devicePixelRatio.
-      const resolution = isMobile ? Math.max(window.devicePixelRatio || 2, 2) : 4;
 
       try {
         await app.init({
@@ -82,14 +79,13 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
           height: height,
           background: '#ffffff',
           resolution: resolution,
-          autoDensity: true,
           antialias: true,
-          roundPixels: true, // Helps with text sharpness
+          preference: 'webgl', // 🚀 Force WebGL preference in v8
         });
 
         // Apply 30% reduction scale if on mobile
         if (isMobile) {
-          app.stage.scale.set(0.7);
+          app.stage.scale.set(0.8);
         }
 
         if (!isMounted) {
@@ -113,6 +109,7 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
         const shapesLayer = new PIXI.Container();
         const linesLayer = new PIXI.Container();
         const sectionsLayer = new PIXI.Container();
+        sectionsLayer.sortableChildren = true; // 🎯 Enable Z-index sorting
 
         layers.current.shapes = shapesLayer;
         layers.current.sections = sectionsLayer;
@@ -257,6 +254,14 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
 
     if (!shapesLayer || !sectionsLayer || !linesLayer) return;
 
+    if (!sharedRenderer.current) {
+      sharedRenderer.current = new PixiRenderer(null, {
+        width: width,
+        height: height,
+        resolution: resolution
+      });
+    }
+
     const renderAll = async () => {
       // 🚀 HARD CLEANUP: Explicitly destroy old textures to prevent VRAM leaks
       [shapesLayer, sectionsLayer, linesLayer].forEach(layer => {
@@ -340,12 +345,15 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
         graphics.interactive = true;
         graphics.buttonMode = true;
         graphics.hitArea = new PIXI.Rectangle(
-          Math.min(line.x1, line.x2) - 5,
-          Math.min(line.y1, line.y2) - 5,
-          Math.abs(line.x2 - line.x1) + 10,
-          Math.abs(line.y2 - line.y1) + 10
+          Math.min(line.x1, line.x2) - 3, // Tighter hitarea (3px instead of 5px)
+          Math.min(line.y1, line.y2) - 3,
+          Math.abs(line.x2 - line.x1) + 6,
+          Math.abs(line.y2 - line.y1) + 6
         );
-        graphics.on('pointerdown', () => onSelect('line', line.id));
+        graphics.on('pointerdown', () => {
+          console.log(`[CLICK] Line clicked: ${line.id} (${line.label})`);
+          onSelect('line', line.id);
+        });
 
         linesLayer.addChild(graphics);
       });
@@ -362,10 +370,17 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
           sectionContainer.cursor = 'move';
           sectionContainer._sectionName = sectionName;
 
+          // 🎯 Ensure entire section area is clickable, even if transparent
+          // We add a 5px padding to make it easier to grab the edges
+          sectionContainer.hitArea = new PIXI.Rectangle(-5, -5, snapshot.width + 10, snapshot.height + 10);
+
+          // 🎯 Bring selected section to front
+          sectionContainer.zIndex = selectedId === sectionName ? 100 : 0;
+
           // 🎯 LOG HEADER SECTION COORDINATES FOR GPU ANIMATION
-          if (sectionName === 'header') {
+          if (sectionName === 'header' || sectionName === 'education') {
             console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            console.log('🎨 HEADER SECTION - WebGL Rendering Coordinates');
+            console.log(`🎨 ${sectionName.toUpperCase()} SECTION - WebGL Rendering Coordinates`);
             console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
             console.log('📍 Position:');
             console.log(`   X: ${pos.x}px`);
@@ -406,7 +421,19 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
           selectionBorder.visible = selectedId === sectionName;
           sectionContainer.addChild(selectionBorder);
 
+          // 🎯 Visual feedback on hover
+          sectionContainer.on('pointerover', () => {
+            sectionContainer.cursor = 'pointer';
+            if (selectionBorder) selectionBorder.visible = true;
+          });
+          sectionContainer.on('pointerout', () => {
+            if (selectionBorder && selectedId !== sectionName) selectionBorder.visible = false;
+          });
+
           sectionContainer.on('pointerdown', (event) => {
+            console.log(`[CLICK] Section: ${sectionName} | Pos: (${pos.x}, ${pos.y}) | Snap: ${snapshot.width}x${snapshot.height}`);
+            event.stopPropagation();
+
             const pointerPos = event.data.getLocalPosition(sectionContainer.parent);
             dragSession.current = {
               active: true,
@@ -423,14 +450,7 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
 
           sectionsLayer.addChild(sectionContainer);
 
-          const renderer = new PixiRenderer(null, {
-            width: snapshot.width,
-            height: snapshot.height,
-            backgroundColor: 'transparent',
-            resolution: window.innerWidth < 768 ? Math.max(window.devicePixelRatio || 2, 2) : 4
-          });
-
-          await renderer.render(snapshot, { targetContainer: sectionContainer });
+          await sharedRenderer.current.render(snapshot, { targetContainer: sectionContainer });
         }
       }
 
@@ -443,10 +463,15 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
           dragSession.current.target = sectionsLayer.children.find(c => c._sectionName === id);
         }
       }
+
+      // 📊 LOG TEXTURE COUNT FOR MEMORY LEAK TRACKING
+      if (app.renderer && app.renderer.texture && app.renderer.texture.managedTextures) {
+        console.log(`[PIXI MEMORY] Active textures in memory: ${app.renderer.texture.managedTextures.length}`);
+      }
     };
 
     renderAll();
-  }, [shapes, lines, sections, sectionSnapshots, selectedId, initTrigger, isAnimating, yOffset]);
+  }, [shapes, lines, sections, sectionSnapshots, selectedId, initTrigger, isAnimating, yOffset, width, height, resolution]);
 
   // Animation Ticker - SEPARATE useEffect
   useEffect(() => {
@@ -579,10 +604,8 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
 
 // ==================== MAIN UI EDITOR COMPONENT ====================
 
-const UIEditor = ({ initialUseWebGL = false }) => {
+const UIEditor = () => {
   // Refs
-  const stageRef = useRef(null);
-  const stage2Ref = useRef(null);
   const sectionRefs = useRef({});
 
 
@@ -609,10 +632,8 @@ const UIEditor = ({ initialUseWebGL = false }) => {
   const [currentTemplate, setCurrentTemplate] = useState('ats');
   const [sectionWidths, setSectionWidths] = useState({});
   const [styleConfig, setStyleConfig] = useState(ATS_TEMPLATE_CONFIG);
-  const [sectionImages, setSectionImages] = useState({});
   const [sectionSnapshots, setSectionSnapshots] = useState({});
   const [TemplateComponents, setTemplateComponents] = useState(null);
-  const [useWebGL, setUseWebGL] = useState(initialUseWebGL); // Toggle for WebGL
   const [resumeData, setResumeData] = useState(defaultResumeData);
   const currentResume = useSelector((state) => state.resume.currentResume);
   const currentResumeId = useSelector((state) => state.resume.resumeId);
@@ -973,14 +994,30 @@ const UIEditor = ({ initialUseWebGL = false }) => {
     }));
   };
 
-  // Handle style changes
+  // Helper to map generic 'bodyStyle' to section-specific style names
+  const getStyleType = (sectionName, genericType) => {
+    if (genericType !== 'bodyStyle') return genericType;
+    const mappings = {
+      header: 'nameStyle',
+      skills: 'valueStyle',
+      experience: 'positionStyle',
+      projects: 'nameStyle',
+      education: 'degreeStyle',
+      certifications: 'itemStyle'
+    };
+    return mappings[sectionName] || 'bodyStyle';
+  };
+
+  // Handle style changes with smart section-to-property mapping
   const handleStyleChange = (sectionName, styleType, value, property) => {
+    const targetType = getStyleType(sectionName, styleType);
+
     setStyleConfig(prev => ({
       ...prev,
       [sectionName]: {
         ...prev[sectionName],
-        [styleType]: {
-          ...prev[sectionName]?.[styleType],
+        [targetType]: {
+          ...prev[sectionName]?.[targetType],
           [property]: value
         }
       }
@@ -1081,34 +1118,28 @@ const UIEditor = ({ initialUseWebGL = false }) => {
   };
 
   // Download as image
-  const downloadResume = () => {
-    if (!stageRef.current) return;
+  const downloadResume = async () => {
+    const app = pixiApp.current;
+    if (!app) return;
 
-    const uri1 = stageRef.current.toDataURL({ pixelRatio: 5 });
-    const link1 = document.createElement('a');
-    link1.download = 'resume-page1.png';
-    link1.href = uri1;
-    link1.click();
+    try {
+      // Use Pixi extraction for Page 1
+      const canvas = await app.renderer.extract.canvas(app.stage);
+      const uri = canvas.toDataURL('image/png', 1.0);
 
-    if (showPage2 && stage2Ref.current) {
-      setTimeout(() => {
-        const uri2 = stage2Ref.current.toDataURL({ pixelRatio: 5 });
-        const link2 = document.createElement('a');
-        link2.download = 'resume-page2.png';
-        link2.href = uri2;
-        link2.click();
-      }, 100);
+      const link = document.createElement('a');
+      link.download = 'resume-design.png';
+      link.href = uri;
+      link.click();
+
+      console.log('✅ Resume downloaded via WebGL extraction');
+    } catch (err) {
+      console.error('Failed to download resume:', err);
     }
   };
 
   // Handle canvas click (deselect)
-  const handleStageClick = (e) => {
-    if (e.target === e.target.getStage()) {
-      setSelectedLine(null);
-      setSelectedShape(null);
-      setSelectedSection(null);
-    }
-  };
+
 
   // Separate elements by page
   const getElementsForPage = (pageNum) => {
@@ -1118,7 +1149,7 @@ const UIEditor = ({ initialUseWebGL = false }) => {
     return {
       sections: Object.entries(sectionPositions || {}).filter(([name, pos]) => {
         if (!pos) return false;
-        const height = parseInt(sectionHeights[name]) || 200; // Use actual height if available
+        const height = parseInt(sectionHeights[name]) || (sectionSnapshots[name]?.height) || 200;
         // Intersection check: top is in page OR bottom is in page
         return (pos.y >= pageStart && pos.y < pageEnd) ||
           (pos.y + height > pageStart && pos.y < pageEnd);
@@ -1339,6 +1370,21 @@ const UIEditor = ({ initialUseWebGL = false }) => {
     ));
   };
 
+  // Move background shape
+  const moveShape = (id, direction) => {
+    const step = 5;
+    setBackgroundShapes(prev => prev.map(shape => {
+      if (shape.id !== id) return shape;
+      switch (direction) {
+        case 'up': return { ...shape, y: shape.y - step };
+        case 'down': return { ...shape, y: shape.y + step };
+        case 'left': return { ...shape, x: shape.x - step };
+        case 'right': return { ...shape, x: shape.x + step };
+        default: return shape;
+      }
+    }));
+  };
+
 
 
 
@@ -1350,6 +1396,26 @@ const UIEditor = ({ initialUseWebGL = false }) => {
       ...prev,
       [sectionName]: newPos
     }));
+  };
+
+  // Move section
+  const moveSection = (sectionName, direction) => {
+    const step = 2; // Fine-grained movement for sections
+    setSectionPositions(prev => {
+      const pos = prev[sectionName] || { x: 0, y: 0 };
+      switch (direction) {
+        case 'up':
+          return { ...prev, [sectionName]: { ...pos, y: pos.y - step } };
+        case 'down':
+          return { ...prev, [sectionName]: { ...pos, y: pos.y + step } };
+        case 'left':
+          return { ...prev, [sectionName]: { ...pos, x: pos.x - step } };
+        case 'right':
+          return { ...prev, [sectionName]: { ...pos, x: pos.x + step } };
+        default:
+          return prev;
+      }
+    });
   };
 
 
@@ -1426,23 +1492,18 @@ const UIEditor = ({ initialUseWebGL = false }) => {
     const newPositions = {};
 
     sortedSections.forEach(sectionName => {
-      const img = sectionImages[sectionName];
-      const height = img ? img.height : 100;
+      const snapshot = sectionSnapshots[sectionName];
+      const height = snapshot ? snapshot.height : 100;
       const currentX = sectionPositions[sectionName]?.x || 40;
 
       // Check if we need to break to next page
-      // If currentY + height exceeds page boundary
       if (currentPage === 1 && (currentY + height) > (PAGE_HEIGHT - PAGE_MARGIN)) {
         currentPage = 2;
-        currentY = PAGE_HEIGHT + PAGE_MARGIN; // Start at Page 2 top (842 + 50)
+        currentY = PAGE_HEIGHT + PAGE_MARGIN;
         setShowPage2(true);
       }
 
-      newPositions[sectionName] = {
-        x: currentX, // Keep X position (respect columns)
-        y: currentY
-      };
-
+      newPositions[sectionName] = { x: currentX, y: currentY };
       currentY += height + spacing;
     });
 
@@ -1451,224 +1512,7 @@ const UIEditor = ({ initialUseWebGL = false }) => {
 
 
 
-  // ==================== DRAGGABLE COMPONENTS ====================
 
-  // Draggable Line Component
-  const DraggableLine = ({ line, onDragEnd, onUpdate, isSelected, onSelect }) => {
-    const lineRef = useRef();
-    const trRef = useRef();
-
-    useEffect(() => {
-      if (isSelected && trRef.current && lineRef.current) {
-        trRef.current.nodes([lineRef.current]);
-        trRef.current.getLayer().batchDraw();
-      }
-      return () => {
-        if (trRef.current) {
-          trRef.current.nodes([]);
-        }
-      };
-    }, [isSelected]);
-
-    return (
-      <>
-        <Line
-          ref={lineRef}
-          points={[line.x1, line.y1, line.x2, line.y2]}
-          stroke={line.color}
-          strokeWidth={line.thickness}
-          draggable
-          onClick={onSelect}
-          onTap={onSelect}
-          onDragEnd={(e) => {
-            const node = e.target;
-            node.scaleX(1);
-            node.scaleY(1);
-
-            const dx = node.x();
-            const dy = node.y();
-
-            onDragEnd(line.id, {
-              x1: line.x1 + dx,
-              y1: line.y1 + dy,
-              x2: line.x2 + dx,
-              y2: line.y2 + dy
-            });
-
-            node.position({ x: 0, y: 0 });
-          }}
-          onTransformEnd={() => {
-            const node = lineRef.current;
-            const scaleX = node.scaleX();
-            const scaleY = node.scaleY();
-
-            node.scaleX(1);
-            node.scaleY(1);
-
-            onUpdate(line.id, {
-              x2: line.x1 + (line.x2 - line.x1) * scaleX,
-              y2: line.y1 + (line.y2 - line.y1) * scaleY
-            });
-          }}
-        />
-        {isSelected && (
-          <Transformer
-            ref={trRef}
-            rotateEnabled={false}
-            enabledAnchors={line.orientation === 'horizontal' ? ['middle-left', 'middle-right'] : ['top-center', 'bottom-center']}
-          />
-        )}
-      </>
-    );
-  };
-
-  // Draggable Shape Component
-  const DraggableShape = ({ shape, onDragEnd, onUpdate, isSelected, onSelect }) => {
-    const shapeRef = useRef();
-    const trRef = useRef();
-
-    useEffect(() => {
-      if (isSelected && trRef.current && shapeRef.current) {
-        trRef.current.nodes([shapeRef.current]);
-        trRef.current.getLayer().batchDraw();
-      }
-      return () => {
-        if (trRef.current) {
-          trRef.current.nodes([]);
-        }
-      };
-    }, [isSelected]);
-
-    return (
-      <>
-        <Rect
-          ref={shapeRef}
-          x={shape.x}
-          y={shape.y}
-          width={shape.width}
-          height={shape.height}
-          fill={shape.color}
-          draggable
-          onClick={onSelect}
-          onTap={onSelect}
-          onDragEnd={(e) => {
-            onDragEnd(shape.id, {
-              x: Math.round(e.target.x()),
-              y: Math.round(e.target.y())
-            });
-          }}
-          onTransformEnd={() => {
-            const node = shapeRef.current;
-            const scaleX = node.scaleX();
-            const scaleY = node.scaleY();
-
-            node.scaleX(1);
-            node.scaleY(1);
-
-            onUpdate(shape.id, {
-              width: Math.max(10, Math.round(shape.width * scaleX)),
-              height: Math.max(10, Math.round(shape.height * scaleY))
-            });
-          }}
-        />
-        {isSelected && <Transformer ref={trRef} rotateEnabled={false} />}
-      </>
-    );
-  };
-
-  // Draggable Section Component - WITH VISIBLE RESIZE HANDLES
-  const DraggableSection = ({ sectionName, image, position, onDragEnd, onTransform, isSelected, onSelect }) => {
-    const imageRef = useRef();
-    const trRef = useRef();
-
-    useEffect(() => {
-      if (isSelected && trRef.current && imageRef.current) {
-        trRef.current.nodes([imageRef.current]);
-        trRef.current.getLayer().batchDraw();
-      }
-      return () => {
-        if (trRef.current) {
-          trRef.current.nodes([]);
-        }
-      };
-    }, [isSelected]);
-
-    if (!image) return null;
-
-    return (
-      <>
-        <KonvaImage
-          ref={imageRef}
-          image={image}
-          x={position.x}
-          y={position.y}
-          draggable
-          onClick={onSelect}
-          onTap={onSelect}
-          onDragEnd={(e) => {
-            onDragEnd(sectionName, {
-              x: Math.round(e.target.x()),
-              y: Math.round(e.target.y())
-            });
-          }}
-          onTransformEnd={() => {
-            const node = imageRef.current;
-            const scaleX = node.scaleX();
-            const scaleY = node.scaleY();
-
-            const newWidth = Math.max(50, Math.round(node.width() * scaleX));
-            const newHeight = Math.max(20, Math.round(node.height() * scaleY));
-
-            onTransform(sectionName, {
-              x: Math.round(node.x()),
-              y: Math.round(node.y()),
-              width: newWidth,
-              height: newHeight
-            });
-
-            node.scaleX(1);
-            node.scaleY(1);
-          }}
-        />
-        {isSelected && (
-          <Transformer
-            ref={trRef}
-            rotateEnabled={false}
-            keepRatio={false}
-            enabledAnchors={[
-              'top-left',
-              'top-center',
-              'top-right',
-              'middle-right',
-              'bottom-right',
-              'bottom-center',
-              'bottom-left',
-              'middle-left'
-            ]}
-            // Make anchors MORE VISIBLE
-            anchorSize={10}
-            anchorStroke="#3b82f6"
-            anchorFill="#ffffff"
-            anchorStrokeWidth={2}
-            anchorCornerRadius={2}
-            borderStroke="#3b82f6"
-            borderStrokeWidth={2}
-            borderDash={[4, 4]}
-            boundBoxFunc={(oldBox, newBox) => {
-              // Minimum sizes
-              if (newBox.width < 50) {
-                newBox.width = 50;
-              }
-              if (newBox.height < 20) {
-                newBox.height = 20;
-              }
-              return newBox;
-            }}
-          />
-        )}
-      </>
-    );
-  };
 
 
 
@@ -1710,44 +1554,6 @@ const UIEditor = ({ initialUseWebGL = false }) => {
         console.log(`✅ [RE-CAPTURE] Done capturing ${sectionName} in ${(t3 - t2).toFixed(1)}ms`);
 
         setSectionSnapshots(prev => ({ ...prev, [sectionName]: snapshot }));
-
-        // 2. CAPTURE FOR KONVA (html2canvas)
-        // Only run this if NOT using WebGL to prevent double-rendering lag
-        if (!useWebGL) {
-          const canvas = await html2canvas(element, {
-            backgroundColor: null,
-            scale: 8,
-            logging: false,
-            useCORS: true,
-            allowTaint: true,
-            height: element.offsetHeight,
-            letterRendering: true,
-            imageTimeout: 0,
-            onclone: (clonedDoc) => {
-              const clonedElement = clonedDoc.querySelector(`[data-section="${sectionName}"]`);
-              if (clonedElement) {
-                clonedElement.style.opacity = '1';
-                clonedElement.style.visibility = 'visible';
-                clonedElement.style.display = 'block';
-              }
-            }
-          });
-          const t4 = performance.now();
-
-          // Convert canvas to image
-          const img = new Image();
-          img.width = element.offsetWidth;
-          img.height = element.offsetHeight;
-
-          img.onload = () => {
-            setSectionImages(prev => ({ ...prev, [sectionName]: img }));
-          };
-
-          img.src = canvas.toDataURL('image/png', 1.0);
-        } else {
-          // WebGL Mode - capture complete
-        }
-
       } catch (error) {
         console.error(`Error rendering ${sectionName}:`, error);
       }
@@ -1758,6 +1564,7 @@ const UIEditor = ({ initialUseWebGL = false }) => {
       console.log('--- START RENDER ALL SECTIONS ---');
       const tStart = performance.now();
       const sections = Object.keys(sectionRefs.current);
+      console.log('📋 Sections in refs:', sections);
       await Promise.all(sections.map(sectionName => renderSectionData(sectionName)));
       const tEnd = performance.now();
       console.log(`--- END RENDER ALL SECTIONS: ${(tEnd - tStart).toFixed(1)}ms ---`);
@@ -1774,7 +1581,6 @@ const UIEditor = ({ initialUseWebGL = false }) => {
     resumeData,
     sectionWidths,
     sectionHeights,
-    useWebGL,
   ]);
 
 
@@ -1964,6 +1770,21 @@ const UIEditor = ({ initialUseWebGL = false }) => {
                 <button onClick={() => deleteBackgroundShape(shape.id)} className="btn-delete">✕</button>
               </div>
 
+              <div className="line-move-control" style={{ marginTop: '12px' }}>
+                <label className="control-label">Nudge Position</label>
+                <div className="arrow-grid">
+                  <div></div>
+                  <button onClick={() => moveShape(shape.id, 'up')} className="btn-arrow">↑</button>
+                  <div></div>
+                  <button onClick={() => moveShape(shape.id, 'left')} className="btn-arrow">←</button>
+                  <div className="arrow-center">MOVE</div>
+                  <button onClick={() => moveShape(shape.id, 'right')} className="btn-arrow">→</button>
+                  <div></div>
+                  <button onClick={() => moveShape(shape.id, 'down')} className="btn-arrow">↓</button>
+                  <div></div>
+                </div>
+              </div>
+
               <div className="shape-properties">
                 <div className="property-control">
                   <label className="control-label">X Position</label>
@@ -2072,6 +1893,23 @@ const UIEditor = ({ initialUseWebGL = false }) => {
                         />
                       </div>
                     </div>
+
+                    {/* Nudge Controls for Section */}
+                    <div className="line-move-control" style={{ marginTop: '12px', marginBottom: '12px' }}>
+                      <label className="control-label" style={{ fontSize: '10px' }}>Nudge Position</label>
+                      <div className="arrow-grid">
+                        <div></div>
+                        <button onClick={() => moveSection(sectionName, 'up')} className="btn-arrow">↑</button>
+                        <div></div>
+                        <button onClick={() => moveSection(sectionName, 'left')} className="btn-arrow">←</button>
+                        <div className="arrow-center">MOVE</div>
+                        <button onClick={() => moveSection(sectionName, 'right')} className="btn-arrow">→</button>
+                        <div></div>
+                        <button onClick={() => moveSection(sectionName, 'down')} className="btn-arrow">↓</button>
+                        <div></div>
+                      </div>
+                    </div>
+
                     <div style={{ display: 'flex', gap: '4px' }}>
                       <button
                         onClick={() => {
@@ -2099,126 +1937,6 @@ const UIEditor = ({ initialUseWebGL = false }) => {
                     </div>
                   </div>
 
-                  <div className="section-controls-grid">
-                    <div className="control-item">
-                      <label className="control-label-small">Width (px)</label>
-                      <input
-                        type="text"
-                        value={sectionWidths[sectionName]}
-                        onChange={(e) => handleWidthChange(sectionName, e.target.value)}
-                        onBlur={() => handleWidthBlur(sectionName)}
-                        className="control-input-small"
-                        placeholder="Width"
-                      />
-                    </div>
-
-
-
-                    <div className="control-item">
-                      <label className="control-label-small">Height (px)</label>
-                      <input
-                        type="text"
-                        value={sectionHeights[sectionName] || '300px'}
-                        onChange={(e) => handleHeightChange(sectionName, e.target.value)}
-                        onBlur={() => handleHeightBlur(sectionName)}
-                        className="control-input-small"
-                        placeholder="auto or px"
-                      />
-                    </div>
-
-
-
-
-                    <div className="control-item">
-                      <label className="control-label-small">Padding (px)</label>
-                      <input
-                        type="number"
-                        value={parseInt(styleConfig[sectionName]?.container?.padding) || 0}
-                        onChange={(e) => {
-                          const newPadding = `${e.target.value}px`;
-                          handleStyleChange(sectionName, 'container', newPadding, 'padding');
-                        }}
-                        className="control-input-small"
-                        min="0"
-                        max="50"
-                      />
-                    </div>
-
-                    <div className="control-item">
-                      <label className="control-label-small">Background</label>
-                      <div className="color-with-transparent">
-                        <input
-                          type="color"
-                          value={styleConfig[sectionName]?.container?.backgroundColor === 'transparent' ? '#FFFFFF' : (styleConfig[sectionName]?.container?.backgroundColor || '#FFFFFF')}
-                          onChange={(e) => handleStyleChange(sectionName, 'container', e.target.value, 'backgroundColor')}
-                          className="control-color-small"
-                          disabled={styleConfig[sectionName]?.container?.backgroundColor === 'transparent'}
-                        />
-                        <button
-                          onClick={() => {
-                            const currentBg = styleConfig[sectionName]?.container?.backgroundColor;
-                            handleStyleChange(sectionName, 'container', currentBg === 'transparent' ? '#FFFFFF' : 'transparent', 'backgroundColor');
-                          }}
-                          className={`btn-transparent ${styleConfig[sectionName]?.container?.backgroundColor === 'transparent' ? 'active' : ''}`}
-                          title="Toggle Transparent"
-                        >
-                          {styleConfig[sectionName]?.container?.backgroundColor === 'transparent' ? '⊘' : 'T'}
-                        </button>
-                      </div>
-                    </div>
-
-                    {styleConfig[sectionName]?.titleStyle && (
-                      <>
-                        <div className="control-item">
-                          <label className="control-label-small">Title Size</label>
-                          <input
-                            type="number"
-                            value={parseInt(styleConfig[sectionName]?.titleStyle?.fontSize) || 12}
-                            onChange={(e) => handleStyleChange(sectionName, 'titleStyle', `${e.target.value}px`, 'fontSize')}
-                            className="control-input-small"
-                            min="8"
-                            max="32"
-                          />
-                        </div>
-
-                        <div className="control-item">
-                          <label className="control-label-small">Title Color</label>
-                          <input
-                            type="color"
-                            value={styleConfig[sectionName]?.titleStyle?.color || '#000000'}
-                            onChange={(e) => handleStyleChange(sectionName, 'titleStyle', e.target.value, 'color')}
-                            className="control-color-small"
-                          />
-                        </div>
-                      </>
-                    )}
-
-                    {styleConfig[sectionName]?.bodyStyle && (
-                      <>
-                        <div className="control-item">
-                          <label className="control-label-small">Body Size</label>
-                          <input
-                            type="number"
-                            value={parseInt(styleConfig[sectionName]?.bodyStyle?.fontSize) || 10}
-                            onChange={(e) => handleStyleChange(sectionName, 'bodyStyle', `${e.target.value}px`, 'fontSize')}
-                            className="control-input-small"
-                            min="6"
-                            max="24"
-                          />
-                        </div>
-
-                        <div className="control-item">
-                          <label className="control-label-small">Body Color</label>
-                          <input
-                            type="color"
-                            value={styleConfig[sectionName]?.bodyStyle?.color || '#000000'}
-                            onChange={(e) => handleStyleChange(sectionName, 'bodyStyle', e.target.value, 'color')}
-                            className="control-color-small"
-                          />
-                        </div>
-                      </>
-                    )}
-                  </div>
                 </div>
               </div>
             );
@@ -2235,15 +1953,7 @@ const UIEditor = ({ initialUseWebGL = false }) => {
           ⚡ AUTO-FLOW CONTENT
         </button>
 
-        <div className="button-grid">
-          <button
-            onClick={() => setUseWebGL(!useWebGL)}
-            className="btn-primary full-width"
-            style={{ background: useWebGL ? '#059669' : '#4b5563' }}
-          >
-            {useWebGL ? '🚀 WebGL ACTIVE' : '🎨 CANVAS ACTIVE'}
-          </button>
-        </div>
+
 
         <div className="button-grid">
           <button onClick={downloadResume} className="btn-secondary">📥 PNG</button>
@@ -2263,66 +1973,68 @@ const UIEditor = ({ initialUseWebGL = false }) => {
           <button onClick={() => addLine('vertical')} className="btn-secondary">│ V</button>
         </div>
 
-        {lines.length > 0 && lines.map(line => (
-          <div key={line.id} className={`line-control ${selectedLine === line.id ? 'selected' : ''}`}>
-            <div className="line-header">
-              <span className="line-label">{line.label}</span>
-              <button onClick={() => deleteLine(line.id)} className="btn-delete">✕</button>
-            </div>
+        {
+          lines.length > 0 && lines.map(line => (
+            <div key={line.id} className={`line-control ${selectedLine === line.id ? 'selected' : ''}`}>
+              <div className="line-header">
+                <span className="line-label">{line.label}</span>
+                <button onClick={() => deleteLine(line.id)} className="btn-delete">✕</button>
+              </div>
 
-            <div className="line-move-control">
-              <label className="control-label">Move Position</label>
-              <div className="arrow-grid">
-                <div></div>
-                <button onClick={() => moveLine(line.id, 'up')} className="btn-arrow">↑</button>
-                <div></div>
-                <button onClick={() => moveLine(line.id, 'left')} className="btn-arrow">←</button>
-                <div className="arrow-center">MOVE</div>
-                <button onClick={() => moveLine(line.id, 'right')} className="btn-arrow">→</button>
-                <div></div>
-                <button onClick={() => moveLine(line.id, 'down')} className="btn-arrow">↓</button>
-                <div></div>
+              <div className="line-move-control">
+                <label className="control-label">Move Position</label>
+                <div className="arrow-grid">
+                  <div></div>
+                  <button onClick={() => moveLine(line.id, 'up')} className="btn-arrow">↑</button>
+                  <div></div>
+                  <button onClick={() => moveLine(line.id, 'left')} className="btn-arrow">←</button>
+                  <div className="arrow-center">MOVE</div>
+                  <button onClick={() => moveLine(line.id, 'right')} className="btn-arrow">→</button>
+                  <div></div>
+                  <button onClick={() => moveLine(line.id, 'down')} className="btn-arrow">↓</button>
+                  <div></div>
+                </div>
               </div>
-            </div>
 
-            <div className="line-resize-control">
-              <label className="control-label">
-                Resize {line.orientation === 'vertical' ? 'Height' : 'Width'}
-              </label>
-              <div className="resize-buttons">
-                <button onClick={() => resizeLine(line.id, 'decrease')} className="btn-resize">−</button>
-                <button onClick={() => resizeLine(line.id, 'increase')} className="btn-resize">+</button>
+              <div className="line-resize-control">
+                <label className="control-label">
+                  Resize {line.orientation === 'vertical' ? 'Height' : 'Width'}
+                </label>
+                <div className="resize-buttons">
+                  <button onClick={() => resizeLine(line.id, 'decrease')} className="btn-resize">−</button>
+                  <button onClick={() => resizeLine(line.id, 'increase')} className="btn-resize">+</button>
+                </div>
               </div>
-            </div>
 
-            <div className="line-properties">
-              <div className="property-control">
-                <label className="control-label">Thickness</label>
-                <input
-                  type="number"
-                  value={line.thickness}
-                  onChange={(e) => updateLine(line.id, 'thickness', parseFloat(e.target.value))}
-                  step="0.5"
-                  className="control-input"
-                />
-              </div>
-              <div className="property-control">
-                <label className="control-label">Color</label>
-                <input
-                  type="color"
-                  value={normalizeColorForInput(line.color)}
-                  onChange={(e) => updateLine(line.id, 'color', e.target.value)}
-                  className="control-color"
-                />
+              <div className="line-properties">
+                <div className="property-control">
+                  <label className="control-label">Thickness</label>
+                  <input
+                    type="number"
+                    value={line.thickness}
+                    onChange={(e) => updateLine(line.id, 'thickness', parseFloat(e.target.value))}
+                    step="0.5"
+                    className="control-input"
+                  />
+                </div>
+                <div className="property-control">
+                  <label className="control-label">Color</label>
+                  <input
+                    type="color"
+                    value={normalizeColorForInput(line.color)}
+                    onChange={(e) => updateLine(line.id, 'color', e.target.value)}
+                    className="control-color"
+                  />
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))
+        }
+      </div >
 
 
       {/* MIDDLE - Canvas */}
-      <div className="canvas-container">
+      < div className="canvas-container" >
         <div className="template-badge">
           {currentTemplate === 'ats' ? '📄 ATS' : currentTemplate === 'modern' ? '✨ MODERN' : '📑 TWO COLUMN'}
         </div>
@@ -2331,94 +2043,38 @@ const UIEditor = ({ initialUseWebGL = false }) => {
           <div className="canvas-stack-layout">
             {/* Page 1 */}
             <div className="canvas-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
-              {useWebGL ? (
-                <WebGLStage
-                  width={isMobile ? 595 * 0.7 : 595}
-                  height={isMobile ? 842 * 0.7 : 842}
-                  shapes={page1Elements.shapes}
-                  lines={page1Elements.lines}
-                  sections={page1Elements.sections}
-                  sectionSnapshots={sectionSnapshots}
-                  onDragEnd={(type, id, pos) => {
-                    if (type === 'section') handleSectionDragEnd(id, pos);
-                    if (type === 'shape') handleShapeDragEnd(id, pos);
-                    if (type === 'line') handleLineDragEnd(id, pos);
-                  }}
-                  onSelect={(type, id) => {
-                    if (type === 'shape') setSelectedShape(id);
-                    if (type === 'line') setSelectedLine(id);
-                    if (type === 'section') setSelectedSection(id);
-                  }}
-                  selectedId={selectedShape || selectedLine || selectedSection}
-                  isAnimating={isAnimating}
-                  onHeaderContainerReady={(container) => {
-                    headerContainerRef.current = container;
-                  }}
-                  headerAnimating={headerAnimating}
-                  headerAnimationRef={headerAnimationRef}
-                  setHeaderAnimating={setHeaderAnimating}
-                  skillsAnimating={skillsAnimating}
-                  skillsAnimationRef={skillsAnimationRef}
-                  setSkillsAnimating={setSkillsAnimating}
-                  onSkillsContainerReady={(container) => {
-                    skillsContainerRef.current = container;
-                  }}
-                />
-              ) : (
-                <Stage
-                  ref={stageRef}
-                  width={isMobile ? 595 * 0.7 : 595}
-                  height={isMobile ? 842 * 0.7 : 842}
-                  scaleX={isMobile ? 0.7 : 1}
-                  scaleY={isMobile ? 0.7 : 1}
-                  onClick={handleStageClick}
-                  onTap={handleStageClick}
-                >
-                  {/* Background Layer */}
-                  <Layer>
-                    {page1Elements.shapes.map(shape => (
-                      <DraggableShape
-                        key={shape.id}
-                        shape={shape}
-                        onDragEnd={handleShapeDragEnd}
-                        onUpdate={handleShapeUpdate}
-                        isSelected={selectedShape === shape.id}
-                        onSelect={() => setSelectedShape(shape.id)}
-                      />
-                    ))}
-                  </Layer>
-
-                  {/* Lines Layer */}
-                  <Layer>
-                    {page1Elements.lines.map(line => (
-                      <DraggableLine
-                        key={line.id}
-                        line={line}
-                        onDragEnd={handleLineDragEnd}
-                        onUpdate={handleLineUpdate}
-                        isSelected={selectedLine === line.id}
-                        onSelect={() => setSelectedLine(line.id)}
-                      />
-                    ))}
-                  </Layer>
-
-                  {/* Content Layer */}
-                  <Layer>
-                    {page1Elements.sections.map(([sectionName, pos]) => (
-                      <DraggableSection
-                        key={sectionName}
-                        sectionName={sectionName}
-                        image={sectionImages[sectionName]}
-                        position={pos}
-                        onDragEnd={handleSectionDragEnd}
-                        onTransform={handleSectionTransform}
-                        isSelected={selectedSection === sectionName}
-                        onSelect={() => setSelectedSection(sectionName)}
-                      />
-                    ))}
-                  </Layer>
-                </Stage>
-              )}
+              <WebGLStage
+                width={isMobile ? 595 * 0.7 : 595}
+                height={isMobile ? 842 * 0.7 : 842}
+                shapes={page1Elements.shapes}
+                lines={page1Elements.lines}
+                sections={page1Elements.sections}
+                sectionSnapshots={sectionSnapshots}
+                onDragEnd={(type, id, pos) => {
+                  if (type === 'section') handleSectionDragEnd(id, pos);
+                  if (type === 'shape') handleShapeDragEnd(id, pos);
+                  if (type === 'line') handleLineDragEnd(id, pos);
+                }}
+                onSelect={(type, id) => {
+                  if (type === 'shape') setSelectedShape(id);
+                  if (type === 'line') setSelectedLine(id);
+                  if (type === 'section') setSelectedSection(id);
+                }}
+                selectedId={selectedShape || selectedLine || selectedSection}
+                isAnimating={isAnimating}
+                onHeaderContainerReady={(container) => {
+                  headerContainerRef.current = container;
+                }}
+                headerAnimating={headerAnimating}
+                headerAnimationRef={headerAnimationRef}
+                setHeaderAnimating={setHeaderAnimating}
+                skillsAnimating={skillsAnimating}
+                skillsAnimationRef={skillsAnimationRef}
+                setSkillsAnimating={setSkillsAnimating}
+                onSkillsContainerReady={(container) => {
+                  skillsContainerRef.current = container;
+                }}
+              />
               <div className="page-number">Page 1</div>
             </div>
 
@@ -2427,99 +2083,34 @@ const UIEditor = ({ initialUseWebGL = false }) => {
             {/* Page 2 */}
             {showPage2 && (
               <div className="canvas-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
-                {useWebGL ? (
-                  <WebGLStage
-                    width={isMobile ? 595 * 0.7 : 595}
-                    height={isMobile ? 842 * 0.7 : 842}
-                    shapes={page2Elements.shapes}
-                    lines={page2Elements.lines}
-                    sections={page2Elements.sections}
-                    sectionSnapshots={sectionSnapshots}
-                    yOffset={842}
-                    onDragEnd={(type, id, pos) => {
-                      const adjustedPos = { ...pos, y: pos.y + 842 };
-                      if (type === 'section') handleSectionDragEnd(id, adjustedPos);
-                      if (type === 'shape') handleShapeDragEnd(id, adjustedPos);
-                      if (type === 'line') {
-                        handleLineDragEnd(id, {
-                          ...pos,
-                          y1: pos.y1 + 842,
-                          y2: pos.y2 + 842
-                        });
-                      }
-                    }}
-                    onSelect={(type, id) => {
-                      if (type === 'shape') setSelectedShape(id);
-                      if (type === 'line') setSelectedLine(id);
-                      if (type === 'section') setSelectedSection(id);
-                    }}
-                    selectedId={selectedShape || selectedLine || selectedSection}
-                    isAnimating={isAnimating}
-                  />
-                ) : (
-                  <Stage
-                    ref={stage2Ref}
-                    width={isMobile ? 595 * 0.7 : 595}
-                    height={isMobile ? 842 * 0.7 : 842}
-                    scaleX={isMobile ? 0.7 : 1}
-                    scaleY={isMobile ? 0.7 : 1}
-                    onClick={handleStageClick}
-                    onTap={handleStageClick}
-                  >
-                    <Layer>
-                      {page2Elements.shapes.map(shape => {
-                        const adjustedShape = { ...shape, y: shape.y - 842 };
-                        return (
-                          <DraggableShape
-                            key={shape.id}
-                            shape={adjustedShape}
-                            onDragEnd={(id, pos) => handleShapeDragEnd(id, { ...pos, y: pos.y + 842 })}
-                            onUpdate={handleShapeUpdate}
-                            isSelected={selectedShape === shape.id}
-                            onSelect={() => setSelectedShape(shape.id)}
-                          />
-                        );
-                      })}
-                    </Layer>
-
-                    <Layer>
-                      {page2Elements.lines.map(line => {
-                        const adjustedLine = { ...line, y1: line.y1 - 842, y2: line.y2 - 842 };
-                        return (
-                          <DraggableLine
-                            key={line.id}
-                            line={adjustedLine}
-                            onDragEnd={(id, pos) => handleLineDragEnd(id, {
-                              x1: pos.x1, y1: pos.y1 + 842,
-                              x2: pos.x2, y2: pos.y2 + 842
-                            })}
-                            onUpdate={handleLineUpdate}
-                            isSelected={selectedLine === line.id}
-                            onSelect={() => setSelectedLine(line.id)}
-                          />
-                        );
-                      })}
-                    </Layer>
-
-                    <Layer>
-                      {page2Elements.sections.map(([sectionName, pos]) => {
-                        const adjustedPos = { ...pos, y: pos.y - 842 };
-                        return (
-                          <DraggableSection
-                            key={sectionName}
-                            sectionName={sectionName}
-                            image={sectionImages[sectionName]}
-                            position={adjustedPos}
-                            onDragEnd={(name, newPos) => handleSectionDragEnd(name, { ...newPos, y: newPos.y + 842 })}
-                            onTransform={handleSectionTransform}
-                            isSelected={selectedSection === sectionName}
-                            onSelect={() => setSelectedSection(sectionName)}
-                          />
-                        );
-                      })}
-                    </Layer>
-                  </Stage>
-                )}
+                <WebGLStage
+                  width={isMobile ? 595 * 0.7 : 595}
+                  height={isMobile ? 842 * 0.7 : 842}
+                  shapes={page2Elements.shapes}
+                  lines={page2Elements.lines}
+                  sections={page2Elements.sections}
+                  sectionSnapshots={sectionSnapshots}
+                  yOffset={842}
+                  onDragEnd={(type, id, pos) => {
+                    const adjustedPos = { ...pos, y: pos.y + 842 };
+                    if (type === 'section') handleSectionDragEnd(id, adjustedPos);
+                    if (type === 'shape') handleShapeDragEnd(id, adjustedPos);
+                    if (type === 'line') {
+                      handleLineDragEnd(id, {
+                        ...pos,
+                        y1: pos.y1 + 842,
+                        y2: pos.y2 + 842
+                      });
+                    }
+                  }}
+                  onSelect={(type, id) => {
+                    if (type === 'shape') setSelectedShape(id);
+                    if (type === 'line') setSelectedLine(id);
+                    if (type === 'section') setSelectedSection(id);
+                  }}
+                  selectedId={selectedShape || selectedLine || selectedSection}
+                  isAnimating={isAnimating}
+                />
                 <div className="page-number">Page 2</div>
               </div>
             )}
@@ -2529,13 +2120,7 @@ const UIEditor = ({ initialUseWebGL = false }) => {
 
 
         <div className="zoom-controls">
-          <button
-            onClick={() => setUseWebGL(!useWebGL)}
-            className={`btn-zoom-reset ${useWebGL ? 'active' : ''}`}
-            style={{ marginRight: '10px', background: useWebGL ? '#10b981' : '#6b7280', color: 'white', fontWeight: 'bold' }}
-          >
-            {useWebGL ? '🚀 WEBGL ON' : '⚙️ WEBGL OFF'}
-          </button>
+
           <button onClick={() => setZoom(Math.max(0.3, zoom - 0.1))} className="btn-zoom">−</button>
           <span className="zoom-value">{Math.round(zoom * 100)}%</span>
           <button onClick={() => setZoom(Math.min(2, zoom + 0.1))} className="btn-zoom">+</button>
@@ -2549,81 +2134,75 @@ const UIEditor = ({ initialUseWebGL = false }) => {
             {showPage2 ? '1 PAGE' : '2 PAGES'}
           </button>
         </div>
-      </div>
+      </div >
 
       {/* ======================= RIGHT PANEL START ======================= */}
 
 
 
-      <div className="right-panel">
+      < div className="right-panel" >
         <h3 className="panel-title">QUICK STYLE</h3>
 
-        {selectedSection ? (
-          <div style={{ padding: '12px' }}>
-            <div style={{
-              background: '#f3f4f6',
-              padding: '8px 12px',
-              borderRadius: '6px',
-              marginBottom: '16px',
-              fontSize: '12px',
-              fontWeight: '600',
-              color: '#1f2937'
-            }}>
-              📝 {selectedSection.toUpperCase()}
-            </div>
-
-            {/* Font Size Quick Controls */}
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
-                Font Size
-              </label>
-              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                <button
-                  onClick={() => {
-                    const current = parseInt(styleConfig[selectedSection]?.bodyStyle?.fontSize) || 10;
-                    handleStyleChange(selectedSection, 'bodyStyle', `${Math.max(6, current - 1)}px`, 'fontSize');
-                  }}
-                  className="btn-secondary"
-                  style={{ padding: '8px 14px', fontSize: '16px', flex: 1 }}
-                >
-                  −
-                </button>
-                <span style={{
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  minWidth: '40px',
-                  textAlign: 'center',
-                  background: 'white',
-                  padding: '8px',
-                  borderRadius: '4px',
-                  border: '1px solid #e5e7eb'
-                }}>
-                  {parseInt(styleConfig[selectedSection]?.bodyStyle?.fontSize) || 10}
-                </span>
-                <button
-                  onClick={() => {
-                    const current = parseInt(styleConfig[selectedSection]?.bodyStyle?.fontSize) || 10;
-                    handleStyleChange(selectedSection, 'bodyStyle', `${Math.min(32, current + 1)}px`, 'fontSize');
-                  }}
-                  className="btn-secondary"
-                  style={{ padding: '8px 14px', fontSize: '16px', flex: 1 }}
-                >
-                  +
-                </button>
+        {
+          selectedSection ? (
+            <div style={{ padding: '12px' }}>
+              <div style={{
+                background: '#f3f4f6',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                marginBottom: '16px',
+                fontSize: '12px',
+                fontWeight: '600',
+                color: '#1f2937'
+              }}>
+                📝 {selectedSection.toUpperCase()}
               </div>
-            </div>
 
-            {/* Title Font Size (if applicable) */}
-            {styleConfig[selectedSection]?.titleStyle && (
+              {/* Height Control (Moved to Quick Style for convenience) */}
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
-                  Title Font Size
+                  Height (px)
+                </label>
+                <input
+                  type="text"
+                  value={sectionHeights[selectedSection] || 'auto'}
+                  onChange={(e) => handleHeightChange(selectedSection, e.target.value)}
+                  onBlur={() => handleHeightBlur(selectedSection)}
+                  className="control-input"
+                  style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #e5e7eb' }}
+                  placeholder="auto or 200px"
+                />
+              </div>
+
+              {/* Nudge Controls for Section - RIGHT PANEL */}
+              <div className="line-move-control" style={{ marginBottom: '24px' }}>
+                <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                  Fine Position Control (Nudge)
+                </label>
+                <div className="arrow-grid">
+                  <div></div>
+                  <button onClick={() => moveSection(selectedSection, 'up')} className="btn-arrow">↑</button>
+                  <div></div>
+                  <button onClick={() => moveSection(selectedSection, 'left')} className="btn-arrow">←</button>
+                  <div className="arrow-center">MOVE</div>
+                  <button onClick={() => moveSection(selectedSection, 'right')} className="btn-arrow">→</button>
+                  <div></div>
+                  <button onClick={() => moveSection(selectedSection, 'down')} className="btn-arrow">↓</button>
+                  <div></div>
+                </div>
+              </div>
+
+              {/* Font Size Quick Controls */}
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                  Font Size
                 </label>
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                   <button
                     onClick={() => {
-                      const current = parseInt(styleConfig[selectedSection]?.titleStyle?.fontSize) || 14;
-                      handleStyleChange(selectedSection, 'titleStyle', `${Math.max(8, current - 1)}px`, 'fontSize');
+                      const type = getStyleType(selectedSection, 'bodyStyle');
+                      const current = parseInt(styleConfig[selectedSection]?.[type]?.fontSize) || 10;
+                      handleStyleChange(selectedSection, 'bodyStyle', `${Math.max(6, current - 1)}px`, 'fontSize');
                     }}
                     className="btn-secondary"
                     style={{ padding: '8px 14px', fontSize: '16px', flex: 1 }}
@@ -2640,12 +2219,16 @@ const UIEditor = ({ initialUseWebGL = false }) => {
                     borderRadius: '4px',
                     border: '1px solid #e5e7eb'
                   }}>
-                    {parseInt(styleConfig[selectedSection]?.titleStyle?.fontSize) || 14}
+                    {(() => {
+                      const type = getStyleType(selectedSection, 'bodyStyle');
+                      return parseInt(styleConfig[selectedSection]?.[type]?.fontSize) || 10;
+                    })()}
                   </span>
                   <button
                     onClick={() => {
-                      const current = parseInt(styleConfig[selectedSection]?.titleStyle?.fontSize) || 14;
-                      handleStyleChange(selectedSection, 'titleStyle', `${Math.min(36, current + 1)}px`, 'fontSize');
+                      const type = getStyleType(selectedSection, 'bodyStyle');
+                      const current = parseInt(styleConfig[selectedSection]?.[type]?.fontSize) || 10;
+                      handleStyleChange(selectedSection, 'bodyStyle', `${Math.min(32, current + 1)}px`, 'fontSize');
                     }}
                     className="btn-secondary"
                     style={{ padding: '8px 14px', fontSize: '16px', flex: 1 }}
@@ -2654,37 +2237,62 @@ const UIEditor = ({ initialUseWebGL = false }) => {
                   </button>
                 </div>
               </div>
-            )}
 
-            {/* Text Color */}
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
-                Text Color
-              </label>
-              <input
-                type="color"
-                value={normalizeColorForInput(styleConfig[selectedSection]?.bodyStyle?.color)}
-                onChange={(e) => handleStyleChange(selectedSection, 'bodyStyle', e.target.value, 'color')}
-                style={{
-                  width: '100%',
-                  height: '40px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  cursor: 'pointer'
-                }}
-              />
-            </div>
+              {/* Title Font Size (if applicable) */}
+              {styleConfig[selectedSection]?.titleStyle && (
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                    Title Font Size
+                  </label>
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                    <button
+                      onClick={() => {
+                        const current = parseInt(styleConfig[selectedSection]?.titleStyle?.fontSize) || 14;
+                        handleStyleChange(selectedSection, 'titleStyle', `${Math.max(8, current - 1)}px`, 'fontSize');
+                      }}
+                      className="btn-secondary"
+                      style={{ padding: '8px 14px', fontSize: '16px', flex: 1 }}
+                    >
+                      −
+                    </button>
+                    <span style={{
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      minWidth: '40px',
+                      textAlign: 'center',
+                      background: 'white',
+                      padding: '8px',
+                      borderRadius: '4px',
+                      border: '1px solid #e5e7eb'
+                    }}>
+                      {parseInt(styleConfig[selectedSection]?.titleStyle?.fontSize) || 14}
+                    </span>
+                    <button
+                      onClick={() => {
+                        const current = parseInt(styleConfig[selectedSection]?.titleStyle?.fontSize) || 14;
+                        handleStyleChange(selectedSection, 'titleStyle', `${Math.min(36, current + 1)}px`, 'fontSize');
+                      }}
+                      className="btn-secondary"
+                      style={{ padding: '8px 14px', fontSize: '16px', flex: 1 }}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              )}
 
-            {/* Title Color (if applicable) */}
-            {styleConfig[selectedSection]?.titleStyle && (
+              {/* Text Color */}
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
-                  Title Color
+                  Text Color
                 </label>
                 <input
                   type="color"
-                  value={normalizeColorForInput(styleConfig[selectedSection]?.titleStyle?.color)}
-                  onChange={(e) => handleStyleChange(selectedSection, 'titleStyle', e.target.value, 'color')}
+                  value={(() => {
+                    const type = getStyleType(selectedSection, 'bodyStyle');
+                    return normalizeColorForInput(styleConfig[selectedSection]?.[type]?.color);
+                  })()}
+                  onChange={(e) => handleStyleChange(selectedSection, 'bodyStyle', e.target.value, 'color')}
                   style={{
                     width: '100%',
                     height: '40px',
@@ -2694,142 +2302,237 @@ const UIEditor = ({ initialUseWebGL = false }) => {
                   }}
                 />
               </div>
-            )}
 
-            {/* Background Color */}
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
-                Background
-              </label>
-              <div style={{ display: 'flex', gap: '6px' }}>
-                <input
-                  type="color"
-                  value={normalizeColorForInput(styleConfig[selectedSection]?.container?.backgroundColor)}
-                  onChange={(e) => handleStyleChange(selectedSection, 'container', e.target.value, 'backgroundColor')}
-                  disabled={styleConfig[selectedSection]?.container?.backgroundColor === 'transparent'}
-                  style={{
-                    flex: 1,
-                    height: '40px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    opacity: styleConfig[selectedSection]?.container?.backgroundColor === 'transparent' ? 0.5 : 1
-                  }}
-                />
-                <button
-                  onClick={() => {
-                    const currentBg = styleConfig[selectedSection]?.container?.backgroundColor;
-                    handleStyleChange(selectedSection, 'container', currentBg === 'transparent' ? '#FFFFFF' : 'transparent', 'backgroundColor');
-                  }}
-                  className="btn-secondary"
-                  style={{
-                    padding: '0 16px',
-                    fontSize: '12px',
-                    fontWeight: '600',
-                    background: styleConfig[selectedSection]?.container?.backgroundColor === 'transparent' ? '#3b82f6' : 'white',
-                    color: styleConfig[selectedSection]?.container?.backgroundColor === 'transparent' ? 'white' : '#374151',
-                    border: styleConfig[selectedSection]?.container?.backgroundColor === 'transparent' ? '1px solid #3b82f6' : '1px solid #d1d5db'
-                  }}
-                >
-                  {styleConfig[selectedSection]?.container?.backgroundColor === 'transparent' ? '⊘' : 'T'}
-                </button>
-              </div>
-              <span style={{ fontSize: '10px', color: '#6b7280', marginTop: '4px', display: 'block' }}>
-                {styleConfig[selectedSection]?.container?.backgroundColor === 'transparent' ? 'Transparent' : 'Solid'}
-              </span>
-            </div>
+              {/* Title Color (if applicable) */}
+              {styleConfig[selectedSection]?.titleStyle && (
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                    Title Color
+                  </label>
+                  <input
+                    type="color"
+                    value={normalizeColorForInput(styleConfig[selectedSection]?.titleStyle?.color)}
+                    onChange={(e) => handleStyleChange(selectedSection, 'titleStyle', e.target.value, 'color')}
+                    style={{
+                      width: '100%',
+                      height: '40px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      cursor: 'pointer'
+                    }}
+                  />
+                </div>
+              )}
 
-            {/* Padding */}
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
-                Padding
-              </label>
-              <input
-                type="range"
-                min="0"
-                max="50"
-                value={parseInt(styleConfig[selectedSection]?.container?.padding) || 0}
-                onChange={(e) => {
-                  const newPadding = `${e.target.value}px`;
-                  handleStyleChange(selectedSection, 'container', newPadding, 'padding');
-                }}
-                style={{ width: '100%' }}
-              />
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#6b7280', marginTop: '4px' }}>
-                <span>0px</span>
-                <span style={{ fontWeight: '600', color: '#1f2937' }}>
-                  {parseInt(styleConfig[selectedSection]?.container?.padding) || 0}px
+              {/* Background Color */}
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                  Background
+                </label>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <input
+                    type="color"
+                    value={normalizeColorForInput(styleConfig[selectedSection]?.container?.backgroundColor)}
+                    onChange={(e) => handleStyleChange(selectedSection, 'container', e.target.value, 'backgroundColor')}
+                    disabled={styleConfig[selectedSection]?.container?.backgroundColor === 'transparent'}
+                    style={{
+                      flex: 1,
+                      height: '40px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      opacity: styleConfig[selectedSection]?.container?.backgroundColor === 'transparent' ? 0.5 : 1
+                    }}
+                  />
+                  <button
+                    onClick={() => {
+                      const currentBg = styleConfig[selectedSection]?.container?.backgroundColor;
+                      handleStyleChange(selectedSection, 'container', currentBg === 'transparent' ? '#FFFFFF' : 'transparent', 'backgroundColor');
+                    }}
+                    className="btn-secondary"
+                    style={{
+                      padding: '0 16px',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      background: styleConfig[selectedSection]?.container?.backgroundColor === 'transparent' ? '#3b82f6' : 'white',
+                      color: styleConfig[selectedSection]?.container?.backgroundColor === 'transparent' ? 'white' : '#374151',
+                      border: styleConfig[selectedSection]?.container?.backgroundColor === 'transparent' ? '1px solid #3b82f6' : '1px solid #d1d5db'
+                    }}
+                  >
+                    {styleConfig[selectedSection]?.container?.backgroundColor === 'transparent' ? '⊘' : 'T'}
+                  </button>
+                </div>
+                <span style={{ fontSize: '10px', color: '#6b7280', marginTop: '4px', display: 'block' }}>
+                  {styleConfig[selectedSection]?.container?.backgroundColor === 'transparent' ? 'Transparent' : 'Solid'}
                 </span>
-                <span>50px</span>
               </div>
-            </div>
 
-            {/* Width (range slider) */}
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
-                Width
-              </label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {/* Padding */}
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                  Padding
+                </label>
                 <input
                   type="range"
-                  min={200}
-                  max={595}
-                  value={parseInt(sectionWidths[selectedSection]) || 515}
-                  onChange={(e) => handleWidthChange(selectedSection, `${e.target.value}px`)}
-                  onMouseUp={() => handleWidthBlur(selectedSection)}
-                  onTouchEnd={() => handleWidthBlur(selectedSection)}
+                  min="0"
+                  max="50"
+                  value={parseInt(styleConfig[selectedSection]?.container?.padding) || 0}
+                  onChange={(e) => {
+                    const newPadding = `${e.target.value}px`;
+                    handleStyleChange(selectedSection, 'container', newPadding, 'padding');
+                  }}
                   style={{ width: '100%' }}
                 />
-                <div style={{ minWidth: '64px', textAlign: 'right', fontSize: '13px', color: '#374151' }}>
-                  {(parseInt(sectionWidths[selectedSection]) || 515) + 'px'}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#6b7280', marginTop: '4px' }}>
+                  <span>0px</span>
+                  <span style={{ fontWeight: '600', color: '#1f2937' }}>
+                    {parseInt(styleConfig[selectedSection]?.container?.padding) || 0}px
+                  </span>
+                  <span>50px</span>
                 </div>
               </div>
-            </div>
 
+              {/* Width (range slider) */}
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                  Width
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <input
+                    type="range"
+                    min={200}
+                    max={595}
+                    value={parseInt(sectionWidths[selectedSection]) || 515}
+                    onChange={(e) => handleWidthChange(selectedSection, `${e.target.value}px`)}
+                    onMouseUp={() => handleWidthBlur(selectedSection)}
+                    onTouchEnd={() => handleWidthBlur(selectedSection)}
+                    style={{ width: '100%' }}
+                  />
+                  <div style={{ minWidth: '64px', textAlign: 'right', fontSize: '13px', color: '#374151' }}>
+                    {(parseInt(sectionWidths[selectedSection]) || 515) + 'px'}
+                  </div>
+                </div>
+              </div>
 
+              <div style={{
+                background: '#fef3c7',
+                padding: '12px',
+                borderRadius: '6px',
+                border: '1px solid #fbbf24',
+                marginTop: '20px'
+              }}>
+                <p style={{ fontSize: '11px', color: '#92400e', margin: 0, lineHeight: '1.5' }}>
+                  💡 <strong>Tip:</strong> Select a section on canvas to quickly adjust its style here!
+                </p>
+              </div>
+            </div>
+          ) : selectedShape ? (
+            <div style={{ padding: '12px' }}>
+              <div style={{
+                background: '#f3f4f6',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                marginBottom: '16px',
+                fontSize: '12px',
+                fontWeight: '600',
+                color: '#1f2937'
+              }}>
+                💠 {backgroundShapes.find(s => s.id === selectedShape)?.label?.toUpperCase() || 'SHAPE'}
+              </div>
 
-            <div style={{
-              background: '#fef3c7',
-              padding: '12px',
-              borderRadius: '6px',
-              border: '1px solid #fbbf24',
-              marginTop: '20px'
-            }}>
-              <p style={{ fontSize: '11px', color: '#92400e', margin: 0, lineHeight: '1.5' }}>
-                💡 <strong>Tip:</strong> Select a section on canvas to quickly adjust its style here!
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div style={{ padding: '12px' }}>
-            <div style={{
-              background: '#f3f4f6',
-              padding: '20px',
-              borderRadius: '8px',
-              textAlign: 'center',
-              color: '#6b7280',
-              fontSize: '12px'
-            }}>
-              <div style={{ fontSize: '32px', marginBottom: '8px' }}>🎨</div>
-              <p style={{ margin: 0 }}>
-                Click on a section in the canvas to edit its styles
-              </p>
-            </div>
+              {/* Nudge Controls for Shape - RIGHT PANEL */}
+              <div className="line-move-control" style={{ marginBottom: '24px' }}>
+                <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                  Fine Position Control (Nudge)
+                </label>
+                <div className="arrow-grid">
+                  <div></div>
+                  <button onClick={() => moveShape(selectedShape, 'up')} className="btn-arrow">↑</button>
+                  <div></div>
+                  <button onClick={() => moveShape(selectedShape, 'left')} className="btn-arrow">←</button>
+                  <div className="arrow-center">MOVE</div>
+                  <button onClick={() => moveShape(selectedShape, 'right')} className="btn-arrow">→</button>
+                  <div></div>
+                  <button onClick={() => moveShape(selectedShape, 'down')} className="btn-arrow">↓</button>
+                  <div></div>
+                </div>
+              </div>
 
-            <div style={{ marginTop: '20px', padding: '12px', background: '#eff6ff', borderRadius: '6px', border: '1px solid #3b82f6' }}>
-              <h4 style={{ fontSize: '11px', fontWeight: '600', color: '#1e40af', margin: '0 0 8px 0' }}>
-                Quick Actions:
-              </h4>
-              <ul style={{ fontSize: '11px', color: '#1e40af', margin: 0, paddingLeft: '20px', lineHeight: '1.8' }}>
-                <li>Drag sections to reposition</li>
-                <li>Resize using corner handles</li>
-                <li>Click to select and style</li>
-                <li>Use left panel for advanced controls</li>
-              </ul>
+              <div style={{ background: '#eff6ff', padding: '12px', borderRadius: '6px', border: '1px solid #3b82f6', marginTop: '20px' }}>
+                <p style={{ fontSize: '11px', color: '#1e40af', margin: 0 }}>
+                  💡 Use the <strong>Left Panel</strong> for color and size adjustments of background shapes.
+                </p>
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          ) : selectedLine ? (
+            <div style={{ padding: '12px' }}>
+              <div style={{
+                background: '#f3f4f6',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                marginBottom: '16px',
+                fontSize: '12px',
+                fontWeight: '600',
+                color: '#1f2937'
+              }}>
+                📏 {lines.find(l => l.id === selectedLine)?.label?.toUpperCase() || 'LINE'}
+              </div>
+
+              {/* Nudge Controls for Line - RIGHT PANEL */}
+              <div className="line-move-control" style={{ marginBottom: '24px' }}>
+                <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                  Fine Position Control (Nudge)
+                </label>
+                <div className="arrow-grid">
+                  <div></div>
+                  <button onClick={() => moveLine(selectedLine, 'up')} className="btn-arrow">↑</button>
+                  <div></div>
+                  <button onClick={() => moveLine(selectedLine, 'left')} className="btn-arrow">←</button>
+                  <div className="arrow-center">MOVE</div>
+                  <button onClick={() => moveLine(selectedLine, 'right')} className="btn-arrow">→</button>
+                  <div></div>
+                  <button onClick={() => moveLine(selectedLine, 'down')} className="btn-arrow">↓</button>
+                  <div></div>
+                </div>
+              </div>
+
+              <div style={{ background: '#eff6ff', padding: '12px', borderRadius: '6px', border: '1px solid #3b82f6', marginTop: '20px' }}>
+                <p style={{ fontSize: '11px', color: '#1e40af', margin: 0 }}>
+                  💡 Use the <strong>Left Panel</strong> for thickness and color of divider lines.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div style={{ padding: '12px' }}>
+              <div style={{
+                background: '#f3f4f6',
+                padding: '20px',
+                borderRadius: '8px',
+                textAlign: 'center',
+                color: '#6b7280',
+                fontSize: '12px'
+              }}>
+                <div style={{ fontSize: '32px', marginBottom: '8px' }}>🎨</div>
+                <p style={{ margin: 0 }}>
+                  Click on an element in the canvas to edit its styles
+                </p>
+              </div>
+
+              <div style={{ marginTop: '20px', padding: '12px', background: '#eff6ff', borderRadius: '6px', border: '1px solid #3b82f6' }}>
+                <h4 style={{ fontSize: '11px', fontWeight: '600', color: '#1e40af', margin: '0 0 8px 0' }}>
+                  Quick Actions:
+                </h4>
+                <ul style={{ fontSize: '11px', color: '#1e40af', margin: 0, paddingLeft: '20px', lineHeight: '1.8' }}>
+                  <li>Drag elements to reposition</li>
+                  <li>Click to select and style</li>
+                  <li>Use "Nudge" for fine control</li>
+                  <li>Navigate using left panel accordions</li>
+                </ul>
+              </div>
+            </div>
+          )
+        }
+      </div >
 
 
       {/* ======================= RIGHT PANEL END ========================= */}
@@ -2837,7 +2540,7 @@ const UIEditor = ({ initialUseWebGL = false }) => {
 
 
 
-    </div>
+    </div >
 
   );
 };

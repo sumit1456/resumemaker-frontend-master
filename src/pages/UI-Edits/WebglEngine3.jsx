@@ -132,6 +132,7 @@ class GeometrySnapshot {
         const totalTime = performance.now() - this.captureStartTime;
         const workerWait = performance.now() - workerStartTime;
 
+
         console.log(`📸 GeometrySnapshot: Captured ${this.nodes.length} nodes in ${totalTime.toFixed(1)}ms (Worker wait: ${workerWait.toFixed(1)}ms)`);
 
         if (totalTime > 50) {
@@ -879,7 +880,7 @@ class PixiRenderer {
             width: options.width || 595,
             height: options.height || 842,
             backgroundColor: options.backgroundColor || 0xffffff,
-            resolution: options.resolution || 3,
+            resolution: options.resolution || 1,
             antialias: options.antialias ?? true,
             ...options
         };
@@ -926,6 +927,7 @@ class PixiRenderer {
     }
 
     async render(geometrySnapshot, options = {}) {
+        const renderStartTime = performance.now();
         if (!this.app && !options.targetContainer) {
             const initialized = await this.initialize();
             if (!initialized) return null;
@@ -966,6 +968,8 @@ class PixiRenderer {
             mainContainer.addChild(linesContainer);
             this.renderLines(options.lines, linesContainer);
         }
+
+        const renderTime = performance.now() - renderStartTime;
 
         return mainContainer;
     }

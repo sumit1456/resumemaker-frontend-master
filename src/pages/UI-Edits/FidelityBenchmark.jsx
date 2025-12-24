@@ -26,7 +26,7 @@ const FidelityBenchmark = () => {
         const renderer = new PixiRenderer(canvasRef.current, {
             width: data.width,
             height: data.height,
-            resolution: 4
+            resolution: 1
         });
 
         await renderer.render(data);
@@ -52,7 +52,7 @@ const FidelityBenchmark = () => {
             liveRendererRef.current = new PixiRenderer(liveCanvasRef.current, {
                 width: data.width,
                 height: data.height,
-                resolution: 2, // 2x for live performance
+                resolution: 1, // 1x for live performance
                 clear: true
             });
             // We need to wait for init if it's async, but PixiRenderer.render handles init internally usually

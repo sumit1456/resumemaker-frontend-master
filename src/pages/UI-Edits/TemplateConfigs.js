@@ -907,16 +907,16 @@ export const MODERN_TEMPLATE_CONFIG = {
   // two-column flow). For now, we'll place them logically.
   positions: {
     // Left Column Positions (on black background)
-    header: { x: 6, y: 3, scaleX: 1, scaleY: 1 },
-    contact: { x: 40, y: 180, scaleX: 1, scaleY: 1 },
-    skills: { x: 6, y: 211, scaleX: 1, scaleY: 1 },
-    education: { x: 5, y: 550, scaleX: 1, scaleY: 1 },
+    header: { x: 46, y: 23, scaleX: 1, scaleY: 1 },
+    contact: { x: 46, y: 180, scaleX: 1, scaleY: 1 },
+    skills: { x: 46, y: 231, scaleX: 1, scaleY: 1 },
+    education: { x: 46, y: 560, scaleX: 1, scaleY: 1 },
 
     // Right Column Positions (on white background)
-    summary: { x: 265, y: 6, scaleX: 1, scaleY: 1 },
-    experience: { x: 265, y: 194, scaleX: 1, scaleY: 1 },
-    projects: { x: 265, y: 348, scaleX: 1, scaleY: 1 },
-    certifications: { x: 5, y: 900, scaleX: 1, scaleY: 1 }
+    summary: { x: 305, y: 15, scaleX: 1, scaleY: 1 },
+    experience: { x: 305, y: 194, scaleX: 1, scaleY: 1 },
+    projects: { x: 305, y: 348, scaleX: 1, scaleY: 1 },
+    certifications: { x: 46, y: 900, scaleX: 1, scaleY: 1 }
   },
 
   lines: [
@@ -953,7 +953,7 @@ export const MODERN_TEMPLATE_CONFIG = {
       // This section must span the entire top width or be split manually in the UI code
       width: "250px",
       backgroundColor: "transparent",
-      padding: "20px 40px",
+      padding: "0",
       color: "#FFFFFF",
     },
     mainLayout: { display: "flex", flexDirection: "column", gap: "2px" },
@@ -989,7 +989,7 @@ export const MODERN_TEMPLATE_CONFIG = {
     container: {
       width: "250px",
       backgroundColor: "transparent",
-      padding: "20px 20px 20px 40px",
+      padding: "0",
       color: "#FFFFFF",
     },
     showTitle: true,
@@ -1007,7 +1007,7 @@ export const MODERN_TEMPLATE_CONFIG = {
     container: {
       width: "300px",
       backgroundColor: "transparent",
-      padding: "20px 20px 20px 20px",
+      padding: "0",
       color: "#FFFFFF",
     },
     showTitle: true,
@@ -1027,7 +1027,7 @@ export const MODERN_TEMPLATE_CONFIG = {
     container: {
       width: "400px", // Right column width
       backgroundColor: "transparent",
-      padding: "0 40px 0 0",
+      padding: "0",
     },
     showTitle: true,
     titleStyle: { fontSize: "14px", fontWeight: "bold", color: "#000000", borderBottom: "1px solid #000", marginBottom: "8px", paddingBottom: "3px" },
@@ -1050,7 +1050,7 @@ export const MODERN_TEMPLATE_CONFIG = {
     container: {
       width: "350px", // Main content width
       backgroundColor: "transparent",
-      padding: "0 40px 0 0",
+      padding: "0",
     },
     showTitle: true,
     titleStyle: {
@@ -1069,7 +1069,7 @@ export const MODERN_TEMPLATE_CONFIG = {
     container: {
       width: "400px",
       backgroundColor: "transparent",
-      padding: "0 40px 0 0",
+      padding: "0",
     },
     showTitle: true,
     titleStyle: {
@@ -1105,7 +1105,7 @@ export const MODERN_TEMPLATE_CONFIG = {
     container: {
       width: "400px",
       backgroundColor: "transparent",
-      padding: "0 40px 0 0",
+      padding: "0",
     },
     showTitle: true,
     titleStyle: {
@@ -1133,7 +1133,7 @@ export const MODERN_TEMPLATE_CONFIG = {
       lineHeight: "1.5",
       itemMarginBottom: "3px"
     },
-    itemMarginBottom: "11px"
+    itemMarginBottom: "12px"
   },
 };
 
@@ -1485,17 +1485,17 @@ export const TEMPLATE5_CONFIG = {
   // --- 1. Global Positions ---
   positions: {
     // Full width header at top
-    header: { x: 0, y: 0, scaleX: 1, scaleY: 1 },
+    header: { x: 30, y: 28, scaleX: 1, scaleY: 1 },
 
     // Left Column Positions (on gray background)
-    skills: { x: 26, y: 136, scaleX: 1, scaleY: 1 },
-    education: { x: 26, y: 444, scaleX: 1, scaleY: 1 },
-    certifications: { x: 26, y: 639, scaleX: 1, scaleY: 1 },
+    skills: { x: 52, y: 136, scaleX: 1, scaleY: 1 },
+    education: { x: 52, y: 444, scaleX: 1, scaleY: 1 },
+    certifications: { x: 52, y: 639, scaleX: 1, scaleY: 1 },
 
     // Right Column Positions (on white background)
-    summary: { x: 242, y: 164, scaleX: 1, scaleY: 1 },
-    experience: { x: 242, y: 336, scaleX: 1, scaleY: 1 },
-    projects: { x: 242, y: 494, scaleX: 1, scaleY: 1 },
+    summary: { x: 272, y: 164, scaleX: 1, scaleY: 1 },
+    experience: { x: 272, y: 336, scaleX: 1, scaleY: 1 },
+    projects: { x: 272, y: 494, scaleX: 1, scaleY: 1 },
   },
 
   lines: [],
@@ -1538,7 +1538,7 @@ export const TEMPLATE5_CONFIG = {
       width: "595px",
       height: "114px",
       backgroundColor: "#2C3E50",
-      padding: "28px 30px 22px 30px",
+      padding: "0",
       color: "#FFFFFF",
       position: "relative",
     },
@@ -1562,8 +1562,8 @@ export const TEMPLATE5_CONFIG = {
     container: {
       width: "210px",
       backgroundColor: "transparent",
-      padding: "0 26px",
-      paddingTop: "22px",
+      padding: "0",
+      paddingTop: "0",
       color: "#2C3E50",
     },
     showTitle: true,
@@ -1602,8 +1602,8 @@ export const TEMPLATE5_CONFIG = {
     container: {
       width: "210px",
       backgroundColor: "transparent",
-      padding: "0 26px",
-      paddingTop: "26px",
+      padding: "0",
+      paddingTop: "0",
       color: "#2C3E50",
     },
     showTitle: true,
@@ -1650,8 +1650,8 @@ export const TEMPLATE5_CONFIG = {
     container: {
       width: "210px",
       backgroundColor: "transparent",
-      padding: "0 26px",
-      paddingTop: "26px",
+      padding: "0",
+      paddingTop: "0",
     },
     showTitle: true,
     titleStyle: {
@@ -1688,8 +1688,8 @@ export const TEMPLATE5_CONFIG = {
     container: {
       width: "353px",
       backgroundColor: "transparent",
-      padding: "0 30px",
-      paddingTop: "28px",
+      padding: "0",
+      paddingTop: "0",
     },
     showTitle: true,
     titleStyle: {
@@ -1720,8 +1720,8 @@ export const TEMPLATE5_CONFIG = {
     container: {
       width: "353px",
       backgroundColor: "transparent",
-      padding: "0 30px",
-      paddingTop: "20px",
+      padding: "0",
+      paddingTop: "0",
     },
     showTitle: true,
     titleStyle: {
@@ -1777,15 +1777,15 @@ export const TEMPLATE5_CONFIG = {
       lineHeight: "1.6",
       itemMarginBottom: "5px"
     },
-    itemMarginBottom: "18px"
+    itemMarginBottom: "15px"
   },
 
   projects: {
     container: {
       width: "353px",
       backgroundColor: "transparent",
-      padding: "0 30px",
-      paddingTop: "20px",
+      padding: "0",
+      paddingTop: "0",
     },
     showTitle: true,
     titleStyle: {
@@ -1841,9 +1841,9 @@ export const TEMPLATE5_CONFIG = {
       lineHeight: "1.6",
       itemMarginBottom: "5px"
     },
-    itemMarginBottom: "16px",
+    itemMarginBottom: "15px",
     itemStyle: {
-      marginBottom: "16px",
+      marginBottom: "15px",
       backgroundColor: "#F8F9FA",
       padding: "12px 14px",
       borderLeft: "4px solid #E74C3C"
@@ -1855,8 +1855,8 @@ export const TEMPLATE5_CONFIG = {
     container: {
       width: "210px",
       backgroundColor: "transparent",
-      padding: "0 26px",
-      paddingTop: "26px",
+      padding: "0",
+      paddingTop: "0",
     },
     showTitle: true,
     titleStyle: {

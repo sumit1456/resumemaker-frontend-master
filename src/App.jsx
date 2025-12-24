@@ -13,7 +13,6 @@ import B3 from "./pages/UI-Edits/b3.jsx";
 import FidelityBenchmark from "./pages/UI-Edits/FidelityBenchmark.jsx";
 
 
-
 export default function App() {
 
   const isLoggedIn = useSelector((state) => state.auth.isLoggedIn);
@@ -45,7 +44,7 @@ export default function App() {
       <Routes>
 
         <Route path="ui-editor" element={<EditorPage></EditorPage>}></Route>
-        <Route path="ui-editor/webgl" element={<B3 initialUseWebGL={true} />} />
+        <Route path="ui-editor/webgl" element={<B3 />} />
         <Route
           path="/*"
           element={
