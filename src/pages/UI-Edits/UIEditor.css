@@ -523,6 +523,7 @@
   position: relative;
   border-right: 1px solid #222;
   overflow: hidden;
+
 }
 
 .canvas-wrapper {
@@ -1255,6 +1256,7 @@
     align-items: flex-start;
     min-height: 100%;
     width: 100%;
+    background-color: red;
   }
 
   .canvas-stack-layout {
@@ -1270,6 +1272,8 @@
     margin-bottom: 10px;
     width: 100%;
     max-width: 100%;
+    max-height: 65vh;
+
   }
 
   .panel-title {
@@ -1451,17 +1455,19 @@
     border-bottom: 1px solid #222;
     z-index: 100;
     position: sticky;
-    top: 80px;
+    top: 60px;
   }
 
   .canvas-container {
-    height: 50vh !important;
+    max-height: 450px;
+    height: auto;
     overflow: auto;
-    padding: 10px;
     background: #0a0a0a;
     display: block !important;
     flex: none !important;
     border-bottom: 2px solid #333;
+    padding: 30px 40px;
+    /* Increased horizontal padding for edge access */
   }
 
   .template-badge {
@@ -1506,6 +1512,16 @@
   .canvas-wrapper {
     margin: 0 auto;
     transform-origin: top center !important;
+  }
+
+  .zoom-controls {
+    position: relative !important;
+    bottom: auto !important;
+    left: auto !important;
+    transform: none !important;
+    margin: 20px auto !important;
+    width: fit-content;
+    z-index: 10;
   }
 }
 

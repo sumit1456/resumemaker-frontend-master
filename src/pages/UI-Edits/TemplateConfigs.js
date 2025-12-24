@@ -11,7 +11,7 @@ export const TWO_COLUMN_TEMPLATE_CONFIG = {
     skills: { x: 20, y: 200, scaleX: 1, scaleY: 1 },
     experience: { x: 273, y: 200, scaleX: 1, scaleY: 1 },
     projects: { x: 273, y: 520, scaleX: 1, scaleY: 1 },
-    education: { x: 20, y: 450, scaleX: 1, scaleY: 1 },
+    education: { x: 25, y: 450, scaleX: 1, scaleY: 1 },
     certifications: { x: 20, y: 750, scaleX: 1, scaleY: 1 }
   },
 
@@ -907,16 +907,16 @@ export const MODERN_TEMPLATE_CONFIG = {
   // two-column flow). For now, we'll place them logically.
   positions: {
     // Left Column Positions (on black background)
-    header: { x: 40, y: 30, scaleX: 1, scaleY: 1 },
+    header: { x: 6, y: 3, scaleX: 1, scaleY: 1 },
     contact: { x: 40, y: 180, scaleX: 1, scaleY: 1 },
-    skills: { x: 40, y: 180, scaleX: 1, scaleY: 1 },
-    education: { x: 40, y: 650, scaleX: 1, scaleY: 1 },
+    skills: { x: 6, y: 211, scaleX: 1, scaleY: 1 },
+    education: { x: 5, y: 550, scaleX: 1, scaleY: 1 },
 
     // Right Column Positions (on white background)
-    summary: { x: 270, y: 150, scaleX: 1, scaleY: 1 },
-    experience: { x: 270, y: 280, scaleX: 1, scaleY: 1 },
-    projects: { x: 270, y: 500, scaleX: 1, scaleY: 1 },
-    certifications: { x: 270, y: 800, scaleX: 1, scaleY: 1 }
+    summary: { x: 265, y: 6, scaleX: 1, scaleY: 1 },
+    experience: { x: 265, y: 194, scaleX: 1, scaleY: 1 },
+    projects: { x: 265, y: 348, scaleX: 1, scaleY: 1 },
+    certifications: { x: 5, y: 900, scaleX: 1, scaleY: 1 }
   },
 
   lines: [
@@ -951,15 +951,15 @@ export const MODERN_TEMPLATE_CONFIG = {
   header: {
     container: {
       // This section must span the entire top width or be split manually in the UI code
-      width: "600px",
+      width: "250px",
       backgroundColor: "transparent",
       padding: "20px 40px",
       color: "#FFFFFF",
     },
     mainLayout: { display: "flex", flexDirection: "column", gap: "2px" },
     nameSection: { display: "flex", flexDirection: "column", alignItems: "flex-start" },
-    nameStyle: { fontSize: "28px", fontWeight: "900", color: "#FFFFFF", textTransform: "uppercase" },
-    titleStyle: { fontSize: "14px", fontWeight: "normal", color: "#F0F0F0", marginTop: "4px" },
+    nameStyle: { fontSize: "20px", fontWeight: "900", color: "#FFFFFF", textTransform: "uppercase" },
+    titleStyle: { fontSize: "12px", fontWeight: "normal", color: "#F0F0F0", marginTop: "4px" },
     showTitle: true,
     showTitle: true,
     showContact: true,
@@ -974,7 +974,7 @@ export const MODERN_TEMPLATE_CONFIG = {
       flexWrap: "wrap"
     },
     contactOrder: ["phone", "email", "linkedin", "location"],
-    contactItemStyle: { fontSize: "12px", color: "#FFFFFF" },
+    contactItemStyle: { fontSize: "px", color: "#FFFFFF" },
     showContactIcons: true,
     contactIconColor: "#FFFFFF",
 
@@ -987,7 +987,7 @@ export const MODERN_TEMPLATE_CONFIG = {
 
   skills: {
     container: {
-      width: "200px",
+      width: "250px",
       backgroundColor: "transparent",
       padding: "20px 20px 20px 40px",
       color: "#FFFFFF",
@@ -1005,9 +1005,9 @@ export const MODERN_TEMPLATE_CONFIG = {
 
   education: {
     container: {
-      width: "200px",
+      width: "300px",
       backgroundColor: "transparent",
-      padding: "20px 20px 20px 40px",
+      padding: "20px 20px 20px 20px",
       color: "#FFFFFF",
     },
     showTitle: true,
@@ -1018,7 +1018,7 @@ export const MODERN_TEMPLATE_CONFIG = {
     detailsStyle: { fontSize: "9px", fontStyle: "normal", color: "#CCCCCC", lineHeight: "1.4" },
     showInstitution: true,
     showGpa: true,
-    showLocation: false,
+    showLocation: true,
     gpaPrefix: "GPA: ",
     itemMarginBottom: "10px"
   },
@@ -1048,7 +1048,7 @@ export const MODERN_TEMPLATE_CONFIG = {
 
   summary: {
     container: {
-      width: "400px", // Main content width
+      width: "350px", // Main content width
       backgroundColor: "transparent",
       padding: "0 40px 0 0",
     },

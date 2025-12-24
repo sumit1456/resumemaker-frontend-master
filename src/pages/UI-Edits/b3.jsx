@@ -33,10 +33,17 @@ const normalizeColorForInput = (color) => {
   return color;
 };
 
-const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, onDragEnd, onSelect, selectedId, type, isAnimating, onHeaderContainerReady, headerAnimating, headerAnimationRef, setHeaderAnimating, skillsAnimating, skillsAnimationRef, setSkillsAnimating, onSkillsContainerReady }) => {
+const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, onDragEnd, onSelect, selectedId, type, isAnimating, onHeaderContainerReady, headerAnimating, headerAnimationRef, setHeaderAnimating, skillsAnimating, skillsAnimationRef, setSkillsAnimating, onSkillsContainerReady, yOffset = 0 }) => {
   const containerRef = useRef(null);
   const pixiApp = useRef(null);
   const [initTrigger, setInitTrigger] = useState(0);
+
+  // Layer Refs to avoid index-based access
+  const layers = useRef({
+    shapes: null,
+    sections: null,
+    lines: null
+  });
 
   // Robust Drag Session Ref
   const dragSession = useRef({
@@ -52,9 +59,11 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
   });
 
   useEffect(() => {
+    let isMounted = true;
     let app;
+
     const initPixi = async () => {
-      if (!containerRef.current) return;
+      if (!containerRef.current || !isMounted) return;
 
       const PIXI_LIB = PIXI || window.PIXI;
       // Initialize PixiJS Application (v8 style)
@@ -78,15 +87,36 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
           roundPixels: true, // Helps with text sharpness
         });
 
+        // Apply 30% reduction scale if on mobile
+        if (isMobile) {
+          app.stage.scale.set(0.7);
+        }
+
+        if (!isMounted) {
+          app.destroy(true, { children: true, texture: true, baseTexture: true });
+          return;
+        }
+
         console.log(`[WebGL] Initialized. Mobile: ${isMobile}, Res: ${resolution}`);
 
         pixiApp.current = app;
-        containerRef.current.appendChild(app.canvas || app.view);
+
+        // Verify container still exists before appending
+        if (containerRef.current) {
+          containerRef.current.appendChild(app.canvas || app.view);
+        } else {
+          app.destroy(true, { children: true, texture: true, baseTexture: true });
+          return;
+        }
 
         // Create layers
         const shapesLayer = new PIXI.Container();
         const linesLayer = new PIXI.Container();
         const sectionsLayer = new PIXI.Container();
+
+        layers.current.shapes = shapesLayer;
+        layers.current.sections = sectionsLayer;
+        layers.current.lines = linesLayer;
 
         app.stage.addChild(shapesLayer);
         app.stage.addChild(sectionsLayer);
@@ -160,8 +190,18 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
     initPixi();
 
     return () => {
+      isMounted = false;
       if (app) {
-        app.destroy(true, { children: true, texture: true, baseTexture: true });
+        try {
+          // Robust destruction check
+          if (app.renderer) {
+            app.destroy(true, { children: true, texture: true, baseTexture: true });
+          }
+        } catch (e) {
+          console.warn("PixiJS destruction error (likely already destroyed):", e);
+        }
+        pixiApp.current = null;
+        layers.current = { shapes: null, sections: null, lines: null };
       }
     };
   }, [width, height]);
@@ -209,11 +249,13 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
   // Update elements when props change
   useEffect(() => {
     const app = pixiApp.current;
-    if (!app) return;
+    if (!app || !app.stage) return;
 
-    const shapesLayer = app.stage.children[0];
-    const sectionsLayer = app.stage.children[1];
-    const linesLayer = app.stage.children[2];
+    const shapesLayer = layers.current.shapes;
+    const sectionsLayer = layers.current.sections;
+    const linesLayer = layers.current.lines;
+
+    if (!shapesLayer || !sectionsLayer || !linesLayer) return;
 
     const renderAll = async () => {
       // 🚀 HARD CLEANUP: Explicitly destroy old textures to prevent VRAM leaks
@@ -255,7 +297,7 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
           graphics.endFill();
         }
         graphics.x = shape.x;
-        graphics.y = shape.y;
+        graphics.y = shape.y - yOffset;
         graphics._id = shape.id;
 
         graphics.interactive = true;
@@ -286,13 +328,13 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
         const thickness = line.thickness || 1;
 
         if (graphics.stroke) {
-          graphics.moveTo(line.x1, line.y1);
-          graphics.lineTo(line.x2, line.y2);
+          graphics.moveTo(line.x1, line.y1 - yOffset);
+          graphics.lineTo(line.x2, line.y2 - yOffset);
           graphics.stroke({ color: colorData.hex, width: thickness, alpha: colorData.alpha });
         } else {
           graphics.lineStyle(thickness, colorData.hex, colorData.alpha);
-          graphics.moveTo(line.x1, line.y1);
-          graphics.lineTo(line.x2, line.y2);
+          graphics.moveTo(line.x1, line.y1 - yOffset);
+          graphics.lineTo(line.x2, line.y2 - yOffset);
         }
 
         graphics.interactive = true;
@@ -314,7 +356,7 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
         if (snapshot) {
           const sectionContainer = new PIXI.Container();
           sectionContainer.x = pos.x;
-          sectionContainer.y = pos.y;
+          sectionContainer.y = pos.y - yOffset;
           sectionContainer.interactive = true;
           sectionContainer.buttonMode = true;
           sectionContainer.cursor = 'move';
@@ -404,7 +446,7 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
     };
 
     renderAll();
-  }, [shapes, lines, sections, sectionSnapshots, selectedId, initTrigger, isAnimating]);
+  }, [shapes, lines, sections, sectionSnapshots, selectedId, initTrigger, isAnimating, yOffset]);
 
   // Animation Ticker - SEPARATE useEffect
   useEffect(() => {
@@ -527,7 +569,8 @@ const WebGLStage = ({ width, height, shapes, lines, sections, sectionSnapshots, 
         width: width,
         height: height,
         boxShadow: '0 0 20px rgba(0,0,0,0.1)',
-        background: 'white'
+        background: 'white',
+        border: '2px solid red'
       }}
     />
   );
@@ -1073,8 +1116,12 @@ const UIEditor = ({ initialUseWebGL = false }) => {
     const pageEnd = pageNum * 842;
 
     return {
-      sections: Object.entries(sectionPositions || {}).filter(([_, pos]) => {
-        return pos && pos.y >= pageStart && pos.y < pageEnd;
+      sections: Object.entries(sectionPositions || {}).filter(([name, pos]) => {
+        if (!pos) return false;
+        const height = parseInt(sectionHeights[name]) || 200; // Use actual height if available
+        // Intersection check: top is in page OR bottom is in page
+        return (pos.y >= pageStart && pos.y < pageEnd) ||
+          (pos.y + height > pageStart && pos.y < pageEnd);
       }),
       lines: (lines || []).filter(line => {
         return (line.y1 >= pageStart && line.y1 < pageEnd) ||
@@ -2286,8 +2333,8 @@ const UIEditor = ({ initialUseWebGL = false }) => {
             <div className="canvas-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
               {useWebGL ? (
                 <WebGLStage
-                  width={595}
-                  height={842}
+                  width={isMobile ? 595 * 0.7 : 595}
+                  height={isMobile ? 842 * 0.7 : 842}
                   shapes={page1Elements.shapes}
                   lines={page1Elements.lines}
                   sections={page1Elements.sections}
@@ -2320,8 +2367,10 @@ const UIEditor = ({ initialUseWebGL = false }) => {
               ) : (
                 <Stage
                   ref={stageRef}
-                  width={595}
-                  height={842}
+                  width={isMobile ? 595 * 0.7 : 595}
+                  height={isMobile ? 842 * 0.7 : 842}
+                  scaleX={isMobile ? 0.7 : 1}
+                  scaleY={isMobile ? 0.7 : 1}
                   onClick={handleStageClick}
                   onTap={handleStageClick}
                 >
@@ -2380,16 +2429,24 @@ const UIEditor = ({ initialUseWebGL = false }) => {
               <div className="canvas-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
                 {useWebGL ? (
                   <WebGLStage
-                    width={595}
-                    height={842}
+                    width={isMobile ? 595 * 0.7 : 595}
+                    height={isMobile ? 842 * 0.7 : 842}
                     shapes={page2Elements.shapes}
                     lines={page2Elements.lines}
                     sections={page2Elements.sections}
                     sectionSnapshots={sectionSnapshots}
+                    yOffset={842}
                     onDragEnd={(type, id, pos) => {
-                      if (type === 'section') handleSectionDragEnd(id, pos);
-                      if (type === 'shape') handleShapeDragEnd(id, pos);
-                      if (type === 'line') handleLineDragEnd(id, pos);
+                      const adjustedPos = { ...pos, y: pos.y + 842 };
+                      if (type === 'section') handleSectionDragEnd(id, adjustedPos);
+                      if (type === 'shape') handleShapeDragEnd(id, adjustedPos);
+                      if (type === 'line') {
+                        handleLineDragEnd(id, {
+                          ...pos,
+                          y1: pos.y1 + 842,
+                          y2: pos.y2 + 842
+                        });
+                      }
                     }}
                     onSelect={(type, id) => {
                       if (type === 'shape') setSelectedShape(id);
@@ -2402,8 +2459,10 @@ const UIEditor = ({ initialUseWebGL = false }) => {
                 ) : (
                   <Stage
                     ref={stage2Ref}
-                    width={595}
-                    height={842}
+                    width={isMobile ? 595 * 0.7 : 595}
+                    height={isMobile ? 842 * 0.7 : 842}
+                    scaleX={isMobile ? 0.7 : 1}
+                    scaleY={isMobile ? 0.7 : 1}
                     onClick={handleStageClick}
                     onTap={handleStageClick}
                   >

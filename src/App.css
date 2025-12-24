@@ -1,23 +1,33 @@
-.home{
-    width: 100vh;
-    height: 100vh;
+.home {
+  width: 100vh;
+  height: 100vh;
 }
 
 
 
-*{
-    padding: 0;
-    margin: 0;
-    max-width: 100%;
+* {
+  padding: 0;
+  margin: 0;
+  max-width: 100%;
 }
+
 body {
   margin: 0;
   font-family: Arial, sans-serif;
   background-color: white;
- 
-}
-.app-container{
-  height: calc(100vh-80px);
-  width: 100vw;
+
 }
 
+.app-container {
+  height: calc(100vh - 70px);
+  width: 100vw;
+  padding-top: 70px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .app-container {
+    height: calc(100vh - 60px);
+    padding-top: 60px;
+  }
+}
