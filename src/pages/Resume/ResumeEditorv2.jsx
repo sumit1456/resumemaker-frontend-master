@@ -772,12 +772,30 @@ export default function ResumeEditor({ resume: propsResume }) {
                 }
 
                 const data = await response.json();
-                console.log("Fetched resume data:", data);
+                console.log("Fetched resume data:====================");
+                console.log(data);
+
 
 
 
                 setResumeTitle(data.title || "");
-                setSelectedTemplate(data.templateId ? String(data.templateId) : "1");
+
+                let config = data.styleConfig || data.details?.styleConfig || {};
+                if (typeof config === 'string') {
+                    try {
+                        config = JSON.parse(config);
+                    } catch (e) {
+                        console.error("Error parsing styleConfig", e);
+                        config = {};
+                    }
+                }
+
+                // If style config is available, switch to Custom Template automatically
+                if (config && Object.keys(config).length > 0) {
+                    setSelectedTemplate("custom");
+                } else {
+                    setSelectedTemplate(data.templateId ? String(data.templateId) : "1");
+                }
 
                 setResumeDetails({
                     name: data.details?.name || "",
@@ -790,7 +808,7 @@ export default function ResumeEditor({ resume: propsResume }) {
                         github: data.contact?.github || "",
                         location: data.contact?.location || ""
                     },
-                    styleConfig: data.styleConfig || data.details?.styleConfig || {}
+                    styleConfig: config
                 });
 
                 if (data.skills) {
@@ -970,10 +988,11 @@ export default function ResumeEditor({ resume: propsResume }) {
             showProjects,
             showEducation,
             showCertifications,
-            customSections
+            customSections,
+            sectionTitles
         }),
         [resumeDetails, skills, experiences, projects, educationList, certifications,
-            showSummary, showSkills, showExperience, showProjects, showEducation, showCertifications, customSections]
+            showSummary, showSkills, showExperience, showProjects, showEducation, showCertifications, customSections, sectionTitles]
     );
 
     const debouncedData = useDebounce(combinedData, 1500);
@@ -1332,8 +1351,7 @@ export default function ResumeEditor({ resume: propsResume }) {
                     name: resumeDetails.name,
                     title: resumeDetails.title,
                     summary: resumeDetails.summary,
-                    styleConfig: resumeDetails.styleConfig || {},
-                    sectionTitles: sectionTitles || {}
+
                 },
                 contact: resumeDetails.contact,
                 skills: transformedSkills,

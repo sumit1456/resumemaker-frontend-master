@@ -676,8 +676,10 @@ export const FlexibleExperienceSection = ({ experiences, styleConfig }) => {
             )}
 
             {experiences.map((exp, idx) => (
-                <div key={idx} style={applyStyles({ marginBottom: config.itemMarginBottom || "12px" }, config.itemContainer || {})}>
-
+                <FlexibleContainer
+                    key={idx}
+                    config={{ marginBottom: config.itemMarginBottom || "12px", ...config.itemContainer, ...config.itemStyle }}
+                >
                     {/* Custom Header Structure (NEW FEATURE) */}
                     {config.headerStructure ? (
                         config.headerStructure.map((structure, structIdx) => (
@@ -736,7 +738,7 @@ export const FlexibleExperienceSection = ({ experiences, styleConfig }) => {
                     {config.showAchievements && exp.achievements && (
                         <FlexibleBulletList items={exp.achievements} styleConfig={config.bulletConfig} />
                     )}
-                </div>
+                </FlexibleContainer>
             ))}
         </FlexibleContainer>
     );
@@ -760,7 +762,7 @@ export const FlexibleProjectsSection = ({ projects, styleConfig }) => {
             {projects.map((proj, idx) => (
                 <FlexibleContainer
                     key={idx}
-                    config={config.itemStyle || { marginBottom: config.itemMarginBottom || "12px" }}
+                    config={{ marginBottom: config.itemMarginBottom || "12px", ...config.itemStyle }}
                 >
                     {/* Project Header */}
                     <FlexibleLayout config={config.headerLayout}>
@@ -825,7 +827,7 @@ export const FlexibleEducationSection = ({ educationList, styleConfig }) => {
             {educationList && Array.isArray(educationList) && educationList.map((edu, idx) => (
                 <FlexibleContainer
                     key={idx}
-                    config={config.itemStyle || { marginBottom: config.itemMarginBottom || "10px" }}
+                    config={{ marginBottom: config.itemMarginBottom || "10px", ...config.itemStyle }}
                 >
                     {/* Custom Field Order (NEW FEATURE) */}
                     {config.fieldOrder ? (

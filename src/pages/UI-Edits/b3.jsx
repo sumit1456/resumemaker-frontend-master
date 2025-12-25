@@ -35,7 +35,7 @@ const normalizeColorForInput = (color) => {
 const WebGLStage = forwardRef(({ width, height, shapes, lines, sections, sectionSnapshots, onDragEnd, onSelect, selectedId, type, isAnimating, onHeaderContainerReady, headerAnimating, headerAnimationRef, setHeaderAnimating, skillsAnimating, skillsAnimationRef, setSkillsAnimating, onSkillsContainerReady, yOffset = 0 }, ref) => {
   // Device-specific config (Calculated once per render)
   const isMobile = window.innerWidth < 768;
-  const resolution = isMobile ? Math.max(window.devicePixelRatio || 1, 1) : 2;
+  const resolution = isMobile ? 1.25 : 1;
 
   const containerRef = useRef(null);
   const pixiApp = useRef(null);
@@ -763,8 +763,8 @@ const UIEditor = () => {
   const currentResumeId = useSelector((state) => state.resume.resumeId);
 
   const [resumeDetails, setResumeDetails] = useState(defaultResumeData);
-  const API_BASE_URL2 = 'http://localhost:8080';
-  const API_BASE_URL = 'https://resumemaker-1.onrender.com';
+  const API_BASE_URL = 'http://localhost:8080';
+  const API_BASE_URL2 = 'https://resumemaker-1.onrender.com';
 
   // 🎬 GPU Animation State
   const [headerAnimating, setHeaderAnimating] = useState(false);
@@ -786,6 +786,7 @@ const UIEditor = () => {
   });
 
   const handleSaveAll = async () => {
+    console.log("🚀 [ANTIGRAVITY] handleSaveAll triggered");
     if (userId == null) {
       // Assuming simple alert or toast if window.showMessage not available, 
       // but strictly following user pattern:
@@ -807,33 +808,41 @@ const UIEditor = () => {
         // You might want to store widths/heights if not already in styleConfig
       };
 
-      const API_BASE_URL = `${API_BASE_URL}/saveAllConfig-ResumeData`;
 
       // 2. Build Payload
+      const transformedSkills = (resumeDetails.skills || []).map(skill =>
+        typeof skill === 'string' ? { name: skill.trim() } : skill
+      ).filter(skill => skill.name !== "");
+
+      const transformedCertifications = (resumeDetails.certifications || []).map(cert =>
+        typeof cert === 'string' ? { name: cert.trim() } : cert
+      ).filter(cert => cert.name !== "");
+
+      const transformedCustomSections = (resumeDetails.customSections || []).map(section => ({
+        title: section.title,
+        sectionData: {
+          items: section.items
+        }
+      }));
+
       const payload = {
         title: resumeDetails.resumeDetails?.title || "My Resume",
-        templateId: "custom", // Or whatever logic you have
+        templateId: String(Coutom`${currentTemplate}` || "custom"),
         userId: userId,
         details: {
           name: resumeDetails.resumeDetails?.name,
           title: resumeDetails.resumeDetails?.title,
           summary: resumeDetails.resumeDetails?.summary,
-          styleConfig: updatedConfig // <--- STORING CONFIG HERE
         },
         contact: resumeDetails.resumeDetails?.contact,
-        skills: resumeDetails.skills,
+        skills: transformedSkills,
         experiences: resumeDetails.experiences,
         projects: resumeDetails.projects,
         educationList: resumeDetails.educationList,
-        certifications: resumeDetails.certifications,
-        showSummary: true, // You might want to make these dynamic
-        showSkills: true,
-        showExperience: true,
-        showProjects: true,
-        showEducation: true,
-        showCertifications: true,
-        customSections: resumeDetails.customSections || [],
-        sectionTitles: resumeDetails.sectionTitles || {} // Add if you have state for this
+        certifications: transformedCertifications,
+        customSections: transformedCustomSections,
+        styleConfig: updatedConfig,
+        sectionTitles: resumeDetails.sectionTitles || {}
       };
 
       const targetResumeId = resumeId || currentResumeId;
@@ -842,6 +851,12 @@ const UIEditor = () => {
         : `${API_BASE_URL}/saveall`;
 
       const method = targetResumeId ? "PUT" : "POST";
+
+      console.log("the endpoint was ========================");
+
+      console.log(endpoint);
+      console.log(payload);
+
 
       const res = await fetch(endpoint, {
         method,
@@ -908,8 +923,8 @@ const UIEditor = () => {
     setResumeDetails(currentResume); // Sync local resumeDetails state
 
     // If the resume has a saved style configuration, load it
-    if (currentResume.details?.styleConfig) {
-      const savedConfig = currentResume.details.styleConfig;
+    if (currentResume.styleConfig) {
+      const savedConfig = currentResume.styleConfig;
       setStyleConfig(savedConfig);
 
       if (savedConfig.positions) setSectionPositions(savedConfig.positions);
@@ -1786,7 +1801,7 @@ const UIEditor = () => {
       {/* Hidden rendering area */}
       <div className="hidden-render" style={{
         position: 'absolute',
-        right: '-100px',
+        right: '220px',
         top: '0',
         visibility: 'hidden',
         width: '595px',
@@ -2613,6 +2628,191 @@ const UIEditor = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Title Spacing Control */}
+              {styleConfig[selectedSection]?.titleStyle?.marginBottom && (
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                    Title Spacing (Title → Content)
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      type="range"
+                      min={0}
+                      max={20}
+                      value={parseInt(styleConfig[selectedSection]?.titleStyle?.marginBottom) || 0}
+                      onChange={(e) => handleStyleChange(selectedSection, 'titleStyle', `${e.target.value}px`, 'marginBottom')}
+                      style={{ width: '100%' }}
+                    />
+                    <div style={{ minWidth: '64px', textAlign: 'right', fontSize: '13px', color: '#374151' }}>
+                      {(parseInt(styleConfig[selectedSection]?.titleStyle?.marginBottom) || 0) + 'px'}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Title Padding Bottom Control */}
+              {styleConfig[selectedSection]?.titleStyle && (
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                    Title Padding Bottom
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      type="range"
+                      min={0}
+                      max={10}
+                      value={parseInt(styleConfig[selectedSection]?.titleStyle?.paddingBottom) || 0}
+                      onChange={(e) => handleStyleChange(selectedSection, 'titleStyle', `${e.target.value}px`, 'paddingBottom')}
+                      style={{ width: '100%' }}
+                    />
+                    <div style={{ minWidth: '64px', textAlign: 'right', fontSize: '13px', color: '#374151' }}>
+                      {(parseInt(styleConfig[selectedSection]?.titleStyle?.paddingBottom) || 0) + 'px'}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Entry Spacing Control */}
+              {styleConfig[selectedSection]?.itemMarginBottom && (
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                    Entry Spacing (Between Items)
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      type="range"
+                      min={0}
+                      max={30}
+                      value={parseInt(styleConfig[selectedSection]?.itemMarginBottom) || 0}
+                      onChange={(e) => {
+                        setStyleConfig(prev => ({
+                          ...prev,
+                          [selectedSection]: {
+                            ...prev[selectedSection],
+                            itemMarginBottom: `${e.target.value}px`
+                          }
+                        }));
+                        setInitTrigger(t => t + 1);
+                      }}
+                      style={{ width: '100%' }}
+                    />
+                    <div style={{ minWidth: '64px', textAlign: 'right', fontSize: '13px', color: '#374151' }}>
+                      {(parseInt(styleConfig[selectedSection]?.itemMarginBottom) || 0) + 'px'}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Content Gap Control (for skills section) */}
+              {styleConfig[selectedSection]?.contentLayout?.gap && (
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                    Content Gap (Between Categories)
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      type="range"
+                      min={0}
+                      max={20}
+                      value={parseInt(styleConfig[selectedSection]?.contentLayout?.gap) || 0}
+                      onChange={(e) => {
+                        setStyleConfig(prev => ({
+                          ...prev,
+                          [selectedSection]: {
+                            ...prev[selectedSection],
+                            contentLayout: {
+                              ...prev[selectedSection]?.contentLayout,
+                              gap: `${e.target.value}px`
+                            }
+                          }
+                        }));
+                        setInitTrigger(t => t + 1);
+                      }}
+                      style={{ width: '100%' }}
+                    />
+                    <div style={{ minWidth: '64px', textAlign: 'right', fontSize: '13px', color: '#374151' }}>
+                      {(parseInt(styleConfig[selectedSection]?.contentLayout?.gap) || 0) + 'px'}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Inner Field Spacing for Education */}
+              {selectedSection === 'education' && styleConfig.education?.degreeStyle?.marginBottom && (
+                <>
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                      Degree Spacing (After Degree)
+                    </label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <input
+                        type="range"
+                        min={0}
+                        max={10}
+                        value={parseInt(styleConfig.education?.degreeStyle?.marginBottom) || 0}
+                        onChange={(e) => handleStyleChange('education', 'degreeStyle', `${e.target.value}px`, 'marginBottom')}
+                        style={{ width: '100%' }}
+                      />
+                      <div style={{ minWidth: '64px', textAlign: 'right', fontSize: '13px', color: '#374151' }}>
+                        {(parseInt(styleConfig.education?.degreeStyle?.marginBottom) || 0) + 'px'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                      Institution Spacing (After Institution)
+                    </label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <input
+                        type="range"
+                        min={0}
+                        max={10}
+                        value={parseInt(styleConfig.education?.institutionStyle?.marginBottom) || 0}
+                        onChange={(e) => handleStyleChange('education', 'institutionStyle', `${e.target.value}px`, 'marginBottom')}
+                        style={{ width: '100%' }}
+                      />
+                      <div style={{ minWidth: '64px', textAlign: 'right', fontSize: '13px', color: '#374151' }}>
+                        {(parseInt(styleConfig.education?.institutionStyle?.marginBottom) || 0) + 'px'}
+                      </div>
+                    </div>
+                  </div>
+                </>)}
+
+              {/* Item Padding Control (for sections with entries) */}
+              {(selectedSection === 'education' || selectedSection === 'experience' || selectedSection === 'projects') && (
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                    Item Left Indent
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      type="range"
+                      min={0}
+                      max={30}
+                      value={parseInt(styleConfig[selectedSection]?.itemStyle?.padding) || 0}
+                      onChange={(e) => {
+                        setStyleConfig(prev => ({
+                          ...prev,
+                          [selectedSection]: {
+                            ...prev[selectedSection],
+                            itemStyle: {
+                              ...prev[selectedSection]?.itemStyle,
+                              padding: `${e.target.value}px`
+                            }
+                          }
+                        }));
+                        setInitTrigger(t => t + 1);
+                      }}
+                      style={{ width: '100%' }}
+                    />
+                    <div style={{ minWidth: '64px', textAlign: 'right', fontSize: '13px', color: '#374151' }}>
+                      {(parseInt(styleConfig[selectedSection]?.itemStyle?.padding) || 0) + 'px'}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div style={{
                 background: '#fef3c7',

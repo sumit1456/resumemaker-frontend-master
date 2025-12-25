@@ -114,8 +114,8 @@ export const TWO_COLUMN_TEMPLATE_CONFIG = {
       fontWeight: "bold",
       color: "#000000",
       borderBottom: "2px solid #000000",
-      marginBottom: "10px",
-      paddingBottom: "4px",
+      marginBottom: "6px",
+      paddingBottom: "0px",
       letterSpacing: "0.5px"
     },
     bodyStyle: {
@@ -138,8 +138,8 @@ export const TWO_COLUMN_TEMPLATE_CONFIG = {
       fontWeight: "bold",
       color: "#000000",
       borderBottom: "2px solid #000000",
-      marginBottom: "12px",
-      paddingBottom: "4px",
+      marginBottom: "8px",
+      paddingBottom: "0px",
       letterSpacing: "0.5px"
     },
     contentLayout: { display: "flex", flexDirection: "column", gap: "10px" },
@@ -157,7 +157,7 @@ export const TWO_COLUMN_TEMPLATE_CONFIG = {
     },
     displayType: "inline",
     separator: ", ",
-    itemMarginBottom: "10px"
+    itemMarginBottom: "6px"
   },
 
   experience: {
@@ -172,7 +172,7 @@ export const TWO_COLUMN_TEMPLATE_CONFIG = {
       fontWeight: "bold",
       color: "#000000",
       borderBottom: "2px solid #000000",
-      marginBottom: "12px",
+      marginBottom: "8px",
       paddingBottom: "4px",
       letterSpacing: "0.5px"
     },
@@ -212,9 +212,10 @@ export const TWO_COLUMN_TEMPLATE_CONFIG = {
       textSize: "9px",
       textColor: "#000000",
       lineHeight: "1.5",
-      itemMarginBottom: "4px"
+      itemMarginBottom: "3px"
     },
-    itemMarginBottom: "16px"
+    itemMarginBottom: "10px",
+    itemStyle: { padding: "0" }
   },
 
   projects: {
@@ -229,7 +230,7 @@ export const TWO_COLUMN_TEMPLATE_CONFIG = {
       fontWeight: "bold",
       color: "#000000",
       borderBottom: "2px solid #000000",
-      marginBottom: "12px",
+      marginBottom: "8px",
       paddingBottom: "4px",
       letterSpacing: "0.5px"
     },
@@ -266,9 +267,10 @@ export const TWO_COLUMN_TEMPLATE_CONFIG = {
       textSize: "9px",
       textColor: "#000000",
       lineHeight: "1.5",
-      itemMarginBottom: "4px"
+      itemMarginBottom: "3px"
     },
-    itemMarginBottom: "16px"
+    itemMarginBottom: "10px",
+    itemStyle: { padding: "0" }
   },
 
   education: {
@@ -283,7 +285,7 @@ export const TWO_COLUMN_TEMPLATE_CONFIG = {
       fontWeight: "bold",
       color: "#000000",
       borderBottom: "2px solid #000000",
-      marginBottom: "12px",
+      marginBottom: "8px",
       paddingBottom: "4px",
       letterSpacing: "0.5px"
     },
@@ -292,14 +294,14 @@ export const TWO_COLUMN_TEMPLATE_CONFIG = {
       fontWeight: "bold",
       color: "#000000",
       lineHeight: "1.5",
-      marginBottom: "2px"
+      marginBottom: "1px"
     },
     institutionStyle: {
       fontSize: "9px",
       color: "#000000",
       lineHeight: "1.5",
       fontStyle: "italic",
-      marginBottom: "2px"
+      marginBottom: "1px"
     },
     detailsLayout: {
       display: "flex",
@@ -316,7 +318,8 @@ export const TWO_COLUMN_TEMPLATE_CONFIG = {
     showGpa: true,
     showLocation: true,
     gpaPrefix: "GPA: ",
-    itemMarginBottom: "14px"
+    itemMarginBottom: "8px",
+    itemStyle: { padding: "0" }
   },
 
   certifications: {
@@ -331,7 +334,7 @@ export const TWO_COLUMN_TEMPLATE_CONFIG = {
       fontWeight: "bold",
       color: "#000000",
       borderBottom: "2px solid #000000",
-      marginBottom: "12px",
+      marginBottom: "8px",
       paddingBottom: "4px",
       letterSpacing: "0.5px"
     },
@@ -457,7 +460,7 @@ export const ATS_TEMPLATE_CONFIG = {
       padding: "0"
     },
     showTitle: true,
-    titleStyle: { fontSize: "12px", fontWeight: "bold", color: "#000000", borderBottom: "1px solid #000", marginBottom: "8px", paddingBottom: "3px" },
+    titleStyle: { fontSize: "12px", fontWeight: "bold", color: "#000000", borderBottom: "1px solid #000", marginBottom: "5px", paddingBottom: "0px" },
     bodyStyle: { fontSize: "10px", color: "#000000", lineHeight: "1.5", textAlign: "justify" }
   },
 
@@ -468,14 +471,14 @@ export const ATS_TEMPLATE_CONFIG = {
       padding: "0"
     },
     showTitle: true,
-    titleStyle: { fontSize: "12px", fontWeight: "bold", color: "#000000", borderBottom: "1px solid #000", marginBottom: "8px", paddingBottom: "3px" },
-    contentLayout: { display: "flex", flexDirection: "column", gap: "6px" },
+    titleStyle: { fontSize: "12px", fontWeight: "bold", color: "#000000", borderBottom: "1px solid #000", marginBottom: "5px", paddingBottom: "0px" },
+    contentLayout: { display: "flex", flexDirection: "column", gap: "1px" },
     showCategories: true,
     categoryStyle: { fontSize: "10px", fontWeight: "bold", color: "#000000" },
     valueStyle: { fontSize: "9px", color: "#000000", lineHeight: "1.4" },
     displayType: "inline",
     separator: ", ",
-    itemMarginBottom: "8px"
+    itemMarginBottom: "2px"
   },
 
   experience: {
@@ -485,7 +488,7 @@ export const ATS_TEMPLATE_CONFIG = {
       padding: "0"
     },
     showTitle: true,
-    titleStyle: { fontSize: "12px", fontWeight: "bold", color: "#000000", borderBottom: "1px solid #000", marginBottom: "8px", paddingBottom: "3px" },
+    titleStyle: { fontSize: "12px", fontWeight: "bold", color: "#000000", borderBottom: "1px solid #000", marginBottom: "5px", paddingBottom: "0px" },
     headerLayout: { display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "4px", marginBottom: "2px" },
     subHeaderLayout: { display: "flex", marginBottom: "4px" },
     positionFirst: true,
@@ -501,9 +504,9 @@ export const ATS_TEMPLATE_CONFIG = {
       textSize: "9px",
       textColor: "#000000",
       lineHeight: "1.4",
-      itemMarginBottom: "3px"
+      itemMarginBottom: "2px"
     },
-    itemMarginBottom: "12px"
+    itemMarginBottom: "8px"
   },
 
   projects: {
@@ -513,7 +516,7 @@ export const ATS_TEMPLATE_CONFIG = {
       padding: "0"
     },
     showTitle: true,
-    titleStyle: { fontSize: "12px", fontWeight: "bold", color: "#000000", borderBottom: "1px solid #000", marginBottom: "8px", paddingBottom: "3px" },
+    titleStyle: { fontSize: "12px", fontWeight: "bold", color: "#000000", borderBottom: "1px solid #000", marginBottom: "5px", paddingBottom: "0px" },
     headerLayout: { display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "4px", marginBottom: "2px" },
     nameStyle: { fontSize: "11px", fontWeight: "bold", color: "#000000" },
     durationStyle: { fontSize: "9px", fontStyle: "italic", color: "#666666", whiteSpace: "nowrap" },
@@ -528,9 +531,10 @@ export const ATS_TEMPLATE_CONFIG = {
       textSize: "9px",
       textColor: "#000000",
       lineHeight: "1.4",
-      itemMarginBottom: "3px"
+      itemMarginBottom: "2px"
     },
-    itemMarginBottom: "11px"
+    itemMarginBottom: "7px",
+    itemStyle: { padding: "0" }
   },
 
   education: {
@@ -540,7 +544,7 @@ export const ATS_TEMPLATE_CONFIG = {
       padding: "0"
     },
     showTitle: true,
-    titleStyle: { fontSize: "12px", fontWeight: "bold", color: "#000000", borderBottom: "1px solid #000", marginBottom: "8px", paddingBottom: "3px" },
+    titleStyle: { fontSize: "12px", fontWeight: "bold", color: "#000000", borderBottom: "1px solid #000", marginBottom: "5px", paddingBottom: "0px" },
     degreeStyle: { fontSize: "10px", fontWeight: "bold", color: "#000000", lineHeight: "1.4" },
     institutionStyle: { fontSize: "9px", color: "#000000", lineHeight: "1.4" },
     detailsLayout: { display: "flex", gap: "8px", flexWrap: "wrap" },
@@ -549,7 +553,8 @@ export const ATS_TEMPLATE_CONFIG = {
     showGpa: true,
     showLocation: false,
     gpaPrefix: "GPA: ",
-    itemMarginBottom: "10px"
+    itemMarginBottom: "6px",
+    itemStyle: { padding: "0" }
   },
 
   certifications: {
@@ -559,7 +564,7 @@ export const ATS_TEMPLATE_CONFIG = {
       padding: "0"
     },
     showTitle: true,
-    titleStyle: { fontSize: "12px", fontWeight: "bold", color: "#000000", borderBottom: "1px solid #000", marginBottom: "8px", paddingBottom: "3px" },
+    titleStyle: { fontSize: "12px", fontWeight: "bold", color: "#000000", borderBottom: "1px solid #000", marginBottom: "5px", paddingBottom: "0px" },
     displayType: "list",
     bulletConfig: {
       bulletStyle: "•",
@@ -568,9 +573,9 @@ export const ATS_TEMPLATE_CONFIG = {
       textSize: "9px",
       textColor: "#000000",
       lineHeight: "1.4",
-      itemMarginBottom: "4px"
+      itemMarginBottom: "2px"
     },
-    itemStyle: { fontSize: "9px", color: "#000000", marginBottom: "4px" }
+    itemStyle: { fontSize: "9px", color: "#000000", marginBottom: "2px" }
   }
 };
 

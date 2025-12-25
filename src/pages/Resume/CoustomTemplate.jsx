@@ -97,13 +97,44 @@ const PDFHeaderSection = ({ resumeDetails, styleConfig }) => {
                             );
                         case 'contact':
                             if (!config.showContact) return null;
+                            const hasGroups = config.contactLeftGroup && config.contactRightGroup;
+
+                            if (hasGroups) {
+                                return (
+                                    <View key="contact" style={applyPdfStyles({
+                                        marginTop: 8,
+                                        display: 'flex',
+                                        flexDirection: 'row',
+                                        justifyContent: 'space-between'
+                                    }, config.contactLayout)}>
+                                        <View style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                            {config.contactLeftGroup.map(key => {
+                                                if (!resumeDetails.contact[key]) return null;
+                                                return (
+                                                    <PDFFlexibleText key={key} config={config.contactItemStyle}>
+                                                        {resumeDetails.contact[key]}
+                                                    </PDFFlexibleText>
+                                                )
+                                            })}
+                                        </View>
+                                        <View style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'flex-end' }}>
+                                            {config.contactRightGroup.map(key => {
+                                                if (!resumeDetails.contact[key]) return null;
+                                                return (
+                                                    <PDFFlexibleText key={key} config={config.contactItemStyle}>
+                                                        {resumeDetails.contact[key]}
+                                                    </PDFFlexibleText>
+                                                )
+                                            })}
+                                        </View>
+                                    </View>
+                                );
+                            }
+
                             return (
                                 <View key="contact" style={applyPdfStyles({ marginTop: 8 }, config.contactLayout)}>
-                                    {/* Handle Contact Items Loop */}
-                                    {['phone', 'email', 'linkedin', 'github', 'location'].map(key => {
+                                    {(config.contactOrder || ['phone', 'email', 'linkedin', 'github', 'location']).map(key => {
                                         if (!resumeDetails.contact[key]) return null;
-                                        // Simple linear render for now, or respect contactOrder if provided
-                                        // For full fidelity, we'd need to replicate the contact group logic here
                                         return (
                                             <PDFFlexibleText key={key} config={config.contactItemStyle}>
                                                 {resumeDetails.contact[key]}
@@ -352,6 +383,26 @@ const PDFFlexibleCertifications = ({ certifications, styleConfig, sectionTitles 
 };
 
 
+const PDFFlexibleCustomSection = ({ section, styleConfig }) => {
+    const config = styleConfig?.[section.title] || styleConfig?.customSection || {};
+    if (!section.items?.length) return null;
+
+    return (
+        <View style={applyPdfStyles({ marginBottom: 15 }, config.container)}>
+            <PDFSectionTitle title={section.title || "CUSTOM SECTION"} config={config} />
+            <View style={applyPdfStyles({ display: 'flex', flexDirection: 'column', gap: 2 }, config.contentLayout)}>
+                {section.items.map((item, idx) => (
+                    <View key={idx} style={applyPdfStyles({ marginBottom: 2, flexDirection: 'row' }, config.itemStyle)}>
+                        <Text style={{ width: 10, fontSize: 10 }}>•</Text>
+                        <PDFFlexibleText config={config.valueStyle || { fontSize: 9 }}>{item}</PDFFlexibleText>
+                    </View>
+                ))}
+            </View>
+        </View>
+    );
+};
+
+
 // ==================== MAIN CUSTOM TEMPLATE ====================
 
 const CoustomTemplate = ({
@@ -369,66 +420,98 @@ const CoustomTemplate = ({
     const config = styleConfig || {};
     const pageConfig = config.page || { padding: 30, fontFamily: 'Helvetica' };
 
+    // Helper to render a section by name
+    const renderSection = (sectionName) => {
+        switch (sectionName) {
+            case 'header':
+                return <PDFHeaderSection resumeDetails={resumeDetails} styleConfig={config} />;
+            case 'summary':
+                return <PDFFlexibleSummary resumeDetails={resumeDetails} styleConfig={config} sectionTitles={sectionTitles} />;
+            case 'experience':
+                return <PDFFlexibleExperience experiences={experiences} styleConfig={config} sectionTitles={sectionTitles} />;
+            case 'skills':
+                return <PDFFlexibleSkills skills={skills} styleConfig={config} sectionTitles={sectionTitles} />;
+            case 'education':
+                return <PDFFlexibleEducation educationList={educationList} styleConfig={config} sectionTitles={sectionTitles} />;
+            case 'projects':
+                return <PDFFlexibleProjects projects={projects} styleConfig={config} sectionTitles={sectionTitles} />;
+            case 'certifications':
+                return <PDFFlexibleCertifications certifications={certifications} styleConfig={config} sectionTitles={sectionTitles} />;
+            default:
+                // Check if it's a custom section
+                const customSec = (customSections || []).find(s => s.title === sectionName);
+                if (customSec) {
+                    return <PDFFlexibleCustomSection section={customSec} styleConfig={config} />;
+                }
+                return null;
+        }
+    };
+
     return (
         <Document>
             <Page size="A4" style={{
-                padding: pageConfig.padding || 30,
+                padding: config.positions ? 0 : (pageConfig.padding || 30),
                 backgroundColor: pageConfig.backgroundColor || '#FFF',
                 fontFamily: pageConfig.fontFamily || 'Helvetica',
                 fontSize: 10
             }}>
-
-                {/* 1. Header is usually always top */}
-                <PDFHeaderSection resumeDetails={resumeDetails} styleConfig={config} />
+                {/* 1. Shapes (Always absolute, rendered first/bottom) */}
+                {config.shapes && config.shapes.map((shape, idx) => (
+                    <View key={`shape-${idx}`} style={{
+                        position: 'absolute',
+                        left: shape.x,
+                        top: shape.y,
+                        width: shape.width,
+                        height: shape.height,
+                        backgroundColor: shape.backgroundColor || shape.color || '#eee',
+                        borderRadius: shape.borderRadius || 0,
+                        opacity: shape.opacity || 1,
+                        zIndex: -1
+                    }} />
+                ))}
 
                 {/* 2. Main Body Content */}
                 {config.positions ? (
-                    // ABSOLUTE POSITIONING MODE (e.g. Two Column or advanced layouts)
+                    // ABSOLUTE POSITIONING MODE
                     <React.Fragment>
-                        {Object.entries(config.positions).map(([sectionName, pos]) => {
-                            if (sectionName === 'header') return null;
-
-                            const style = {
+                        {Object.entries(config.positions).map(([sectionName, pos]) => (
+                            <View key={sectionName} style={{
                                 position: 'absolute',
                                 left: pos.x,
                                 top: pos.y,
-                                width: config[sectionName]?.container?.width,
-                            };
-
-                            return (
-                                <View key={sectionName} style={style}>
-                                    {sectionName === 'summary' && <PDFFlexibleSummary resumeDetails={resumeDetails} styleConfig={config} sectionTitles={sectionTitles} />}
-                                    {sectionName === 'experience' && <PDFFlexibleExperience experiences={experiences} styleConfig={config} sectionTitles={sectionTitles} />}
-                                    {sectionName === 'skills' && <PDFFlexibleSkills skills={skills} styleConfig={config} sectionTitles={sectionTitles} />}
-                                    {sectionName === 'education' && <PDFFlexibleEducation educationList={educationList} styleConfig={config} sectionTitles={sectionTitles} />}
-                                    {sectionName === 'projects' && <PDFFlexibleProjects projects={projects} styleConfig={config} sectionTitles={sectionTitles} />}
-                                    {sectionName === 'certifications' && <PDFFlexibleCertifications certifications={certifications} styleConfig={config} sectionTitles={sectionTitles} />}
-                                </View>
-                            );
-                        })}
-                        {/* Render lines if any */}
-                        {config.lines && config.lines.map((line, idx) => (
-                            <View key={`line-${idx}`} style={{
-                                position: 'absolute',
-                                left: line.x1,
-                                top: line.y1,
-                                width: line.orientation === 'vertical' ? line.thickness : (line.x2 - line.x1),
-                                height: line.orientation === 'vertical' ? (line.y2 - line.y1) : line.thickness,
-                                backgroundColor: line.color,
-                            }} />
+                                width: pos.width || config[sectionName]?.container?.width || '100%',
+                            }}>
+                                {renderSection(sectionName)}
+                            </View>
                         ))}
                     </React.Fragment>
                 ) : (
                     // STANDARD STACK MODE
                     <React.Fragment>
-                        <PDFFlexibleSummary resumeDetails={resumeDetails} styleConfig={config} sectionTitles={sectionTitles} />
-                        <PDFFlexibleSkills skills={skills} styleConfig={config} sectionTitles={sectionTitles} />
-                        <PDFFlexibleExperience experiences={experiences} styleConfig={config} sectionTitles={sectionTitles} />
-                        <PDFFlexibleProjects projects={projects} styleConfig={config} sectionTitles={sectionTitles} />
-                        <PDFFlexibleEducation educationList={educationList} styleConfig={config} sectionTitles={sectionTitles} />
-                        <PDFFlexibleCertifications certifications={certifications} styleConfig={config} sectionTitles={sectionTitles} />
+                        {renderSection('header')}
+                        {renderSection('summary')}
+                        {renderSection('skills')}
+                        {renderSection('experience')}
+                        {renderSection('projects')}
+                        {renderSection('education')}
+                        {renderSection('certifications')}
+                        {(customSections || []).map((sec, idx) => (
+                            <PDFFlexibleCustomSection key={idx} section={sec} styleConfig={config} />
+                        ))}
                     </React.Fragment>
                 )}
+
+                {/* 3. Lines (Always absolute, rendered top layer) */}
+                {config.lines && config.lines.map((line, idx) => (
+                    <View key={`line-${idx}`} style={{
+                        position: 'absolute',
+                        left: line.x1,
+                        top: line.y1,
+                        width: line.orientation === 'vertical' ? line.thickness : Math.abs(line.x2 - line.x1),
+                        height: line.orientation === 'vertical' ? Math.abs(line.y2 - line.y1) : line.thickness,
+                        backgroundColor: line.color || '#000',
+                    }} />
+                ))}
 
             </Page>
         </Document>
