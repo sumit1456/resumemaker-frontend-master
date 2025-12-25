@@ -964,3 +964,41 @@ export const FlexibleContactSection = ({ resumeDetails, styleConfig }) => {
         </FlexibleContainer>
     );
 };
+
+/**
+ * CUSTOM SECTION - Flexible template for dynamic sections
+ */
+export const FlexibleCustomSection = ({ customSections, styleConfig }) => {
+    // Use custom config if available, otherwise fallback to experience styles for consistency
+    const config = styleConfig?.custom || styleConfig?.experience || {};
+
+    if (!customSections || customSections.length === 0) return null;
+
+    return (
+        <>
+            {customSections.map((section, idx) => (
+                <FlexibleContainer key={section.id || idx} config={config.container}>
+                    {section.title && (
+                        <FlexibleSectionHeader
+                            title={section.title}
+                            config={config.titleStyle}
+                        />
+                    )}
+
+                    {section.items && (
+                        <FlexibleBulletList
+                            items={section.items}
+                            styleConfig={config.bulletConfig || {
+                                // Fallback bullet config constructed from general config if specific bulletConfig missing
+                                containerStyle: config.listContainer,
+                                itemStyle: config.listItem,
+                                bulletStyle: config.bulletStyle,
+                                textStyle: config.itemStyle || config.valueStyle
+                            }}
+                        />
+                    )}
+                </FlexibleContainer>
+            ))}
+        </>
+    );
+};

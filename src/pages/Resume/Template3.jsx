@@ -207,12 +207,12 @@ const Template3 = ({
                   <Text style={styles.degreeName}>{edu.degree}</Text>
                   {edu.year && <Text style={styles.dateRange}>{edu.year}</Text>}
                 </View>
-                
+
                 {/* Institution name */}
                 {edu.institution && (
                   <Text style={styles.institutionName}>{edu.institution}</Text>
                 )}
-                
+
                 {/* Location and GPA on same line if both exist */}
                 {(edu.location || edu.gpa) && (
                   <Text style={styles.educationDetails}>
@@ -231,7 +231,7 @@ const Template3 = ({
           <View>
             <Text style={styles.sectionHeader}>{sectionTitles.certifications || "CERTIFICATIONS"}</Text>
             {certifications
-              .filter((c) => c.trim())
+              ?.filter((c) => c.trim())
               .map((cert, idx) => (
                 <View key={idx} style={styles.bulletPoint}>
                   <Text style={styles.bullet}>•</Text>
@@ -247,7 +247,7 @@ const Template3 = ({
             section.title.trim() && (
               <View key={section.id}>
                 <Text style={styles.sectionHeader}>{section.title}</Text>
-                {section.items
+                {(section.items || [])
                   .filter((item) => item.trim())
                   .map((item, idx) => (
                     <View key={idx} style={styles.bulletPoint}>

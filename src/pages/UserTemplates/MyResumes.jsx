@@ -6,10 +6,10 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import './MyResumes.css';
 import { useSelector } from 'react-redux';
 
-const API_BASE_URL2 = 'http://localhost:8080';
-const API_BASE_URL = 'https://resumemaker-1.onrender.com';
+const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL2 = 'https://resumemaker-1.onrender.com';
 
-const MyResumes = ({userId}) => {
+const MyResumes = ({ userId }) => {
   const navigate = useNavigate();
   const [resumes, setResumes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,33 +17,35 @@ const MyResumes = ({userId}) => {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [deleting, setDeleting] = useState(null);
 
-  const id = useSelector((state)=> state.auth.userId);
+  const id = useSelector((state) => state.auth.userId);
 
   useEffect(() => {
     fetchResumes();
   }, [id]);
 
   const fetchResumes = async () => {
-   
+
     try {
 
-      if(!id || userId){
+      if (!id || userId) {
         window.showMessage('Enable to Fetch resumes', 'Please login first', 'general', 2000);
         return;
       }
       setLoading(true);
       // const cleanId = String(id).trim();
       const response = await fetch(`${API_BASE_URL}/my-resumes/${id}`);
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch resumes');
       }
-      
+
+
       const data = await response.json();
       console.log("This is data recieved from backend");
-      
+
       console.log(data);
-      
+
+
       setResumes(data);
     } catch (err) {
       setError(err.message);
@@ -60,13 +62,13 @@ const MyResumes = ({userId}) => {
         method: 'DELETE',
       });
       console.log(response.status);
-      
-      
+
+
       if (!response.ok || response.status !== 200) {
         const text = await response.text(); // get backend response
         throw new Error(`Failed to delete resume. Status: ${response.status}, Response: ${text}`);
       }
-      
+
       // Remove the deleted resume from state
       setResumes(resumes.filter(resume => resume.id !== resumeId));
       setDeleteConfirm(null);
@@ -154,7 +156,7 @@ const MyResumes = ({userId}) => {
             <div className="empty-icon">📄</div>
             <h3 className="empty-title">No Resumes Yet</h3>
             <p className="empty-text">Create your first resume to get started!</p>
-            <button 
+            <button
               onClick={() => navigate('/editor')}
               className="create-first-button"
             >
@@ -166,11 +168,11 @@ const MyResumes = ({userId}) => {
             {resumes.map((resume) => (
               <div key={resume.id} className="resume-card">
                 {/* Animated Background Gradient */}
-                <div 
+                <div
                   className="card-gradient-bg"
                   style={{ '--template-color': getTemplateColor(resume.templateId) }}
                 ></div>
-                
+
                 {/* Delete Button */}
                 <button
                   className="delete-btn"
@@ -186,7 +188,7 @@ const MyResumes = ({userId}) => {
                 {/* Card Header */}
                 <div className="card-header">
                   <div className="card-header-top">
-                    <span 
+                    <span
                       className="template-badge"
                       style={{ borderColor: getTemplateColor(resume.templateId), color: getTemplateColor(resume.templateId) }}
                     >
@@ -232,7 +234,7 @@ const MyResumes = ({userId}) => {
                       <span className="btn-icon">👁️</span>
                       View
                     </button>
-                    <button 
+                    <button
                       onClick={() => navigate(`/dashboard/resume-editor/${resume.id}`)}
                       className="edit-button"
                     >

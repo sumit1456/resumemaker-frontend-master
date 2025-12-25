@@ -2,12 +2,12 @@
 import React from "react";
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 
-const Template1 = ({ 
-  resumeDetails, 
-  skills, 
-  experiences, 
-  projects, 
-  educationList, 
+const Template1 = ({
+  resumeDetails,
+  skills,
+  experiences,
+  projects,
+  educationList,
   certifications,
   showSummary = true,
   showSkills = true,
@@ -26,7 +26,7 @@ const Template1 = ({
     textColor: '#000000',
     accentColor: '#000000',
     backgroundColor: '#FFFFFF',
-    
+
     // Typography
     nameFontSize: 24,
     titleFontSize: 11,
@@ -35,7 +35,7 @@ const Template1 = ({
     smallFontSize: 9,
     lineHeight: 1.4,
     letterSpacing: 0.5,
-    
+
     // Layout
     pageMargin: 40,
     headerMarginBottom: 20,
@@ -45,12 +45,12 @@ const Template1 = ({
     sectionMarginTop: 12,
     sectionMarginBottom: 6,
     itemMarginBottom: 8,
-    
+
     // Borders
     headerBorderWidth: 3,
     sectionBorderWidth: 1.5,
     columnBorderWidth: 2,
-    
+
     // Style Options
     fontFamily: 'Helvetica',
     bulletStyle: '•',
@@ -68,7 +68,7 @@ const Template1 = ({
       fontFamily: config.fontFamily,
       fontSize: config.bodyFontSize,
     },
-    
+
     // Header - Clean & Professional
     header: {
       marginBottom: config.headerMarginBottom,
@@ -82,14 +82,14 @@ const Template1 = ({
       borderBottomWidth: config.headerBorderWidth,
       borderBottomColor: config.primaryColor,
     },
-    name: { 
-      fontSize: config.nameFontSize, 
-      fontWeight: 'bold', 
+    name: {
+      fontSize: config.nameFontSize,
+      fontWeight: 'bold',
       color: config.primaryColor,
       letterSpacing: config.letterSpacing,
     },
-    title: { 
-      fontSize: config.titleFontSize, 
+    title: {
+      fontSize: config.titleFontSize,
       color: config.primaryColor,
       fontWeight: 'bold',
     },
@@ -112,7 +112,7 @@ const Template1 = ({
       fontSize: config.smallFontSize,
       color: config.textColor,
     },
-    
+
     // Two Column Layout
     mainContent: {
       flexDirection: 'row',
@@ -128,7 +128,7 @@ const Template1 = ({
       borderLeftWidth: config.columnBorderWidth,
       borderLeftColor: config.accentColor,
     },
-    
+
     // Section Headers - ATS Friendly
     sectionHeader: {
       fontSize: config.headerFontSize,
@@ -142,7 +142,7 @@ const Template1 = ({
       textTransform: config.textTransform,
       letterSpacing: config.letterSpacing,
     },
-    
+
     sectionHeaderLeft: {
       fontSize: config.headerFontSize,
       fontWeight: 'bold',
@@ -155,7 +155,7 @@ const Template1 = ({
       textTransform: config.textTransform,
       letterSpacing: config.letterSpacing,
     },
-    
+
     // Skills - Clean List
     skillItem: {
       marginBottom: config.itemMarginBottom,
@@ -171,7 +171,7 @@ const Template1 = ({
       color: config.textColor,
       lineHeight: config.lineHeight,
     },
-    
+
     // Education - Compact Left Column
     educationItemCompact: {
       marginBottom: 10,
@@ -192,7 +192,7 @@ const Template1 = ({
       color: config.textColor,
       fontStyle: 'italic',
     },
-    
+
     // Certifications - Clean
     certItem: {
       fontSize: config.smallFontSize,
@@ -200,7 +200,7 @@ const Template1 = ({
       marginBottom: 4,
       lineHeight: 1.3,
     },
-    
+
     // Summary
     summaryText: {
       fontSize: config.bodyFontSize,
@@ -209,7 +209,7 @@ const Template1 = ({
       textAlign: 'justify',
       marginBottom: 8,
     },
-    
+
     // Experience - Right Column
     experienceItem: {
       marginBottom: 12,
@@ -252,7 +252,7 @@ const Template1 = ({
       lineHeight: config.lineHeight,
       color: config.textColor,
     },
-    
+
     // Projects
     projectItem: {
       marginBottom: 11,
@@ -292,14 +292,14 @@ const Template1 = ({
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        
+
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.nameSection}>
             <Text style={styles.name}>{resumeDetails.name}</Text>
             <Text style={styles.title}>{resumeDetails.title}</Text>
           </View>
-          
+
           <View style={styles.contactGrid}>
             <View style={styles.contactLeft}>
               {resumeDetails.contact?.phone && (
@@ -335,10 +335,10 @@ const Template1 = ({
 
         {/* Two Column Layout */}
         <View style={styles.mainContent}>
-          
+
           {/* LEFT COLUMN - Skills, Education, Certifications */}
           <View style={styles.leftColumn}>
-            
+
             {/* Skills */}
             {showSkills && skills && skills.length > 0 && (
               <View>
@@ -392,7 +392,7 @@ const Template1 = ({
                 <Text style={styles.sectionHeaderLeft}>
                   {sectionTitles.certifications || "CERTIFICATIONS"}
                 </Text>
-                {certifications.filter(cert => cert && cert.trim()).map((cert, idx) => (
+                {certifications?.filter(cert => cert && cert.trim()).map((cert, idx) => (
                   <Text key={idx} style={styles.certItem}>{config.bulletStyle} {cert}</Text>
                 ))}
               </View>
@@ -402,7 +402,7 @@ const Template1 = ({
 
           {/* RIGHT COLUMN - Experience & Projects */}
           <View style={styles.rightColumn}>
-            
+
             {/* Experience */}
             {showExperience && experiences && experiences.length > 0 && (
               <View>
@@ -462,9 +462,9 @@ const Template1 = ({
             )}
 
             {/* Custom Sections */}
-            {customSections && customSections.length > 0 && customSections.map((section) => (
+            {customSections && customSections.length > 0 && customSections.map((section, idx) => (
               section.title && section.title.trim() && (
-                <View key={section.id}>
+                <View key={section.id || idx}>
                   <Text style={styles.sectionHeader}>{section.title}</Text>
                   {section.items && section.items.filter(item => item && item.trim()).map((item, idx) => (
                     <View key={idx} style={styles.achievementItem}>

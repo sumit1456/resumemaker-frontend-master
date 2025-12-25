@@ -144,8 +144,74 @@ const WebGLStage = forwardRef(({ width, height, shapes, lines, sections, section
             const deltaX = newPos.x - session.dragStartX;
             const deltaY = newPos.y - session.dragStartY;
 
-            session.target.x = session.startX + deltaX;
-            session.target.y = session.startY + deltaY;
+            const nextX = session.startX + deltaX;
+            const nextY = session.startY + deltaY;
+
+            session.target.x = nextX;
+            session.target.y = nextY;
+
+            // 😡 ANGRY SECTION EFFECT (Collision + Push)
+            if (session.type === 'section') {
+              const dragged = session.target;
+              // AABB Collision Check against other sections
+              const otherSections = sectionsLayer.children.filter(c => c !== dragged);
+
+              otherSections.forEach(other => {
+                const b1 = dragged.getBounds(); // using Pixi bounds (includes scale)
+                const b2 = other.getBounds();
+
+                // Simple overlap check
+                const isOverlapping = (
+                  b1.x < b2.x + b2.width &&
+                  b1.x + b1.width > b2.x &&
+                  b1.y < b2.y + b2.height &&
+                  b1.y + b1.height > b2.y
+                );
+
+                if (isOverlapping) {
+                  // 🔴 TINT RED (Angry)
+                  other.tint = 0xFF9999;
+
+                  // 📳 SHAKE (Vibrate)
+                  const jitter = 2;
+                  other.x += (Math.random() - 0.5) * jitter;
+                  other.y += (Math.random() - 0.5) * jitter;
+
+                  // ⬇️⬆️⬅️➡️ MULTI-DIRECTIONAL PUSH PHYSICS
+                  // Calculate centers to determine push direction
+                  const c1 = { x: b1.x + b1.width / 2, y: b1.y + b1.height / 2 };
+                  const c2 = { x: b2.x + b2.width / 2, y: b2.y + b2.height / 2 };
+
+                  const dx = c2.x - c1.x;
+                  const dy = c2.y - c1.y;
+
+                  // Determine dominant axis
+                  if (Math.abs(dy) > Math.abs(dx)) {
+                    // Vertical Push
+                    if (dy > 0) {
+                      // Dragged is above, push target DOWN
+                      other.y += 5;
+                    } else {
+                      // Dragged is below, push target UP
+                      other.y -= 5;
+                    }
+                  } else {
+                    // Horizontal Push
+                    if (dx > 0) {
+                      // Dragged is left, push target RIGHT
+                      other.x += 5;
+                    } else {
+                      // Dragged is right, push target LEFT
+                      other.x -= 5;
+                    }
+                  }
+
+                } else {
+                  // Reset tint if not colliding
+                  other.tint = 0xFFFFFF;
+                }
+              });
+            }
           }
         });
 
@@ -154,6 +220,11 @@ const WebGLStage = forwardRef(({ width, height, shapes, lines, sections, section
             const session = dragSession.current;
             const finalX = Math.round(session.target.x);
             const finalY = Math.round(session.target.y);
+
+            // Cleanup tints
+            if (session.type === 'section' && layers.current.sections) {
+              layers.current.sections.children.forEach(c => c.tint = 0xFFFFFF);
+            }
 
             console.log(`[DRAG] Global End: ${session.type} ${session.id} at (${finalX}, ${finalY})`);
 
@@ -171,7 +242,21 @@ const WebGLStage = forwardRef(({ width, height, shapes, lines, sections, section
               console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
             }
 
-            onDragEnd(session.type, session.id, { x: finalX, y: finalY });
+            // Capture new positions of ALL sections (since others might have been pushed)
+            if (session.type === 'section') {
+              const allPositions = {};
+              if (layers.current.sections) {
+                layers.current.sections.children.forEach(c => {
+                  if (c._sectionName) {
+                    allPositions[c._sectionName] = { x: Math.round(c.x), y: Math.round(c.y) };
+                  }
+                });
+              }
+              // Pass batch updates to callback
+              onDragEnd(session.type, session.id, { x: finalX, y: finalY }, allPositions);
+            } else {
+              onDragEnd(session.type, session.id, { x: finalX, y: finalY });
+            }
             session.active = false;
             session.target = null;
           }
@@ -1477,11 +1562,19 @@ const UIEditor = () => {
   // ==================== SECTION FUNCTIONS ====================
 
   // Handle section drag end
-  const handleSectionDragEnd = (sectionName, newPos) => {
-    setSectionPositions(prev => ({
-      ...prev,
-      [sectionName]: newPos
-    }));
+  const handleSectionDragEnd = (sectionName, newPos, allPositions) => {
+    if (allPositions) {
+      // 🚀 Batch Update for Collision Physics
+      setSectionPositions(prev => ({
+        ...prev,
+        ...allPositions
+      }));
+    } else {
+      setSectionPositions(prev => ({
+        ...prev,
+        [sectionName]: newPos
+      }));
+    }
   };
 
   // Move section
@@ -2137,8 +2230,8 @@ const UIEditor = () => {
                 lines={page1Elements.lines}
                 sections={page1Elements.sections}
                 sectionSnapshots={sectionSnapshots}
-                onDragEnd={(type, id, pos) => {
-                  if (type === 'section') handleSectionDragEnd(id, pos);
+                onDragEnd={(type, id, pos, allPositions) => {
+                  if (type === 'section') handleSectionDragEnd(id, pos, allPositions);
                   if (type === 'shape') handleShapeDragEnd(id, pos);
                   if (type === 'line') handleLineDragEnd(id, pos);
                 }}
@@ -2185,9 +2278,22 @@ const UIEditor = () => {
                 sections={page2Elements.sections}
                 sectionSnapshots={sectionSnapshots}
                 yOffset={842}
-                onDragEnd={(type, id, pos) => {
+                onDragEnd={(type, id, pos, allPositions) => {
                   const adjustedPos = { ...pos, y: pos.y + 842 };
-                  if (type === 'section') handleSectionDragEnd(id, adjustedPos);
+
+                  // 🚀 Apply OFFSETS to batch updates for Page 2
+                  let adjustedAll = null;
+                  if (allPositions) {
+                    adjustedAll = {};
+                    Object.keys(allPositions).forEach(k => {
+                      adjustedAll[k] = {
+                        x: allPositions[k].x,
+                        y: allPositions[k].y + 842
+                      };
+                    });
+                  }
+
+                  if (type === 'section') handleSectionDragEnd(id, adjustedPos, adjustedAll);
                   if (type === 'shape') handleShapeDragEnd(id, adjustedPos);
                   if (type === 'line') {
                     handleLineDragEnd(id, {

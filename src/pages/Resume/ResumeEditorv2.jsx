@@ -932,7 +932,7 @@ export default function ResumeEditor({ resume: propsResume }) {
     const updateCustomSectionItem = useCallback((id, itemIndex, value) => {
         setCustomSections(prev => prev.map(section => {
             if (section.id === id) {
-                const newItems = [...section.items];
+                const newItems = [...(section.items || [])];
                 newItems[itemIndex] = value;
                 return { ...section, items: newItems };
             }
@@ -942,14 +942,14 @@ export default function ResumeEditor({ resume: propsResume }) {
 
     const addCustomSectionItem = useCallback((id) => {
         setCustomSections(prev => prev.map(section =>
-            section.id === id ? { ...section, items: [...section.items, ""] } : section
+            section.id === id ? { ...section, items: [...(section.items || []), ""] } : section
         ));
     }, []);
 
     const removeCustomSectionItem = useCallback((id, itemIndex) => {
         setCustomSections(prev => prev.map(section => {
             if (section.id === id) {
-                const newItems = section.items.filter((_, idx) => idx !== itemIndex);
+                const newItems = (section.items || []).filter((_, idx) => idx !== itemIndex);
                 return { ...section, items: newItems };
             }
             return section;
@@ -1740,7 +1740,7 @@ export default function ResumeEditor({ resume: propsResume }) {
                                             <input type="text" className="custom-section-title-input" value={section.title} onChange={(e) => updateCustomSectionTitle(section.id, e.target.value)} placeholder="Section Title" />
                                             <button type="button" className="remove-small-btn" onClick={() => removeCustomSection(section.id)}>Remove Section</button>
                                         </div>
-                                        {section.items.map((item, idx) => (
+                                        {section.items?.map((item, idx) => (
                                             <div key={idx} className="skill" style={{ marginBottom: '0.5rem' }}>
                                                 <span className="bullet">•</span>
                                                 <input className="skill-text" value={item} onChange={(e) => updateCustomSectionItem(section.id, idx, e.target.value)} placeholder="Item content" />

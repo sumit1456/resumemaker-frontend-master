@@ -27,8 +27,8 @@ import FatbricPDF from "../../FabricDemo.jsx";
 
 
 
-const API_BASE_URL2 = 'http://localhost:8080';
-const API_BASE_URL = 'https://resumemaker-1.onrender.com';
+const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL2 = 'https://resumemaker-1.onrender.com';
 
 // PDF.js Viewer Component
 
@@ -850,7 +850,27 @@ export default function ResumeEditor({ resume: propsResume }) {
         setShowCertifications(data.showCertifications !== undefined ? data.showCertifications : true);
 
         if (data.customSections && Array.isArray(data.customSections)) {
-          setCustomSections(data.customSections);
+          const mappedCustomSections = data.customSections.map((section, idx) => {
+            let sectionData = section.sectionData;
+            // Handle case where sectionData might be a JSON string
+            if (typeof sectionData === 'string') {
+              try {
+                sectionData = JSON.parse(sectionData);
+              } catch (e) {
+                console.error("Error parsing custom section data:", e);
+                sectionData = {};
+              }
+            }
+
+            return {
+              id: section.id || Date.now() + idx,
+              title: section.title || "",
+              items: Array.isArray(section.items)
+                ? section.items
+                : (sectionData?.items || []) // Handle backend structure
+            };
+          });
+          setCustomSections(mappedCustomSections);
         }
 
         if (data.sectionTitles) {
@@ -900,7 +920,7 @@ export default function ResumeEditor({ resume: propsResume }) {
   const updateCustomSectionItem = useCallback((id, itemIndex, value) => {
     setCustomSections(prev => prev.map(section => {
       if (section.id === id) {
-        const newItems = [...section.items];
+        const newItems = [...(section.items || [])]; // Handle null/undefined
         newItems[itemIndex] = value;
         return { ...section, items: newItems };
       }
@@ -910,14 +930,14 @@ export default function ResumeEditor({ resume: propsResume }) {
 
   const addCustomSectionItem = useCallback((id) => {
     setCustomSections(prev => prev.map(section =>
-      section.id === id ? { ...section, items: [...section.items, ""] } : section
+      section.id === id ? { ...section, items: [...(section.items || []), ""] } : section
     ));
   }, []);
 
   const removeCustomSectionItem = useCallback((id, itemIndex) => {
     setCustomSections(prev => prev.map(section => {
       if (section.id === id) {
-        const newItems = section.items.filter((_, idx) => idx !== itemIndex);
+        const newItems = (section.items || []).filter((_, idx) => idx !== itemIndex); // Handle null/undefined
         return { ...section, items: newItems };
       }
       return section;
@@ -1676,7 +1696,7 @@ export default function ResumeEditor({ resume: propsResume }) {
                       <input type="text" className="custom-section-title-input" value={section.title} onChange={(e) => updateCustomSectionTitle(section.id, e.target.value)} placeholder="Section Title" />
                       <button type="button" className="remove-small-btn" onClick={() => removeCustomSection(section.id)}>Remove Section</button>
                     </div>
-                    {section.items.map((item, idx) => (
+                    {section.items?.map((item, idx) => (
                       <div key={idx} className="skill" style={{ marginBottom: '0.5rem' }}>
                         <span className="bullet">•</span>
                         <input className="skill-text" value={item} onChange={(e) => updateCustomSectionItem(section.id, idx, e.target.value)} placeholder="Item content" />

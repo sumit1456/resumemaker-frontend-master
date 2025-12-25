@@ -777,7 +777,7 @@ export default function ResumeAnalyzer({
       setNewLocalResume(data);
     } catch (err) {
       console.error("❌ Error calling enhanceResume:", err);
-      window.showMessage(`${error} enhancing failed`, 'error');
+      window.showMessage(`${err.message || 'Error'} enhancing failed`, 'error');
     } finally {
       setIsEnhancing(false);
       setLoading(false);
@@ -812,26 +812,32 @@ export default function ResumeAnalyzer({
 
       const data = await response.json();
 
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
       const resumeJsonString = data.choices?.[0]?.message?.content?.trim();
 
       if (resumeJsonString) {
         try {
           const resumeData = JSON.parse(resumeJsonString);
           dispatch(setImportedResume(resumeData));
+          window.showMessage("Success", 'Resume has been imported', "success", 1500);
         } catch (err) {
           console.error("Failed to parse AI resume JSON:", err, resumeJsonString);
+          throw new Error("Failed to parse AI response");
         }
       } else {
         console.error("No content found in AI response", data);
+        throw new Error(data.error || "No content found in AI response");
       }
 
       console.log("Printing the response for resume import");
-
       console.log("Upload successful:", data);
-      window.showMessage("Success", 'Resume has been imported', "success", 1500);
+
     } catch (error) {
       console.error("Upload failed:", error);
-      window.showMessage("Error", 'Importing Failed', "error", 1500);
+      window.showMessage("Error", error.message || 'Importing Failed', "error", 3000);
     } finally {
       e.target.value = '';
       setLoading(false);
