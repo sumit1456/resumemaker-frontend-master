@@ -767,11 +767,14 @@ export default function ResumeEditor({ resume: propsResume }) {
     // ⚡ WebGL Snapshot Capture Effect
     useEffect(() => {
         const sections = [
-            'header', 'summary', 'skills', 'experience', 'projects', 'education', 'certifications', 'custom'
+            'header', 'summary', 'skills', 'experience', 'projects', 'education', 'certifications',
+            ...customSections.map(s => `custom-${s.id}`)
         ];
+
+        // Ensure refs exist
         sections.forEach(section => {
             if (!sectionRefs.current[section]) {
-                sectionRefs.current[section] = React.createRef();
+                sectionRefs.current[section] = null; // Will be set by ref callback
             }
         });
 
@@ -1066,14 +1069,32 @@ export default function ResumeEditor({ resume: propsResume }) {
 
 
     const addCustomSection = useCallback(() => {
+        const newId = Date.now();
+        const sectionId = `custom-${newId}`;
+
+        // Calculate next Y position
+        const maxY = Object.values(sectionPositions).reduce((max, pos) => Math.max(max, pos.y), 0);
+        const newY = maxY + 100; // buffer
+
+        setSectionPositions(prev => ({
+            ...prev,
+            [sectionId]: { x: 40, y: newY }
+        }));
+
         setCustomSections(prev => [...prev, {
-            id: Date.now(),
+            id: newId,
             title: "New Section",
             items: [""]
         }]);
-    }, []);
+    }, [sectionPositions]);
 
     const removeCustomSection = useCallback((id) => {
+        const sectionId = `custom-${id}`;
+        setSectionPositions(prev => {
+            const newPos = { ...prev };
+            delete newPos[sectionId];
+            return newPos;
+        });
         setCustomSections(prev => prev.filter(section => section.id !== id));
     }, []);
 
@@ -2047,7 +2068,12 @@ export default function ResumeEditor({ resume: propsResume }) {
                                 )}
 
                                 {customSections.map((section) => (
-                                    <div key={section.id} className="custom-section-container">
+                                    <div
+                                        key={section.id}
+                                        className="custom-section-container"
+                                        id={`editor-section-custom-${section.id}`}
+                                        ref={el => sectionRefs.current[`custom-${section.id}`] = el}
+                                    >
                                         <div className="custom-section-header">
                                             <input type="text" className="custom-section-title-input" value={section.title} onChange={(e) => updateCustomSectionTitle(section.id, e.target.value)} placeholder="Section Title" />
                                             <button type="button" className="remove-small-btn" onClick={() => removeCustomSection(section.id)}>Remove Section</button>
@@ -2271,26 +2297,56 @@ export default function ResumeEditor({ resume: propsResume }) {
                             custom: { customSections, styleConfig }
                         };
 
-                        return Object.entries(TemplateComponents).map(([key, Component]) => {
+                        const standardComponents = Object.entries(TemplateComponents)
+                            .filter(([key]) => key !== 'custom')
+                            .map(([key, Component]) => {
+                                if (!sectionRefs.current[key]) sectionRefs.current[key] = React.createRef();
+                                return (
+                                    <div
+                                        key={key}
+                                        ref={sectionRefs.current[key]}
+                                        style={{
+                                            width: styleConfig[key]?.container?.width || '100%',
+                                            height: styleConfig[key]?.container?.height || 'auto',
+                                            minHeight: styleConfig[key]?.container?.height || 'auto',
+                                            maxHeight: styleConfig[key]?.container?.height || 'none',
+                                            overflow: 'visible',
+                                            boxSizing: 'border-box',
+                                            position: 'relative',
+                                            minWidth: 0,
+                                        }}>
+                                        <Component {...propsMap[key]} />
+                                    </div>
+                                );
+                            });
+
+                        const customComponents = customSections.map(section => {
+                            const key = `custom-${section.id}`;
+                            // Ensure ref exists
                             if (!sectionRefs.current[key]) sectionRefs.current[key] = React.createRef();
+
+                            // reuse FlexibleCustomSection but pass single section
                             return (
                                 <div
                                     key={key}
-                                    ref={sectionRefs.current[key]}
+                                    ref={sectionRefs.current[key]} // Use the dynamic ref
                                     style={{
-                                        width: styleConfig[key]?.container?.width || '100%',
-                                        height: styleConfig[key]?.container?.height || 'auto',
-                                        minHeight: styleConfig[key]?.container?.height || 'auto',
-                                        maxHeight: styleConfig[key]?.container?.height || 'none',
+                                        width: '100%',
+                                        height: 'auto',
                                         overflow: 'visible',
                                         boxSizing: 'border-box',
                                         position: 'relative',
                                         minWidth: 0,
                                     }}>
-                                    <Component {...propsMap[key]} />
+                                    <FlexibleCustomSection
+                                        customSections={[section]}
+                                        styleConfig={styleConfig}
+                                    />
                                 </div>
                             );
                         });
+
+                        return [...standardComponents, ...customComponents];
                     })()}
                 </div>
 
