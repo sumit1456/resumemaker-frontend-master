@@ -115,7 +115,7 @@ const FlexibleContainer = ({ children, config = {} }) => {
         padding: "10px",
         margin: "0",
         backgroundColor: "transparent",  // Changed from #FFFFFF to transparent
-        fontFamily: "Arial",
+        fontFamily: "Helvetica",
         color: "#000000",
         boxSizing: "border-box",
         overflow: "hidden",

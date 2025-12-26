@@ -235,7 +235,7 @@ const MyResumes = ({ userId }) => {
                       View
                     </button>
                     <button
-                      onClick={() => navigate(`/dashboard/resume-editor/${resume.id}`)}
+                      onClick={() => navigate(`/dashboard/resume-editorv2/${resume.id}`)}
                       className="edit-button"
                     >
                       <span className="btn-icon">✏️</span>

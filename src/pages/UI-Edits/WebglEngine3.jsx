@@ -794,7 +794,7 @@ class GeometrySnapshot {
         // 6. TEXT (Works for both 'text' type and 'box' type with direct text)
         if (text) {
             ctx.fillStyle = styles.color || '#000';
-            ctx.font = `${styles.fontStyle || ''} ${styles.fontWeight || ''} ${styles.fontSize}px ${styles.fontFamily || 'Arial'}`;
+            ctx.font = `${styles.fontStyle || ''} ${styles.fontWeight || ''} ${styles.fontSize}px ${styles.fontFamily || 'Helvetica'}`;
             ctx.textBaseline = 'top';
 
             const pLeft = (styles.padding?.left || 0);
@@ -1371,7 +1371,7 @@ class PixiRenderer {
         }
 
         const textStyleOptions = {
-            fontFamily: styles.fontFamily || 'Arial',
+            fontFamily: styles.fontFamily || 'Helvetica',
             fontSize: styles.fontSize || 14,
             fontWeight: styles.fontWeight || 'normal',
             fontStyle: styles.fontStyle || 'normal',

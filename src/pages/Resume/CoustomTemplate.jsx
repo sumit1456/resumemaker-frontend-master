@@ -3,7 +3,31 @@ import React from "react";
 import { Document, Page, Text, View, StyleSheet, Font, Image } from "@react-pdf/renderer";
 
 // Register fonts if needed (optional)
+// Register fonts if needed (optional)
 // Font.register({ family: 'Roboto', src: 'https://cdnjs.cloudflare.com/ajax/libs/ink/3.1.10/fonts/Roboto/roboto-light-webfont.ttf' });
+
+// Helper to sanitize font families for React-PDF
+const resolvePdfFont = (fontFamily) => {
+    if (!fontFamily) return undefined;
+
+    // Split by comma to handle fallbacks like "Arial, sans-serif"
+    const fonts = fontFamily.split(',').map(f => f.trim().replace(/['"]/g, '')); // remove quotes
+
+    for (const f of fonts) {
+        const lower = f.toLowerCase();
+        // Check registered fonts first
+        if (lower === 'roboto') return 'Roboto';
+        if (lower === 'open sans') return 'Open Sans';
+
+        // Check standard PDF fonts
+        if (lower === 'times roman' || lower === 'times new roman' || (lower.includes('serif') && !lower.includes('sans'))) return 'Times-Roman';
+        if (lower === 'courier' || lower.includes('mono')) return 'Courier';
+        if (lower === 'helvetica' || lower === 'arial' || lower.includes('sans')) return 'Helvetica';
+    }
+
+    // Default fallback
+    return 'Helvetica';
+};
 
 /**
  * UTILITY: Translator from Canvas/Web CSS to React-PDF styles
@@ -35,11 +59,16 @@ const applyPdfStyles = (baseStyle, configStyle = {}) => {
         'zIndex', 'gap', 'rowGap', 'columnGap' // 'gap' is supported in React-PDF v3+
     ];
 
+
+
     Object.keys(merged).forEach(key => {
         if (allowedProps.includes(key) && merged[key] !== undefined && merged[key] !== "") {
-            // Helper: Convert "px" strings to numbers if needed, though React-PDF handles typical string units well.
-            // React-PDF treats unitless numbers as points (1/72 inch). 
-            validPdfStyles[key] = merged[key];
+            // Apply font mapping
+            if (key === 'fontFamily') {
+                validPdfStyles[key] = resolvePdfFont(merged[key]);
+            } else {
+                validPdfStyles[key] = merged[key];
+            }
         }
     });
 

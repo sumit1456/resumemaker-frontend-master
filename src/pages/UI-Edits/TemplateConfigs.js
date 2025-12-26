@@ -60,7 +60,7 @@ export const TWO_COLUMN_TEMPLATE_CONFIG = {
     width: "210mm",
     height: "297mm",
     backgroundColor: "#FFFFFF",
-    fontFamily: "Arial, sans-serif",
+    fontFamily: "Helvetica",
   },
 
   // Section Styles
@@ -387,7 +387,7 @@ export const ATS_TEMPLATE_CONFIG = {
     width: "210mm",
     height: "297mm",
     backgroundColor: "#FFFFFF",
-    fontFamily: "Arial, sans-serif",
+    fontFamily: "Helvetica",
   },
 
   // Header Section
@@ -431,7 +431,7 @@ export const ATS_TEMPLATE_CONFIG = {
     titleStyle: {
       fontSize: "14px",
       fontWeight: "normal",
-      color: "#c53a3a",
+      color: "#4025efff",
       textAlign: "center"
     },
     showTitle: true,
@@ -932,7 +932,7 @@ export const MODERN_TEMPLATE_CONFIG = {
     width: "210mm",
     height: "297mm",
     backgroundColor: "#FFFFFF",
-    fontFamily: "Arial, sans-serif",
+    fontFamily: "Helvetica",
   },
 
 
@@ -1509,7 +1509,7 @@ export const TEMPLATE5_CONFIG = {
     width: "210mm",
     height: "297mm",
     backgroundColor: "#FFFFFF",
-    fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif",
+    fontFamily: "Helvetica",
   },
 
   shapes: [

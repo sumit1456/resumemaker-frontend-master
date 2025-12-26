@@ -51,9 +51,9 @@ export default function ResumeDashboard({ userId }) {
 
       {/* Resume editor (edit existing resume) */}
       <Route
-        path="resume-editor/:resumeId"
+        path="resume-editorv2/:resumeId"
         element={
-          <ResumeEditor
+          <ResumeEditorv2
             resume={resume}
             setResume={setResume}
             resumeId={resumeId}

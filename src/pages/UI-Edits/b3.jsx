@@ -13,7 +13,7 @@ import {
   FlexibleHeaderSection, FlexibleProjectsSection,
   FlexibleSkillsSection, FlexibleSummarySection
 } from "./BaseTemplates.jsx";
-import { PixiRenderer, GeometrySnapshotWithWorkers as GeometrySnapshot, HybridRenderer, initializeWorkers } from "./WebglEngineWithWorkers.js";
+import { PixiRenderer, GeometrySnapshot, HybridRenderer } from "./WebgEngine4.jsx";
 import * as PIXI from 'pixi.js';
 import { jsPDF } from "jspdf";
 
@@ -35,7 +35,7 @@ const normalizeColorForInput = (color) => {
 const WebGLStage = forwardRef(({ width, height, shapes, lines, sections, sectionSnapshots, onDragEnd, onSelect, selectedId, type, isAnimating, onHeaderContainerReady, headerAnimating, headerAnimationRef, setHeaderAnimating, skillsAnimating, skillsAnimationRef, setSkillsAnimating, onSkillsContainerReady, yOffset = 0 }, ref) => {
   // Device-specific config (Calculated once per render)
   const isMobile = window.innerWidth < 768;
-  const resolution = isMobile ? 1.25 : 1;
+  const resolution = isMobile ? 1.25 : 2;
 
   const containerRef = useRef(null);
   const pixiApp = useRef(null);
@@ -73,7 +73,6 @@ const WebGLStage = forwardRef(({ width, height, shapes, lines, sections, section
       // Initialize PixiJS Application (v8 style)
       app = new PIXI_LIB.Application();
 
-
       try {
         await app.init({
           width: width,
@@ -84,14 +83,16 @@ const WebGLStage = forwardRef(({ width, height, shapes, lines, sections, section
           preference: 'webgl', // 🚀 Force WebGL preference in v8
         });
 
+        // Check if unmounted during async init
+        if (!isMounted) {
+          console.log('🛑 [WebGL] Unmounted during init - cleaning up');
+          app.destroy(true, { children: true, texture: true, baseTexture: true });
+          return;
+        }
+
         // Apply 30% reduction scale if on mobile
         if (isMobile) {
           app.stage.scale.set(0.8);
-        }
-
-        if (!isMounted) {
-          app.destroy(true);
-          return;
         }
 
         console.log(`[WebGL] Initialized. Mobile: ${isMobile}, Res: ${resolution}`);
@@ -100,6 +101,7 @@ const WebGLStage = forwardRef(({ width, height, shapes, lines, sections, section
 
         // Verify container still exists before appending
         if (containerRef.current) {
+          containerRef.current.innerHTML = ''; // Clear existing canvas if any
           containerRef.current.appendChild(app.canvas || app.view);
         } else {
           app.destroy(true);
@@ -135,143 +137,8 @@ const WebGLStage = forwardRef(({ width, height, shapes, lines, sections, section
         app.stage.interactive = true;
         app.stage.hitArea = app.screen;
 
-        app.stage.on('pointermove', (e) => {
-          if (dragSession.current.active && dragSession.current.target) {
-            const session = dragSession.current;
-            const newPos = e.data.getLocalPosition(app.stage);
-
-            // Calculate new position based on original offset
-            const deltaX = newPos.x - session.dragStartX;
-            const deltaY = newPos.y - session.dragStartY;
-
-            const nextX = session.startX + deltaX;
-            const nextY = session.startY + deltaY;
-
-            session.target.x = nextX;
-            session.target.y = nextY;
-
-            // 😡 ANGRY SECTION EFFECT (Collision + Push)
-            if (session.type === 'section') {
-              const dragged = session.target;
-              // AABB Collision Check against other sections
-              const otherSections = sectionsLayer.children.filter(c => c !== dragged);
-
-              otherSections.forEach(other => {
-                const b1 = dragged.getBounds(); // using Pixi bounds (includes scale)
-                const b2 = other.getBounds();
-
-                // Simple overlap check
-                const isOverlapping = (
-                  b1.x < b2.x + b2.width &&
-                  b1.x + b1.width > b2.x &&
-                  b1.y < b2.y + b2.height &&
-                  b1.y + b1.height > b2.y
-                );
-
-                if (isOverlapping) {
-                  // 🔴 TINT RED (Angry)
-                  other.tint = 0xFF9999;
-
-                  // 📳 SHAKE (Vibrate)
-                  const jitter = 2;
-                  other.x += (Math.random() - 0.5) * jitter;
-                  other.y += (Math.random() - 0.5) * jitter;
-
-                  // ⬇️⬆️⬅️➡️ MULTI-DIRECTIONAL PUSH PHYSICS
-                  // Calculate centers to determine push direction
-                  const c1 = { x: b1.x + b1.width / 2, y: b1.y + b1.height / 2 };
-                  const c2 = { x: b2.x + b2.width / 2, y: b2.y + b2.height / 2 };
-
-                  const dx = c2.x - c1.x;
-                  const dy = c2.y - c1.y;
-
-                  // Determine dominant axis
-                  if (Math.abs(dy) > Math.abs(dx)) {
-                    // Vertical Push
-                    if (dy > 0) {
-                      // Dragged is above, push target DOWN
-                      other.y += 5;
-                    } else {
-                      // Dragged is below, push target UP
-                      other.y -= 5;
-                    }
-                  } else {
-                    // Horizontal Push
-                    if (dx > 0) {
-                      // Dragged is left, push target RIGHT
-                      other.x += 5;
-                    } else {
-                      // Dragged is right, push target LEFT
-                      other.x -= 5;
-                    }
-                  }
-
-                } else {
-                  // Reset tint if not colliding
-                  other.tint = 0xFFFFFF;
-                }
-              });
-            }
-          }
-        });
-
-        const endDrag = () => {
-          if (dragSession.current.active) {
-            const session = dragSession.current;
-            const finalX = Math.round(session.target.x);
-            const finalY = Math.round(session.target.y);
-
-            // Cleanup tints
-            if (session.type === 'section' && layers.current.sections) {
-              layers.current.sections.children.forEach(c => c.tint = 0xFFFFFF);
-            }
-
-            console.log(`[DRAG] Global End: ${session.type} ${session.id} at (${finalX}, ${finalY})`);
-
-            // 🎯 LOG HEADER SECTION FINAL POSITION AFTER DRAG
-            if (session.id === 'header') {
-              console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-              console.log('🎨 HEADER DRAG COMPLETE - Final WebGL Coordinates');
-              console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-              console.log('📍 Final Position:');
-              console.log(`   X: ${finalX}px`);
-              console.log(`   Y: ${finalY}px`);
-              console.log('📊 Drag Delta:');
-              console.log(`   ΔX: ${finalX - session.startX}px`);
-              console.log(`   ΔY: ${finalY - session.startY}px`);
-              console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            }
-
-            // Capture new positions of ALL sections (since others might have been pushed)
-            if (session.type === 'section') {
-              const allPositions = {};
-              if (layers.current.sections) {
-                layers.current.sections.children.forEach(c => {
-                  if (c._sectionName) {
-                    allPositions[c._sectionName] = { x: Math.round(c.x), y: Math.round(c.y) };
-                  }
-                });
-              }
-              // Pass batch updates to callback
-              onDragEnd(session.type, session.id, { x: finalX, y: finalY }, allPositions);
-            } else {
-              onDragEnd(session.type, session.id, { x: finalX, y: finalY });
-            }
-            session.active = false;
-            session.target = null;
-          }
-        };
-
-        app.stage.on('pointerup', endDrag);
-        app.stage.on('pointerupoutside', endDrag);
-
-        // Background click to deselect
-        app.stage.on('pointerdown', (e) => {
-          // Only deselect if clicking directly on stage (not on children)
-          if (e.target === app.stage) {
-            onSelect(null, null); // Deselect all
-          }
-        });
+        // ... (Drag logic remains same, can be passed back in via closures) ...
+        bindDragEvents(app, sectionsLayer, shapesLayer);
 
         // Force a re-render once initialized
         setInitTrigger(prev => prev + 1);
@@ -281,20 +148,178 @@ const WebGLStage = forwardRef(({ width, height, shapes, lines, sections, section
       }
     };
 
+    // Helper to bind events (cleaner code)
+    const bindDragEvents = (appInstance, sectionsLayer, shapesLayer) => {
+      appInstance.stage.on('pointermove', (e) => {
+        if (dragSession.current.active && dragSession.current.target) {
+          const session = dragSession.current;
+          // CHECK TARGET EXISTENCE
+          if (!session.target || session.target.destroyed) {
+            console.warn('⚠️ Drag target destroyed during move');
+            session.active = false;
+            return;
+          }
+
+          const newPos = e.data.getLocalPosition(appInstance.stage);
+
+          // Calculate new position based on original offset
+          const deltaX = newPos.x - session.dragStartX;
+          const deltaY = newPos.y - session.dragStartY;
+
+          const nextX = session.startX + deltaX;
+          const nextY = session.startY + deltaY;
+
+          session.target.x = nextX;
+          session.target.y = nextY;
+
+          // 😡 ANGRY SECTION EFFECT (Collision + Push)
+          if (session.type === 'section') {
+            // Ensure layer still exists
+            if (!sectionsLayer || sectionsLayer.destroyed) return;
+
+            const dragged = session.target;
+            // AABB Collision Check against other sections
+            const otherSections = sectionsLayer.children.filter(c => c !== dragged);
+
+            otherSections.forEach(other => {
+              const b1 = dragged.getBounds(); // using Pixi bounds (includes scale)
+              const b2 = other.getBounds();
+
+              // Simple overlap check
+              const isOverlapping = (
+                b1.x < b2.x + b2.width &&
+                b1.x + b1.width > b2.x &&
+                b1.y < b2.y + b2.height &&
+                b1.y + b1.height > b2.y
+              );
+
+              if (isOverlapping) {
+                // 🔴 TINT RED (Angry)
+                other.tint = 0xFF9999;
+
+                // 📳 SHAKE (Vibrate)
+                const jitter = 2;
+                other.x += (Math.random() - 0.5) * jitter;
+                other.y += (Math.random() - 0.5) * jitter;
+
+                // ⬇️⬆️⬅️➡️ MULTI-DIRECTIONAL PUSH PHYSICS
+                // Calculate centers to determine push direction
+                const c1 = { x: b1.x + b1.width / 2, y: b1.y + b1.height / 2 };
+                const c2 = { x: b2.x + b2.width / 2, y: b2.y + b2.height / 2 };
+
+                const dx = c2.x - c1.x;
+                const dy = c2.y - c1.y;
+
+                // Determine dominant axis
+                if (Math.abs(dy) > Math.abs(dx)) {
+                  // Vertical Push
+                  if (dy > 0) {
+                    // Dragged is above, push target DOWN
+                    other.y += 5;
+                  } else {
+                    // Dragged is below, push target UP
+                    other.y -= 5;
+                  }
+                } else {
+                  // Horizontal Push
+                  if (dx > 0) {
+                    // Dragged is left, push target RIGHT
+                    other.x += 5;
+                  } else {
+                    // Dragged is right, push target LEFT
+                    other.x -= 5;
+                  }
+                }
+
+              } else {
+                // Reset tint if not colliding
+                other.tint = 0xFFFFFF;
+              }
+            });
+          }
+        }
+      });
+
+      const endDrag = () => {
+        if (dragSession.current.active) {
+          const session = dragSession.current;
+          if (!session.target || session.target.destroyed) {
+            session.active = false;
+            return;
+          }
+
+          const finalX = Math.round(session.target.x);
+          const finalY = Math.round(session.target.y);
+
+          // Cleanup tints
+          if (session.type === 'section' && layers.current.sections && !layers.current.sections.destroyed) {
+            layers.current.sections.children.forEach(c => c.tint = 0xFFFFFF);
+          }
+
+          console.log(`[DRAG] Global End: ${session.type} ${session.id} at (${finalX}, ${finalY})`);
+
+          // 🎯 LOG HEADER SECTION FINAL POSITION AFTER DRAG
+          if (session.id === 'header') {
+            // (Logs omitted for brevity)
+          }
+
+          // Capture new positions of ALL sections (since others might have been pushed)
+          if (session.type === 'section') {
+            const allPositions = {};
+            if (layers.current.sections && !layers.current.sections.destroyed) {
+              layers.current.sections.children.forEach(c => {
+                if (c._sectionName) {
+                  allPositions[c._sectionName] = { x: Math.round(c.x), y: Math.round(c.y) };
+                }
+              });
+            }
+            // Pass batch updates to callback
+            onDragEnd(session.type, session.id, { x: finalX, y: finalY }, allPositions);
+          } else {
+            onDragEnd(session.type, session.id, { x: finalX, y: finalY });
+          }
+          session.active = false;
+          session.target = null;
+        }
+      };
+
+      appInstance.stage.on('pointerup', endDrag);
+      appInstance.stage.on('pointerupoutside', endDrag);
+
+      // Background click to deselect
+      appInstance.stage.on('pointerdown', (e) => {
+        // Only deselect if clicking directly on stage (not on children)
+        if (e.target === appInstance.stage) {
+          onSelect(null, null); // Deselect all
+        }
+      });
+    }
+
     initPixi();
 
     return () => {
       isMounted = false;
-      if (app) {
+
+      // Cleanup previous app instance
+      const cleanupApp = app || pixiApp.current;
+
+      if (cleanupApp) {
+        console.log('🧹 [WebGL] Cleaning up Pixi instance');
         try {
+          // Remove from container first
+          if (cleanupApp.canvas && cleanupApp.canvas.parentElement) {
+            cleanupApp.canvas.parentElement.removeChild(cleanupApp.canvas);
+          } else if (cleanupApp.view && cleanupApp.view.parentElement) {
+            cleanupApp.view.parentElement.removeChild(cleanupApp.view);
+          }
+
           // Robust destruction check
-          if (app.renderer) {
-            // 🎯 FIXED: Do not destroy textures/baseTextures here as they might be shared
-            // or still needed by Page 1 when Page 2 unmounts.
-            app.destroy(true);
+          if (cleanupApp.renderer) {
+            // Destroy everything: children, texture, baseTexture, context
+            cleanupApp.destroy(true, { children: true, texture: true, baseTexture: true });
           }
         } catch (e) {
-          console.warn("PixiJS destruction error (likely already destroyed):", e);
+          console.warn("PixiJS destruction warning:", e);
         }
         pixiApp.current = null;
         layers.current = { shapes: null, sections: null, lines: null };
@@ -785,6 +810,9 @@ const UIEditor = () => {
     duration: 500, // 🎬 Reduced for decoupled feel
   });
 
+  // 🧠 SMART SNAPSHOT: Track previous styles to avoid unnecessary re-captures
+  const prevStyleConfigRef = useRef({});
+
   const handleSaveAll = async () => {
     console.log("🚀 [ANTIGRAVITY] handleSaveAll triggered");
     if (userId == null) {
@@ -827,7 +855,7 @@ const UIEditor = () => {
 
       const payload = {
         title: resumeDetails.resumeDetails?.title || "My Resume",
-        templateId: String(Coutom`${currentTemplate}` || "custom"),
+        templateId: String(`Coutom ${currentTemplate}` || "custom"),
         userId: userId,
         details: {
           name: resumeDetails.resumeDetails?.name,
@@ -911,10 +939,7 @@ const UIEditor = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Initialize Web Workers
-  useEffect(() => {
-    initializeWorkers().catch(err => console.error('Failed to initialize workers:', err));
-  }, []);
+
 
 
   useEffect(() => {
@@ -1718,34 +1743,44 @@ const UIEditor = () => {
   useEffect(() => {
     if (!TemplateComponents || !resumeData) return;
 
-    // 🎬 Do not recapture while animating!
-    // 🎬 Animations are now decoupled - we recapture even if animating
-    // if (headerAnimating) return;
     const renderSectionData = async (sectionName) => {
-      const t0 = performance.now();
       const ref = sectionRefs.current[sectionName];
       if (!ref?.current) {
-        console.warn(`No ref found for ${sectionName}`);
+        // console.warn(`No ref found for ${sectionName}`);
         return;
       }
 
       const element = ref.current;
 
+      // 🧠 SMART SNAPSHOT LOGIC
+      // Check if safely initialized
+      if (!prevStyleConfigRef || !prevStyleConfigRef.current) return;
+
+      const currentStyle = styleConfig[sectionName] || {};
+      const prevStyle = prevStyleConfigRef.current[sectionName] || {};
+
+      // Always capture if no snapshot exists
+      const hasSnapshot = !!sectionSnapshots[sectionName];
+
+      // Use the static method from Engine 4
+      const needsCapture = !hasSnapshot || GeometrySnapshot.shouldReCapture(prevStyle, currentStyle);
+
+      if (!needsCapture) {
+        // Styles are identical or only layout changed (x/y), which Pixi handles directly via props
+        return;
+      }
+
       try {
         // Wait for fonts to load
         await document.fonts.ready;
-        const t1 = performance.now();
 
         // Force layout recalculation
         element.offsetHeight; // Trigger reflow
-        const t2 = performance.now();
 
         // 1. CAPTURE FOR WEBGL (Geometry Snapshot)
-        console.log(`📸 [RE-CAPTURE] Starting DOM capture for: ${sectionName}...`);
+        console.log(`📸 [SMART-CAPTURE] Capturing ${sectionName} (Visual Update Required)`);
         const scanner = new GeometrySnapshot();
         const snapshot = await scanner.capture(element);
-        const t3 = performance.now();
-        console.log(`✅ [RE-CAPTURE] Done capturing ${sectionName} in ${(t3 - t2).toFixed(1)}ms`);
 
         setSectionSnapshots(prev => ({ ...prev, [sectionName]: snapshot }));
       } catch (error) {
@@ -1755,13 +1790,13 @@ const UIEditor = () => {
 
     // Render all sections in parallel
     const renderAllSections = async () => {
-      console.log('--- START RENDER ALL SECTIONS ---');
-      const tStart = performance.now();
+      // console.log('--- START RENDER CHECK ---');
       const sections = Object.keys(sectionRefs.current);
-      console.log('📋 Sections in refs:', sections);
       await Promise.all(sections.map(sectionName => renderSectionData(sectionName)));
-      const tEnd = performance.now();
-      console.log(`--- END RENDER ALL SECTIONS: ${(tEnd - tStart).toFixed(1)}ms ---`);
+
+      // Update the partial ref for next comparison
+      // We do a deep clone to ensure we have a stable specific snapshot of config
+      prevStyleConfigRef.current = JSON.parse(JSON.stringify(styleConfig));
     };
 
     const timer = setTimeout(() => {
