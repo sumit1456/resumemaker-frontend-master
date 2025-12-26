@@ -6,8 +6,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import './MyResumes.css';
 import { useSelector } from 'react-redux';
 
-const API_BASE_URL = 'http://localhost:8080';
-const API_BASE_URL2 = 'https://resumemaker-1.onrender.com';
+const API_BASE_URL2 = 'http://localhost:8080';
+const API_BASE_URL = 'https://resumemaker-1.onrender.com';
 
 const MyResumes = ({ userId }) => {
   const navigate = useNavigate();
@@ -235,7 +235,7 @@ const MyResumes = ({ userId }) => {
                       View
                     </button>
                     <button
-                      onClick={() => navigate(`/dashboard/resume-editorv2/${resume.id}`)}
+                      onClick={() => navigate(`/dashboard/resume-editorv3/${resume.id}`)}
                       className="edit-button"
                     >
                       <span className="btn-icon">✏️</span>

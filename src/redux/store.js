@@ -6,10 +6,9 @@ const authSlice = createSlice({
   initialState: {
     isLoggedIn: false,
     userId: null,
-    resumeId: null,
+    currentResumeId: null,
     API_BASE_URL: "https://resumemaker-1.onrender.com",
     API_BASE_URL2: 'http://localhost:8080',
-
   },
   reducers: {
     logInUser: (state, action) => {
@@ -30,9 +29,10 @@ const authSlice = createSlice({
 const resumeSlice = createSlice({
   name: 'resume',
   initialState: {
-    importedResume: null,     // 🆕 raw extracted text (before mapping)
+    importedResume: null,     // raw extracted text (before mapping)
     currentResume: null,      // mapped + structured resume being edited
     enhancedResume: null,     // payload returned from ATS-enhancement
+    globalCurrentPdf: null,   // 🆕 PDF Blob or URL stored globally
   },
   reducers: {
     setImportedResume: (state, action) => {
@@ -44,10 +44,14 @@ const resumeSlice = createSlice({
     setEnhancedResume: (state, action) => {
       state.enhancedResume = action.payload;
     },
+    setGlobalCurrentPdf: (state, action) => {
+      state.globalCurrentPdf = action.payload;
+    },
     clearResume: (state) => {
       state.importedResume = null;
       state.currentResume = null;
       state.enhancedResume = null;
+      state.globalCurrentPdf = null;
     },
   },
 });
@@ -56,14 +60,15 @@ const resumeSlice = createSlice({
 export const {
   logInUser,
   logOutUser,
-  setCurrentResumeId
+  setCurrentResumeId,
 } = authSlice.actions;
 
 export const {
   setImportedResume,
   setCurrentResume,
   setEnhancedResume,
-  clearResume
+  setGlobalCurrentPdf,
+  clearResume,
 } = resumeSlice.actions;
 
 // ---------------- CREATE STORE ----------------

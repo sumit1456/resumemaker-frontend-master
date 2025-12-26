@@ -24,7 +24,20 @@ import { useDispatch, useSelector } from 'react-redux';
 import { setCurrentResume, setEnhancedResume } from "../../redux/store.js";
 import { setCurrentResumeId } from "../../redux/store.js";
 import FatbricPDF from "../../FabricDemo.jsx";
-import { Font } from "@react-pdf/renderer";
+import { Font, BlobProvider } from "@react-pdf/renderer";
+
+// WebGL Engine Imports
+import { PixiRendererEngine as PixiRenderer, GeometrySnapshot, HybridRenderer, WebGLStage } from "../../components/engine/WebEngine.jsx";
+import {
+    FlexibleCertificationsSection, FlexibleContactSection,
+    FlexibleEducationSection, FlexibleExperienceSection,
+    FlexibleHeaderSection, FlexibleProjectsSection,
+    FlexibleSkillsSection, FlexibleSummarySection,
+    FlexibleCustomSection
+} from "../UI-Edits/BaseTemplates.jsx";
+import * as PIXI from 'pixi.js';
+import { jsPDF } from "jspdf";
+import { ATS_TEMPLATE_CONFIG, MODERN_TEMPLATE_CONFIG, TWO_COLUMN_TEMPLATE_CONFIG } from "../UI-Edits/TemplateConfigs.js";
 
 Font.register({
     family: "Arial, sans-serif",
@@ -38,8 +51,8 @@ Font.register({
 
 
 
-const API_BASE_URL = 'http://localhost:8080';
-const API_BASE_URL2 = 'https://resumemaker-1.onrender.com';
+const API_BASE_URL2 = 'http://localhost:8080';
+const API_BASE_URL = 'https://resumemaker-1.onrender.com';
 
 // Map template IDs to their configurations
 
@@ -391,6 +404,7 @@ export default function ResumeEditor({ resume: propsResume }) {
     const currentResumeId = useSelector((state) => state.resume.resumeId);
     const dispatch = useDispatch();
     const navigate = useNavigate();
+    const resumePdf = useSelector(state => state.resume.globalCurrentPdf);
 
 
 
@@ -411,6 +425,42 @@ export default function ResumeEditor({ resume: propsResume }) {
     const [showProjects, setShowProjects] = useState(true);
     const [showEducation, setShowEducation] = useState(true);
     const [showCertifications, setShowCertifications] = useState(true);
+
+    // ==================== WebGL ENGINE STATE ====================
+    const [sectionSnapshots, setSectionSnapshots] = useState({});
+    const [sectionPositions, setSectionPositions] = useState(() => {
+        const config = MODERN_TEMPLATE_CONFIG;
+        return config.positions || {
+            header: { x: 40, y: 50 },
+            summary: { x: 40, y: 150 },
+            skills: { x: 40, y: 250 },
+            experience: { x: 40, y: 350 },
+            projects: { x: 40, y: 550 },
+            education: { x: 40, y: 750 },
+            certifications: { x: 40, y: 850 },
+            custom: { x: 40, y: 950 }
+        };
+    });
+    const sectionRefs = useRef({});
+    const [styleConfig, setStyleConfig] = useState(() => {
+        const config = MODERN_TEMPLATE_CONFIG;
+        const defaultStyle = {};
+        ["header", "summary", "skills", "experience", "projects", "education", "certifications"].forEach(key => {
+            if (config[key]) defaultStyle[key] = config[key];
+        });
+        return defaultStyle;
+    });
+    const [lines, setLines] = useState(() => {
+        const config = MODERN_TEMPLATE_CONFIG;
+        return config.lines || [];
+    });
+    const [backgroundShapes, setBackgroundShapes] = useState(() => {
+        const config = MODERN_TEMPLATE_CONFIG;
+        return config.shapes || [];
+    });
+    const [showPage2, setShowPage2] = useState(false);
+    const prevStyleConfigRef = useRef({});
+    // ============================================================
 
     const [customSections, setCustomSections] = useState([]);
 
@@ -714,6 +764,54 @@ export default function ResumeEditor({ resume: propsResume }) {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState("Loading...");
 
+    // ⚡ WebGL Snapshot Capture Effect
+    useEffect(() => {
+        const sections = [
+            'header', 'summary', 'skills', 'experience', 'projects', 'education', 'certifications', 'custom'
+        ];
+        sections.forEach(section => {
+            if (!sectionRefs.current[section]) {
+                sectionRefs.current[section] = React.createRef();
+            }
+        });
+
+        const renderSectionData = async (sectionName) => {
+            const ref = sectionRefs.current[sectionName];
+            if (!ref?.current) return;
+
+            const element = ref.current;
+            const currentStyle = styleConfig[sectionName] || {};
+            const prevStyle = prevStyleConfigRef.current[sectionName] || {};
+
+            const hasSnapshot = !!sectionSnapshots[sectionName];
+            // FIX: Always capture if effect runs, as it means either Data or Style changed.
+            // checking only shouldReCapture(style) ignores text updates.
+            const needsCapture = true;
+
+            if (!needsCapture) return;
+
+            try {
+                await document.fonts.ready;
+                element.offsetHeight; // Trigger reflow
+
+                const scanner = new GeometrySnapshot();
+                const snapshot = await scanner.capture(element);
+                setSectionSnapshots(prev => ({ ...prev, [sectionName]: snapshot }));
+            } catch (error) {
+                console.error(`Error rendering ${sectionName}:`, error);
+            }
+        };
+
+        const renderAllSections = async () => {
+            const sections = Object.keys(sectionRefs.current);
+            await Promise.all(sections.map(sectionName => renderSectionData(sectionName)));
+            prevStyleConfigRef.current = JSON.parse(JSON.stringify(styleConfig));
+        };
+
+        const timer = setTimeout(renderAllSections, 100);
+        return () => clearTimeout(timer);
+    }, [selectedTemplate, styleConfig, resumeDetails, skills, experiences, projects, educationList, certifications, customSections]);
+
 
 
 
@@ -805,9 +903,34 @@ export default function ResumeEditor({ resume: propsResume }) {
                 if (config && Object.keys(config).length > 0) {
                     console.log("DEBUG: Switching to CUSTOM template");
                     setSelectedTemplate("custom");
+                    setStyleConfig(config);
+                    // Also attempt to load positions, lines, and shapes if they are in the config
+                    if (config.positions) setSectionPositions(config.positions);
+                    if (config.lines) setLines(config.lines);
+                    if (config.shapes) setBackgroundShapes(config.shapes);
                 } else {
                     console.log("DEBUG: Switching to STANDARD template ID:", data.templateId);
-                    setSelectedTemplate(data.templateId ? String(data.templateId) : "1");
+                    const tId = data.templateId ? String(data.templateId) : "1";
+                    setSelectedTemplate(tId);
+
+                    // Load default config for the template if no custom config exists
+                    const configs = {
+                        "1": MODERN_TEMPLATE_CONFIG,
+                        "2": MODERN_TEMPLATE_CONFIG,
+                        "3": ATS_TEMPLATE_CONFIG,
+                        "7": ATS_TEMPLATE_CONFIG,
+                        "two": TWO_COLUMN_TEMPLATE_CONFIG
+                    };
+                    const templateDefault = configs[tId] || MODERN_TEMPLATE_CONFIG;
+
+                    const newStyle = {};
+                    ["header", "summary", "skills", "experience", "projects", "education", "certifications"].forEach(key => {
+                        if (templateDefault[key]) newStyle[key] = templateDefault[key];
+                    });
+                    setStyleConfig(newStyle);
+                    if (templateDefault.positions) setSectionPositions(templateDefault.positions);
+                    if (templateDefault.lines) setLines(templateDefault.lines);
+                    if (templateDefault.shapes) setBackgroundShapes(templateDefault.shapes);
                 }
 
                 setResumeDetails({
@@ -1011,63 +1134,84 @@ export default function ResumeEditor({ resume: propsResume }) {
     const debouncedData = useDebounce(combinedData, 1500);
 
 
-    const generatePreview = useCallback(async () => {
-        if (isTemplateLoading) return;
-        setGeneratingPreview(true);
-        try {
-            const { pdf } = await import("@react-pdf/renderer");
-            let doc;
-            switch (selectedTemplate) {
-                case "1":
-                    doc = React.createElement(ResumeDocument, debouncedData);
-                    break;
-                case "2":
-                    doc = React.createElement(ModernResumeDocument, debouncedData);
-                    break;
-                case "3":
-                    doc = React.createElement(ATSFriendlyResumeDocument, debouncedData);
-                    break;
-                case "4":
-                    doc = React.createElement(ExecutiveEliteDocument, debouncedData);
-                    break;
-                case "5":
-                    doc = React.createElement(TechInnovatorDocument, debouncedData);
-                    break;
-                case "6":
-                    doc = React.createElement(AcademicScholarDocument, debouncedData);
-                    break;
-                case "7":
-                    doc = React.createElement(CreativeBold, debouncedData);
-                    break;
-                case "8":
-                    doc = React.createElement(NewTemplate, debouncedData);
-                    break;
-                case "custom":
-                    doc = React.createElement(CoustomTemplate, {
-                        ...debouncedData,
-                        styleConfig: resumeDetails.styleConfig || {}
-                    });
-                    break;
-                default:
-                    doc = React.createElement(ResumeDocument, debouncedData);
-            }
 
-            const asPdf = pdf(doc);
-            const blob = await asPdf.toBlob();
-            setPdfBlob(blob);
-        } catch (err) {
-            console.error("Error generating preview:", err);
-            setPdfBlob(null);
-        } finally {
-            setGeneratingPreview(false);
-        }
-    }, [selectedTemplate, debouncedData, sectionTitles, isTemplateLoading]);
+    //pdf generation from react component
+    // const generatePreview = useCallback(async () => {
+    //     if (isTemplateLoading) return;
+    //     setGeneratingPreview(true);
+    //     try {
+    //         const { pdf } = await import("@react-pdf/renderer");
+    //         let doc;
+    //         switch (selectedTemplate) {
+    //             case "1":
+    //                 doc = React.createElement(ResumeDocument, debouncedData);
+    //                 break;
+    //             case "2":
+    //                 doc = React.createElement(ModernResumeDocument, debouncedData);
+    //                 break;
+    //             case "3":
+    //                 doc = React.createElement(ATSFriendlyResumeDocument, debouncedData);
+    //                 break;
+    //             case "4":
+    //                 doc = React.createElement(ExecutiveEliteDocument, debouncedData);
+    //                 break;
+    //             case "5":
+    //                 doc = React.createElement(TechInnovatorDocument, debouncedData);
+    //                 break;
+    //             case "6":
+    //                 doc = React.createElement(AcademicScholarDocument, debouncedData);
+    //                 break;
+    //             case "7":
+    //                 doc = React.createElement(CreativeBold, debouncedData);
+    //                 break;
+    //             case "8":
+    //                 doc = React.createElement(NewTemplate, debouncedData);
+    //                 break;
+    //             case "custom":
+    //                 doc = React.createElement(CoustomTemplate, {
+    //                     ...debouncedData,
+    //                     styleConfig: resumeDetails.styleConfig || {}
+    //                 });
+    //                 break;
+    //             default:
+    //                 doc = React.createElement(ResumeDocument, debouncedData);
+    //         }
 
-    useEffect(() => {
-        if (!isLoadingResume) {
-            generatePreview();
+    //         const asPdf = pdf(doc);
+    //         const blob = await asPdf.toBlob();
+    //         setPdfBlob(blob);
+    //     } catch (err) {
+    //         console.error("Error generating preview:", err);
+    //         setPdfBlob(null);
+    //     } finally {
+    //         setGeneratingPreview(false);
+    //     }
+    // }, [selectedTemplate, debouncedData, sectionTitles, isTemplateLoading]);
+
+
+    const CurrentTemplateDoc = useMemo(() => {
+        if (isTemplateLoading) return null;
+        console.log("️ [RENDER] Creating React Document for template:", selectedTemplate);
+        switch (selectedTemplate) {
+            case "1": return <ResumeDocument {...debouncedData} />;
+            case "2": return <ModernResumeDocument {...debouncedData} />;
+            case "3": return <ATSFriendlyResumeDocument {...debouncedData} />;
+            case "4": return <ExecutiveEliteDocument {...debouncedData} />;
+            case "5": return <TechInnovatorDocument {...debouncedData} />;
+            case "6": return <AcademicScholarDocument {...debouncedData} />;
+            case "7": return <CreativeBold {...debouncedData} />;
+            case "8": return <NewTemplate {...debouncedData} />;
+            case "custom":
+                return <CoustomTemplate
+                    {...debouncedData}
+                    styleConfig={resumeDetails.styleConfig || {}}
+                />;
+            default: return <ResumeDocument {...debouncedData} />;
         }
-    }, [generatePreview, isLoadingResume]);
+    }, [selectedTemplate, debouncedData, isTemplateLoading, resumeDetails.styleConfig]);
+
+
+    // Removal of old generatePreview effects
 
 
     // handling the enhanced resume
@@ -1075,6 +1219,29 @@ export default function ResumeEditor({ resume: propsResume }) {
     const handleTemplateChange = useCallback((newTemplate) => {
         setIsTemplateLoading(true);
         setSelectedTemplate(newTemplate);
+
+        // Sync WebGL Layout
+        const configs = {
+            "1": MODERN_TEMPLATE_CONFIG,
+            "2": MODERN_TEMPLATE_CONFIG,
+            "3": ATS_TEMPLATE_CONFIG,
+            "7": ATS_TEMPLATE_CONFIG,
+            "two": TWO_COLUMN_TEMPLATE_CONFIG
+        };
+
+        const config = configs[newTemplate];
+        if (config) {
+            if (config.positions) setSectionPositions(config.positions);
+            if (config.lines) setLines(config.lines);
+            if (config.shapes) setBackgroundShapes(config.shapes);
+            // Deep clone style config if needed
+            const newStyle = {};
+            ["header", "summary", "skills", "experience", "projects", "education", "certifications"].forEach(key => {
+                if (config[key]) newStyle[key] = JSON.parse(JSON.stringify(config[key]));
+            });
+            if (Object.keys(newStyle).length > 0) setStyleConfig(prev => ({ ...prev, ...newStyle }));
+        }
+
         setTimeout(() => setIsTemplateLoading(false), 100);
     }, []);
 
@@ -1472,6 +1639,118 @@ export default function ResumeEditor({ resume: propsResume }) {
     };
 
 
+    // ==================== MULTI-PAGE LOGIC ====================
+
+    // Calculate elements for a specific page (1 or 2)
+    const getElementsForPage = (pageNumber) => {
+        const PAGE_HEIGHT = 842;
+        const PAGE_OFFSET = (pageNumber - 1) * PAGE_HEIGHT;
+        const pageStart = PAGE_OFFSET;
+        const pageEnd = pageStart + PAGE_HEIGHT;
+
+        const pageSections = Object.entries(sectionPositions)
+            .filter(([_, pos]) => pos.y >= pageStart && pos.y < pageEnd);
+
+        const pageLines = lines.filter(line =>
+            Math.min(line.y1, line.y2) >= pageStart && Math.min(line.y1, line.y2) < pageEnd
+        );
+
+        const pageShapes = backgroundShapes.filter(shape =>
+            shape.y >= pageStart && shape.y < pageEnd
+        );
+
+        return {
+            sections: pageSections,
+            lines: pageLines,
+            shapes: pageShapes
+        };
+    };
+
+    // Auto-flow sections handling pagination
+    const autoFlowSections = () => {
+        let currentY = 50;
+        const spacing = 20;
+        const PAGE_HEIGHT = 842;
+        const PAGE_MARGIN = 50;
+        let currentPage = 1;
+
+        // Sort by current Y position to maintain relative order
+        const sortedSections = Object.keys(sectionPositions).sort((a, b) => {
+            const posA = sectionPositions[a];
+            const posB = sectionPositions[b];
+            return (posA?.y || 0) - (posB?.y || 0);
+        });
+
+        const newPositions = {};
+
+        sortedSections.forEach(sectionName => {
+            const snapshot = sectionSnapshots[sectionName];
+            const height = snapshot ? snapshot.height : 100;
+            const currentX = sectionPositions[sectionName]?.x || 40;
+
+            // Check if we need to break to next page
+            if (currentPage === 1 && (currentY + height) > (PAGE_HEIGHT - PAGE_MARGIN)) {
+                currentPage = 2;
+                currentY = PAGE_HEIGHT + PAGE_MARGIN;
+                setShowPage2(true);
+            }
+
+            newPositions[sectionName] = { x: currentX, y: currentY };
+            currentY += height + spacing;
+        });
+
+        setSectionPositions(newPositions);
+    };
+
+    // Handle selection from WebGL canvas
+    const handleWebGLSelect = (type, id) => {
+        if (type !== 'section') return;
+
+        console.log(`[WebGL] Selected section: ${id}`);
+
+        // 1. Expand the section in UI
+        switch (id) {
+            case 'summary': setShowSummary(true); break;
+            case 'skills': setShowSkills(true); break;
+            case 'experience': setShowExperience(true); break;
+            case 'projects': setShowProjects(true); break;
+            case 'education': setShowEducation(true); break;
+            case 'certifications': setShowCertifications(true); break;
+            // header is always visible
+        }
+
+        // 2. Scroll to the section (with slight delay for React render)
+        setTimeout(() => {
+            const sectionId = `editor-section-${id}`;
+            const element = document.getElementById(sectionId);
+
+            if (element) {
+                // Scroll into view
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                // Focus the first input or textarea
+                const input = element.querySelector('input, textarea');
+                if (input) {
+                    input.focus();
+                }
+
+                // Visual highlight effect
+                element.style.transition = 'box-shadow 0.3s ease';
+                element.style.boxShadow = '0 0 0 2px #3b82f6, 0 4px 6px -1px rgba(0, 0, 0, 0.1)';
+                setTimeout(() => {
+                    element.style.boxShadow = '';
+                }, 2000);
+            } else {
+                console.warn(`[WebGL] DOM element not found: ${sectionId}`);
+            }
+        }, 100);
+    };
+
+    // Calculate page elements for rendering
+    const page1Elements = getElementsForPage(1);
+    const page2Elements = showPage2 ? getElementsForPage(2) : { sections: [], lines: [], shapes: [] };
+
+
     if (isLoadingResume) {
         return (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -1612,7 +1891,7 @@ export default function ResumeEditor({ resume: propsResume }) {
                                     </div>
                                 )}
 
-                                <header className="header">
+                                <header className="header" id="editor-section-header">
                                     <input className="name" value={resumeDetails.name} onChange={(e) => handleResumeDetailChange("name", e.target.value)} placeholder="Full Name" />
                                     <input className="title" value={resumeDetails.title} onChange={(e) => handleResumeDetailChange("title", e.target.value)} placeholder="Professional Title" />
                                     <div className="contact">
@@ -1633,7 +1912,7 @@ export default function ResumeEditor({ resume: propsResume }) {
 
 
                                 {showSummary && (
-                                    <section className="section">
+                                    <section className="section" id="editor-section-summary">
                                         <div className="section-title">
                                             <input className="sec-inputs" type="text" value={sectionTitles.summary} onChange={(e) => {
                                                 setSectionTitles({ ...sectionTitles, summary: e.target.value })
@@ -1644,7 +1923,7 @@ export default function ResumeEditor({ resume: propsResume }) {
                                 )}
 
                                 {showSkills && (
-                                    <section className="section">
+                                    <section className="section" id="editor-section-skills">
                                         <div className="section-title">
                                             <input type="text" className="sec-inputs" value={sectionTitles.skills} onChange={(e) => {
                                                 setSectionTitles({ ...sectionTitles, skills: e.target.value })
@@ -1662,7 +1941,7 @@ export default function ResumeEditor({ resume: propsResume }) {
                                 )}
 
                                 {showExperience && (
-                                    <section className="section">
+                                    <section className="section" id="editor-section-experience">
                                         <div className="section-title">
                                             <input type="text" value={sectionTitles.experience} className="sec-inputs"
                                                 onChange={(e) => {
@@ -1693,7 +1972,7 @@ export default function ResumeEditor({ resume: propsResume }) {
                                 )}
 
                                 {showProjects && (
-                                    <section className="section">
+                                    <section className="section" id="editor-section-projects">
                                         <div className="section-title">
                                             <input className="sec-inputs" type="text" value={sectionTitles.projects} onChange={(e) => {
                                                 setSectionTitles({ ...sectionTitles, projects: e.target.value })
@@ -1724,7 +2003,7 @@ export default function ResumeEditor({ resume: propsResume }) {
                                 )}
 
                                 {showEducation && (
-                                    <section className="section">
+                                    <section className="section" id="editor-section-education">
                                         <div className="section-title">
                                             <input type="text" className="sec-inputs" value={sectionTitles.education} onChange={(e) => {
                                                 setSectionTitles({ ...sectionTitles, education: e.target.value })
@@ -1751,7 +2030,7 @@ export default function ResumeEditor({ resume: propsResume }) {
                                 )}
 
                                 {showCertifications && (
-                                    <section className="section">
+                                    <section className="section" id="editor-section-certifications">
                                         <div className="section-title">
                                             <input type="text" className="sec-inputs" value={sectionTitles.certifications} onChange={(e) => {
                                                 setSectionTitles({ ...sectionTitles, certifications: e.target.value })
@@ -1832,9 +2111,96 @@ export default function ResumeEditor({ resume: propsResume }) {
 
 
                             <div className="preview-content">
-                                <ErrorBoundary>
-                                    <FatbricPDF pdfBlob={pdfBlob} />
-                                </ErrorBoundary>
+                                <div className="canvas-scroll-wrapper" style={{ overflow: 'auto', maxHeight: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+                                    {/* Page 1 */}
+                                    <div className="canvas-wrapper" style={{ position: 'relative', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
+                                        <ErrorBoundary>
+                                            <WebGLStage
+                                                width={595}
+                                                height={842}
+                                                shapes={page1Elements.shapes}
+                                                lines={page1Elements.lines}
+                                                sections={page1Elements.sections}
+                                                snapshot={sectionSnapshots}
+                                                onDragEnd={(type, id, pos) => {
+                                                    if (type === 'section') {
+                                                        setSectionPositions(prev => ({ ...prev, [id]: pos }));
+                                                    }
+                                                    // Add other handlers if needed for shapes/lines
+                                                }}
+                                                onSelect={handleWebGLSelect}
+                                                isAnimating={false}
+                                            />
+                                        </ErrorBoundary>
+                                        <div style={{ position: 'absolute', bottom: '-25px', width: '100%', textAlign: 'center', color: '#6b7280', fontSize: '12px', fontWeight: '500' }}>Page 1</div>
+                                    </div>
+
+                                    {/* Page 2 */}
+                                    <div
+                                        className="canvas-wrapper"
+                                        style={{
+                                            position: 'relative',
+                                            display: showPage2 ? 'block' : 'none',
+                                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                                        }}
+                                    >
+                                        <ErrorBoundary>
+                                            <WebGLStage
+                                                width={595}
+                                                height={842}
+                                                shapes={page2Elements.shapes}
+                                                lines={page2Elements.lines}
+                                                sections={page2Elements.sections}
+                                                snapshot={sectionSnapshots}
+                                                yOffset={842}
+                                                onDragEnd={(type, id, pos) => {
+                                                    // Adjust for Page 2 offset
+                                                    const adjustedPos = { ...pos, y: pos.y + 842 };
+                                                    if (type === 'section') {
+                                                        setSectionPositions(prev => ({ ...prev, [id]: adjustedPos }));
+                                                    }
+                                                }}
+                                                onSelect={handleWebGLSelect}
+                                                isAnimating={false}
+                                            />
+                                        </ErrorBoundary>
+                                        <div style={{ position: 'absolute', bottom: '-25px', width: '100%', textAlign: 'center', color: '#6b7280', fontSize: '12px', fontWeight: '500' }}>Page 2</div>
+                                    </div>
+                                </div>
+
+                                <div className="zoom-controls" style={{ marginTop: '20px', display: 'flex', justifyContent: 'center', gap: '10px' }}>
+                                    {/* Add Zoom controls here if needed, already in B3 logic */}
+                                    <button
+                                        onClick={() => setShowPage2(!showPage2)}
+                                        className={`btn-zoom-reset ${showPage2 ? 'active' : ''}`}
+                                        style={{
+                                            padding: '6px 12px',
+                                            borderRadius: '4px',
+                                            border: '1px solid #d1d5db',
+                                            background: showPage2 ? '#3b82f6' : 'white',
+                                            color: showPage2 ? 'white' : '#374151',
+                                            fontSize: '12px',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        {showPage2 ? 'Show 1 Page' : 'Show 2 Pages'}
+                                    </button>
+                                    <button
+                                        onClick={autoFlowSections}
+                                        className="btn-primary"
+                                        style={{
+                                            padding: '6px 12px',
+                                            borderRadius: '4px',
+                                            border: 'none',
+                                            background: '#8b5cf6',
+                                            color: 'white',
+                                            fontSize: '12px',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        ⚡ Auto-Flow
+                                    </button>
+                                </div>
                             </div>
 
 
@@ -1862,8 +2228,70 @@ export default function ResumeEditor({ resume: propsResume }) {
                 <div className="resume-editor-main">
 
 
+                </div>
 
+                {/* Hidden rendering area for WebGL Capture */}
+                <div className="hidden-render" style={{
+                    position: 'absolute',
+                    right: '220px',
+                    top: '0',
+                    visibility: 'hidden',
+                    width: '595px',
+                    height: '842px',
+                    background: 'white',
+                    padding: '0',
+                    zIndex: 10000000,
+                    pointerEvents: 'none',
+                    transform: 'scale(1)',
+                    transformOrigin: 'top right',
+                    overflow: 'hidden'
+                }}>
+                    {(() => {
+                        const TemplateComponents = {
+                            header: FlexibleHeaderSection,
+                            summary: FlexibleSummarySection,
+                            skills: FlexibleSkillsSection,
+                            experience: FlexibleExperienceSection,
+                            projects: FlexibleProjectsSection,
+                            education: FlexibleEducationSection,
+                            certifications: FlexibleCertificationsSection,
+                            contact: FlexibleContactSection,
+                            custom: FlexibleCustomSection
+                        };
 
+                        const propsMap = {
+                            header: { resumeDetails, styleConfig },
+                            summary: { summary: resumeDetails.summary, styleConfig },
+                            skills: { skills, styleConfig },
+                            experience: { experiences, styleConfig },
+                            projects: { projects, styleConfig },
+                            education: { educationList, styleConfig },
+                            certifications: { certifications, styleConfig },
+                            contact: { resumeDetails, styleConfig },
+                            custom: { customSections, styleConfig }
+                        };
+
+                        return Object.entries(TemplateComponents).map(([key, Component]) => {
+                            if (!sectionRefs.current[key]) sectionRefs.current[key] = React.createRef();
+                            return (
+                                <div
+                                    key={key}
+                                    ref={sectionRefs.current[key]}
+                                    style={{
+                                        width: styleConfig[key]?.container?.width || '100%',
+                                        height: styleConfig[key]?.container?.height || 'auto',
+                                        minHeight: styleConfig[key]?.container?.height || 'auto',
+                                        maxHeight: styleConfig[key]?.container?.height || 'none',
+                                        overflow: 'visible',
+                                        boxSizing: 'border-box',
+                                        position: 'relative',
+                                        minWidth: 0,
+                                    }}>
+                                    <Component {...propsMap[key]} />
+                                </div>
+                            );
+                        });
+                    })()}
                 </div>
 
 
