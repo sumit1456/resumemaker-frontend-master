@@ -217,21 +217,32 @@ const UIEditor = () => {
   const [isAnimating, setIsAnimating] = useState(false); // TEST ANIMATION STATE
 
   // Mobile detection effect
+  // Mobile detection & Viewport tracking
+  const [viewportWidth, setViewportWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+
   useEffect(() => {
-    const checkMobile = () => {
-      const mobile = window.innerWidth <= 768;
+    const handleResize = () => {
+      const width = window.innerWidth;
+      setViewportWidth(width);
+      const mobile = width <= 768;
       setIsMobile(mobile);
+
+      // If entering mobile mode, reset zoom to 1 (we rely on native stage scaling)
       if (mobile) {
-        setActiveTab('preview'); // Default to preview for clean look
-        setZoom(0.6); // 🔎 Default zoom to fit mobile screen
-      } else {
+        setActiveTab('preview');
         setZoom(1.0);
       }
     };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+
+    handleResize(); // Init
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Calculate Responsive Canvas Props
+  const canvasTargetWidth = isMobile ? (viewportWidth - 30) : 595;
+  const canvasScale = canvasTargetWidth / 595;
+  const canvasTargetHeight = 842 * canvasScale;
 
 
 
@@ -1561,8 +1572,9 @@ const UIEditor = () => {
             {/* Page 1 */}
             <div className="canvas-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
               <WebGLStage
-                width={595}
-                height={842}
+                width={canvasTargetWidth}
+                height={canvasTargetHeight}
+                stageScale={canvasScale}
                 shapes={page1Elements.shapes}
                 lines={page1Elements.lines}
                 sections={page1Elements.sections}
@@ -1607,8 +1619,9 @@ const UIEditor = () => {
               }}
             >
               <WebGLStage
-                width={595}
-                height={842}
+                width={canvasTargetWidth}
+                height={canvasTargetHeight}
+                stageScale={canvasScale}
                 shapes={page2Elements.shapes}
                 lines={page2Elements.lines}
                 sections={page2Elements.sections}

@@ -2503,7 +2503,8 @@ const WebGLStage = forwardRef(({
     onHeaderContainerReady = null,
     onSkillsContainerReady = null,
     className = "",
-    style = {}
+    style = {},
+    stageScale = 1
 }, ref) => {
     const containerRef = useRef(null);
     const pixiApp = useRef(null);
@@ -2536,11 +2537,15 @@ const WebGLStage = forwardRef(({
             const app = new PIXI_LIB.Application();
 
             try {
+                // Calculate optimal resolution for mobile
+                const pixelRatio = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+                const mobileResolution = Math.max(pixelRatio, 2); // Ensure at least 2x on mobile for sharpness
+
                 await app.init({
                     width,
                     height,
                     background,
-                    resolution: isMobile ? 1.5 : resolution,
+                    resolution: isMobile ? mobileResolution : resolution,
                     antialias: true,
                     preference: 'webgl',
                     autoDensity: true
@@ -2567,15 +2572,24 @@ const WebGLStage = forwardRef(({
                 app.stage.addChild(layers.current.sections);
                 app.stage.addChild(layers.current.lines);
 
+                // Apply Stage Scaling
+                if (stageScale !== 1) {
+                    app.stage.scale.set(stageScale);
+                }
+
                 // ✂️ CLIPPING: Strictly mask the stage to page dimensions
+                // Mask needs to be in logical coordinates if it's a child of stage? 
+                // No, mask is usually applied in global space or local space of the object.
+                // Here we want to mask the VIEWPORT size.
                 const mask = new PIXI_LIB.Graphics();
-                mask.rect(0, 0, width, height).fill(0xffffff);
+                mask.rect(0, 0, width / stageScale, height / stageScale).fill(0xffffff);
                 app.stage.mask = mask;
                 app.stage.addChild(mask);
 
                 // Setup Interaction
                 app.stage.interactive = true;
-                app.stage.hitArea = app.screen;
+                // Hit area should be the unscaled logical size to cover the whole content
+                app.stage.hitArea = new PIXI_LIB.Rectangle(0, 0, width / stageScale, height / stageScale);
 
                 bindEvents(app);
 

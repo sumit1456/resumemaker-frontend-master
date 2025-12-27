@@ -426,6 +426,20 @@ export default function ResumeEditor({ resume: propsResume }) {
     const [showEducation, setShowEducation] = useState(true);
     const [showCertifications, setShowCertifications] = useState(true);
 
+    // ==================== RESPONSIVE CANVAS STATE ====================
+    const [viewportWidth, setViewportWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+
+    useEffect(() => {
+        const handleResize = () => setViewportWidth(window.innerWidth);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    const isMobileView = viewportWidth < 768;
+    const canvasTargetWidth = isMobileView ? (viewportWidth - 30) : 595;
+    const canvasScale = canvasTargetWidth / 595;
+    const canvasTargetHeight = 842 * canvasScale;
+
     // ==================== WebGL ENGINE STATE ====================
     const [sectionSnapshots, setSectionSnapshots] = useState({});
     const [sectionPositions, setSectionPositions] = useState(() => {
@@ -2237,8 +2251,9 @@ export default function ResumeEditor({ resume: propsResume }) {
                                     <div className="canvas-wrapper" style={{ position: 'relative', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
                                         <ErrorBoundary>
                                             <WebGLStage
-                                                width={595}
-                                                height={842}
+                                                width={canvasTargetWidth}
+                                                height={canvasTargetHeight}
+                                                stageScale={canvasScale}
                                                 shapes={page1Elements.shapes}
                                                 lines={page1Elements.lines}
                                                 sections={page1Elements.sections}
@@ -2267,8 +2282,9 @@ export default function ResumeEditor({ resume: propsResume }) {
                                     >
                                         <ErrorBoundary>
                                             <WebGLStage
-                                                width={595}
-                                                height={842}
+                                                width={canvasTargetWidth}
+                                                height={canvasTargetHeight}
+                                                stageScale={canvasScale}
                                                 shapes={page2Elements.shapes}
                                                 lines={page2Elements.lines}
                                                 sections={page2Elements.sections}
