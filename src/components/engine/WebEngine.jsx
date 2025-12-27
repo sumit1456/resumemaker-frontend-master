@@ -2520,7 +2520,8 @@ const WebGLStage = forwardRef(({
         startX: 0,
         startY: 0,
         dragStartX: 0,
-        dragStartY: 0
+        dragStartY: 0,
+        wasDragging: false
     });
 
     // --- PIXI INITIALIZATION ---
@@ -2565,6 +2566,12 @@ const WebGLStage = forwardRef(({
                 app.stage.addChild(layers.current.shapes);
                 app.stage.addChild(layers.current.sections);
                 app.stage.addChild(layers.current.lines);
+
+                // ✂️ CLIPPING: Strictly mask the stage to page dimensions
+                const mask = new PIXI_LIB.Graphics();
+                mask.rect(0, 0, width, height).fill(0xffffff);
+                app.stage.mask = mask;
+                app.stage.addChild(mask);
 
                 // Setup Interaction
                 app.stage.interactive = true;
@@ -2623,11 +2630,18 @@ const WebGLStage = forwardRef(({
                 }
                 session.active = false;
                 session.target = null;
+
+                // 🛡️ Prevent immediate de-selection on touch release
+                session.wasDragging = true;
+                setTimeout(() => {
+                    if (dragSession.current) dragSession.current.wasDragging = false;
+                }, 150);
             };
 
             app.stage.on('pointerup', endDrag);
             app.stage.on('pointerupoutside', endDrag);
             app.stage.on('pointerdown', (e) => {
+                if (dragSession.current.wasDragging) return;
                 if (e.target === app.stage) onSelect(null, null);
             });
         };

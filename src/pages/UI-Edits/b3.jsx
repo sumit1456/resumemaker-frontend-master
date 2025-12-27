@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
+import React, { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { setCurrentResume, setCurrentResumeId } from "../../redux/store.js";
@@ -13,9 +13,9 @@ import {
   FlexibleHeaderSection, FlexibleProjectsSection,
   FlexibleSkillsSection, FlexibleSummarySection
 } from "./BaseTemplates.jsx";
-import { PixiRenderer, GeometrySnapshot, HybridRenderer } from "./WebgEngine4.jsx";
-import * as PIXI from 'pixi.js';
+import { GeometrySnapshot, WebGLStage } from "../../components/engine/WebEngine.jsx";
 import { jsPDF } from "jspdf";
+import * as PIXI from 'pixi.js';
 
 
 
@@ -32,721 +32,9 @@ const normalizeColorForInput = (color) => {
   return color;
 };
 
-const WebGLStage = forwardRef(({ width, height, shapes, lines, sections, sectionSnapshots, onDragEnd, onSelect, selectedId, type, isAnimating, onHeaderContainerReady, headerAnimating, headerAnimationRef, setHeaderAnimating, skillsAnimating, skillsAnimationRef, setSkillsAnimating, onSkillsContainerReady, yOffset = 0 }, ref) => {
-  // Device-specific config (Calculated once per render)
-  const isMobile = window.innerWidth < 768;
-  const resolution = isMobile ? 1.5 : 2;
+// Internal WebGLStage removed - now using standalone version from components/engine/WebEngine.jsx
 
-  const containerRef = useRef(null);
-  const pixiApp = useRef(null);
-  const [initTrigger, setInitTrigger] = useState(0);
 
-  // Layer Refs to avoid index-based access
-  const layers = useRef({
-    shapes: null,
-    sections: null,
-    lines: null
-  });
-  const sharedRenderer = useRef(null);
-
-  // Robust Drag Session Ref
-  const dragSession = useRef({
-    active: false,
-    type: null,
-    id: null,
-    target: null, // The Pixi Graphics/Container object
-    offset: { x: 0, y: 0 },
-    startX: 0,
-    startY: 0,
-    dragStartX: 0,
-    dragStartY: 0
-  });
-
-  useEffect(() => {
-    let isMounted = true;
-    let app;
-
-    const initPixi = async () => {
-      if (!containerRef.current || !isMounted) return;
-
-      const PIXI_LIB = PIXI || window.PIXI;
-      // Initialize PixiJS Application (v8 style)
-      app = new PIXI_LIB.Application();
-
-      try {
-        await app.init({
-          width: width,
-          height: height,
-          background: '#ffffff',
-          resolution: resolution,
-          antialias: true,
-          preference: 'webgl', // 🚀 Force WebGL preference in v8
-        });
-
-        // Check if unmounted during async init
-        if (!isMounted) {
-          console.log('🛑 [WebGL] Unmounted during init - cleaning up');
-          app.destroy(true, { children: true, texture: true, baseTexture: true });
-          return;
-        }
-
-        // Apply 30% reduction scale if on mobile
-        if (isMobile) {
-          app.stage.scale.set(0.8);
-        }
-
-        console.log(`[WebGL] Initialized. Mobile: ${isMobile}, Res: ${resolution}`);
-
-        pixiApp.current = app;
-
-        // Verify container still exists before appending
-        if (containerRef.current) {
-          containerRef.current.innerHTML = ''; // Clear existing canvas if any
-          containerRef.current.appendChild(app.canvas || app.view);
-        } else {
-          app.destroy(true);
-          return;
-        }
-
-        // Create layers
-        const backgroundLayer = new PIXI.Container(); // 🆕 Explicit White Background
-        const shapesLayer = new PIXI.Container();
-        const linesLayer = new PIXI.Container();
-        const sectionsLayer = new PIXI.Container();
-        sectionsLayer.sortableChildren = true; // 🎯 Enable Z-index sorting
-
-        layers.current.background = backgroundLayer;
-        layers.current.shapes = shapesLayer;
-        layers.current.sections = sectionsLayer;
-        layers.current.lines = linesLayer;
-
-        app.stage.addChild(backgroundLayer);
-        app.stage.addChild(shapesLayer);
-        app.stage.addChild(sectionsLayer);
-        app.stage.addChild(linesLayer);
-
-
-        // ⬜ Add White Background Graphic immediately
-        const bgValues = { width: width / (isMobile ? 1 : 1), height: height / (isMobile ? 1 : 1) };
-        const bgGraphic = new PIXI.Graphics();
-        bgGraphic.rect(0, 0, bgValues.width, bgValues.height);
-        bgGraphic.fill({ color: 0xffffff, alpha: 1 });
-        backgroundLayer.addChild(bgGraphic);
-
-        // Global Event Listeners (Stage-level) to ensure "Pick once. Move forever"
-        app.stage.interactive = true;
-        app.stage.hitArea = app.screen;
-
-        // ... (Drag logic remains same, can be passed back in via closures) ...
-        bindDragEvents(app, sectionsLayer, shapesLayer);
-
-        // Force a re-render once initialized
-        setInitTrigger(prev => prev + 1);
-
-      } catch (err) {
-        console.error("PixiJS init failed:", err);
-      }
-    };
-
-    // Helper to bind events (cleaner code)
-    const bindDragEvents = (appInstance, sectionsLayer, shapesLayer) => {
-      appInstance.stage.on('pointermove', (e) => {
-        if (dragSession.current.active && dragSession.current.target) {
-          const session = dragSession.current;
-          // CHECK TARGET EXISTENCE
-          if (!session.target || session.target.destroyed) {
-            console.warn('⚠️ Drag target destroyed during move');
-            session.active = false;
-            return;
-          }
-
-          const newPos = e.data.getLocalPosition(appInstance.stage);
-
-          // Calculate new position based on original offset
-          const deltaX = newPos.x - session.dragStartX;
-          const deltaY = newPos.y - session.dragStartY;
-
-          const nextX = session.startX + deltaX;
-          const nextY = session.startY + deltaY;
-
-          session.target.x = nextX;
-          session.target.y = nextY;
-
-          // 😡 ANGRY SECTION EFFECT (Collision + Push)
-          if (session.type === 'section') {
-            // Ensure layer still exists
-            if (!sectionsLayer || sectionsLayer.destroyed) return;
-
-            const dragged = session.target;
-            // AABB Collision Check against other sections
-            const otherSections = sectionsLayer.children.filter(c => c !== dragged);
-
-            otherSections.forEach(other => {
-              const b1 = dragged.getBounds(); // using Pixi bounds (includes scale)
-              const b2 = other.getBounds();
-
-              // Simple overlap check
-              const isOverlapping = (
-                b1.x < b2.x + b2.width &&
-                b1.x + b1.width > b2.x &&
-                b1.y < b2.y + b2.height &&
-                b1.y + b1.height > b2.y
-              );
-
-              if (isOverlapping) {
-                // 🔴 TINT RED (Angry)
-                other.tint = 0xFF9999;
-
-                // 📳 SHAKE (Vibrate)
-                const jitter = 2;
-                other.x += (Math.random() - 0.5) * jitter;
-                other.y += (Math.random() - 0.5) * jitter;
-
-                // ⬇️⬆️⬅️➡️ MULTI-DIRECTIONAL PUSH PHYSICS
-                // Calculate centers to determine push direction
-                const c1 = { x: b1.x + b1.width / 2, y: b1.y + b1.height / 2 };
-                const c2 = { x: b2.x + b2.width / 2, y: b2.y + b2.height / 2 };
-
-                const dx = c2.x - c1.x;
-                const dy = c2.y - c1.y;
-
-                // Determine dominant axis
-                if (Math.abs(dy) > Math.abs(dx)) {
-                  // Vertical Push
-                  if (dy > 0) {
-                    // Dragged is above, push target DOWN
-                    other.y += 5;
-                  } else {
-                    // Dragged is below, push target UP
-                    other.y -= 5;
-                  }
-                } else {
-                  // Horizontal Push
-                  if (dx > 0) {
-                    // Dragged is left, push target RIGHT
-                    other.x += 5;
-                  } else {
-                    // Dragged is right, push target LEFT
-                    other.x -= 5;
-                  }
-                }
-
-              } else {
-                // Reset tint if not colliding
-                other.tint = 0xFFFFFF;
-              }
-            });
-          }
-        }
-      });
-
-      const endDrag = () => {
-        if (dragSession.current.active) {
-          const session = dragSession.current;
-          if (!session.target || session.target.destroyed) {
-            session.active = false;
-            return;
-          }
-
-          const finalX = Math.round(session.target.x);
-          const finalY = Math.round(session.target.y);
-
-          // Cleanup tints
-          if (session.type === 'section' && layers.current.sections && !layers.current.sections.destroyed) {
-            layers.current.sections.children.forEach(c => c.tint = 0xFFFFFF);
-          }
-
-          console.log(`[DRAG] Global End: ${session.type} ${session.id} at (${finalX}, ${finalY})`);
-
-          // 🎯 LOG HEADER SECTION FINAL POSITION AFTER DRAG
-          if (session.id === 'header') {
-            // (Logs omitted for brevity)
-          }
-
-          // Capture new positions of ALL sections (since others might have been pushed)
-          if (session.type === 'section') {
-            const allPositions = {};
-            if (layers.current.sections && !layers.current.sections.destroyed) {
-              layers.current.sections.children.forEach(c => {
-                if (c._sectionName) {
-                  allPositions[c._sectionName] = { x: Math.round(c.x), y: Math.round(c.y) };
-                }
-              });
-            }
-            // Pass batch updates to callback
-            onDragEnd(session.type, session.id, { x: finalX, y: finalY }, allPositions);
-          } else {
-            onDragEnd(session.type, session.id, { x: finalX, y: finalY });
-          }
-          session.active = false;
-          session.target = null;
-        }
-      };
-
-      appInstance.stage.on('pointerup', endDrag);
-      appInstance.stage.on('pointerupoutside', endDrag);
-
-      // Background click to deselect
-      appInstance.stage.on('pointerdown', (e) => {
-        // Only deselect if clicking directly on stage (not on children)
-        if (e.target === appInstance.stage) {
-          onSelect(null, null); // Deselect all
-        }
-      });
-    }
-
-    initPixi();
-
-    return () => {
-      isMounted = false;
-
-      // Cleanup previous app instance
-      const cleanupApp = app || pixiApp.current;
-
-      if (cleanupApp) {
-        console.log('🧹 [WebGL] Cleaning up Pixi instance');
-        try {
-          // Remove from container first
-          if (cleanupApp.canvas && cleanupApp.canvas.parentElement) {
-            cleanupApp.canvas.parentElement.removeChild(cleanupApp.canvas);
-          } else if (cleanupApp.view && cleanupApp.view.parentElement) {
-            cleanupApp.view.parentElement.removeChild(cleanupApp.view);
-          }
-
-          // Robust destruction check
-          if (cleanupApp.renderer) {
-            // Destroy everything: children, texture, baseTexture, context
-            cleanupApp.destroy(true, { children: true, texture: true, baseTexture: true });
-          }
-        } catch (e) {
-          console.warn("PixiJS destruction warning:", e);
-        }
-        pixiApp.current = null;
-        layers.current = { shapes: null, sections: null, lines: null };
-      }
-    };
-  }, [width, height]);
-
-  // Expose Pixi App to Parent
-  useImperativeHandle(ref, () => ({
-    app: pixiApp.current,
-    container: containerRef.current
-  }));
-
-  const parseColor = (cssColor) => {
-    if (!cssColor || cssColor === 'transparent') return { hex: 0xffffff, alpha: 0 };
-
-    // Improved parser from WebglEngine
-    const PIXI_LIB = PIXI || window.PIXI;
-
-    // 1. Hex
-    if (cssColor.startsWith('#')) {
-      const hex = cssColor.slice(1);
-      if (hex.length === 3) {
-        const fullHex = hex.split('').map(c => c + c).join('');
-        return { hex: parseInt(fullHex, 16), alpha: 1 };
-      }
-      if (hex.length === 8) {
-        return { hex: parseInt(hex.slice(0, 6), 16), alpha: parseInt(hex.slice(6, 8), 16) / 255 };
-      }
-      return { hex: parseInt(hex, 16), alpha: 1 };
-    }
-
-    // 2. RGB/RGBA
-    if (cssColor.startsWith('rgb')) {
-      const values = cssColor.match(/[\d.]+/g);
-      if (values) {
-        const r = parseInt(values[0]);
-        const g = parseInt(values[1]);
-        const b = parseInt(values[2]);
-        const a = values[3] !== undefined ? parseFloat(values[3]) : 1;
-        return { hex: (r << 16) | (g << 8) | b, alpha: a };
-      }
-    }
-
-    // 3. Named colors (Minimal set)
-    const colors = { red: 0xff0000, blue: 0x0000ff, green: 0x00ff00, black: 0x000000, white: 0xffffff, gray: 0x888888 };
-    if (colors[cssColor.toLowerCase()]) {
-      return { hex: colors[cssColor.toLowerCase()], alpha: 1 };
-    }
-
-    return { hex: 0xcccccc, alpha: 1 };
-  };
-
-  useEffect(() => {
-    let active = true;
-    const app = pixiApp.current;
-    if (!app || !app.stage) return;
-
-    const shapesLayer = layers.current.shapes;
-    const sectionsLayer = layers.current.sections;
-    const linesLayer = layers.current.lines;
-
-    if (!shapesLayer || !sectionsLayer || !linesLayer) return;
-
-    if (!sharedRenderer.current) {
-      sharedRenderer.current = new PixiRenderer(null, {
-        width: width,
-        height: height,
-        resolution: resolution
-      });
-    }
-
-    const renderAll = async () => {
-      if (!active) return;
-
-      // � Memory Safeguard: Purge cache if it grows too large (indicates template switching/heavy editing)
-      if (sharedRenderer.current && sharedRenderer.current.textureCache.size > 200) {
-        console.log(`[PIXI MEMORY] Purging sharedRenderer texture cache (${sharedRenderer.current.textureCache.size} entries)`);
-        sharedRenderer.current.purgeCache();
-      }
-
-      // 🚀 SURGICAL CLEANUP: Destroy old graphics to free GPU memory
-      // Include backgroundLayer in cleanup
-      [layers.current.background, shapesLayer, sectionsLayer, linesLayer].forEach(layer => {
-        if (layer) {
-          const children = [...layer.children];
-          children.forEach(child => {
-            if (sharedRenderer.current) {
-              sharedRenderer.current.destroyDisplayObject(child);
-            } else {
-              child.destroy({ children: true });
-            }
-          });
-          layer.removeChildren();
-        }
-      });
-
-      // ⬜ Re-draw White Background Graphic (Handles resizing)
-      if (layers.current.background) {
-        const bgValues = { width: width / (isMobile ? 0.8 : 1), height: height / (isMobile ? 0.8 : 1) };
-        const bgGraphic = new PIXI.Graphics();
-        bgGraphic.rect(0, 0, bgValues.width, bgValues.height);
-        bgGraphic.fill({ color: 0xffffff, alpha: 1 });
-        layers.current.background.addChild(bgGraphic);
-      }
-
-      // Render Shapes
-      shapes.forEach(shape => {
-        const graphics = new PIXI.Graphics();
-        const colorData = parseColor(shape.color);
-
-        if (graphics.fill) {
-          if (shape.type === 'circle') {
-            graphics.circle(shape.width / 2, shape.height / 2, shape.width / 2);
-          } else {
-            graphics.rect(0, 0, shape.width, shape.height);
-          }
-          graphics.fill({ color: colorData.hex, alpha: colorData.alpha });
-        } else {
-          graphics.beginFill(colorData.hex, colorData.alpha);
-          if (shape.type === 'circle') {
-            graphics.drawCircle(shape.width / 2, shape.height / 2, shape.width / 2);
-          } else {
-            graphics.drawRect(0, 0, shape.width, shape.height);
-          }
-          graphics.endFill();
-        }
-        graphics.x = shape.x;
-        graphics.y = shape.y - yOffset;
-        graphics._id = shape.id;
-
-        graphics.interactive = true;
-        graphics.buttonMode = true;
-
-        graphics.on('pointerdown', (event) => {
-          onSelect('shape', shape.id);
-          const pointerPos = event.data.getLocalPosition(graphics.parent);
-          dragSession.current = {
-            active: true,
-            type: 'shape',
-            id: shape.id,
-            target: graphics,
-            startX: graphics.x,
-            startY: graphics.y,
-            dragStartX: pointerPos.x,
-            dragStartY: pointerPos.y
-          };
-        });
-
-        shapesLayer.addChild(graphics);
-      });
-
-      // Render Lines
-      lines.forEach(line => {
-        const graphics = new PIXI.Graphics();
-        const colorData = parseColor(line.color);
-        const thickness = line.thickness || 1;
-
-        if (graphics.stroke) {
-          graphics.moveTo(line.x1, line.y1 - yOffset);
-          graphics.lineTo(line.x2, line.y2 - yOffset);
-          graphics.stroke({ color: colorData.hex, width: thickness, alpha: colorData.alpha });
-        } else {
-          graphics.lineStyle(thickness, colorData.hex, colorData.alpha);
-          graphics.moveTo(line.x1, line.y1 - yOffset);
-          graphics.lineTo(line.x2, line.y2 - yOffset);
-        }
-
-        graphics.interactive = true;
-        graphics.buttonMode = true;
-        graphics.hitArea = new PIXI.Rectangle(
-          Math.min(line.x1, line.x2) - 3, // Tighter hitarea (3px instead of 5px)
-          Math.min(line.y1, line.y2) - 3,
-          Math.abs(line.x2 - line.x1) + 6,
-          Math.abs(line.y2 - line.y1) + 6
-        );
-        graphics.on('pointerdown', () => {
-          console.log(`[CLICK] Line clicked: ${line.id} (${line.label})`);
-          onSelect('line', line.id);
-        });
-
-        linesLayer.addChild(graphics);
-      });
-
-      // Render Sections
-      for (const [sectionName, pos] of sections) {
-        const snapshot = sectionSnapshots[sectionName];
-        if (snapshot) {
-          const sectionContainer = new PIXI.Container();
-          sectionContainer.x = pos.x;
-          sectionContainer.y = pos.y - yOffset;
-          sectionContainer.interactive = true;
-          sectionContainer.buttonMode = true;
-          sectionContainer.cursor = 'move';
-          sectionContainer._sectionName = sectionName;
-
-          // 🎯 Ensure entire section area is clickable, even if transparent
-          // We add a 5px padding to make it easier to grab the edges
-          sectionContainer.hitArea = new PIXI.Rectangle(-5, -5, snapshot.width + 10, snapshot.height + 10);
-
-          // 🎯 Bring selected section to front
-          sectionContainer.zIndex = selectedId === sectionName ? 100 : 0;
-
-          // 🎯 LOG HEADER SECTION COORDINATES FOR GPU ANIMATION
-          if (sectionName === 'header' || sectionName === 'education') {
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            console.log(`🎨 ${sectionName.toUpperCase()} SECTION - WebGL Rendering Coordinates`);
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            console.log('📍 Position:');
-            console.log(`   X: ${pos.x}px`);
-            console.log(`   Y: ${pos.y}px`);
-            console.log('📐 Dimensions:');
-            console.log(`   Width: ${snapshot.width}px`);
-            console.log(`   Height: ${snapshot.height}px`);
-            console.log('🔲 Bounding Box:');
-            console.log(`   Top-Left: (${pos.x}, ${pos.y})`);
-            console.log(`   Top-Right: (${pos.x + snapshot.width}, ${pos.y})`);
-            console.log(`   Bottom-Left: (${pos.x}, ${pos.y + snapshot.height})`);
-            console.log(`   Bottom-Right: (${pos.x + snapshot.width}, ${pos.y + snapshot.height})`);
-            console.log('🎯 Container Properties:');
-            console.log(`   Container X: ${sectionContainer.x}`);
-            console.log(`   Container Y: ${sectionContainer.y}`);
-            console.log(`   Interactive: ${sectionContainer.interactive}`);
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-          }
-
-          // 🎬 Store header container reference for animations
-          if (sectionName === 'header' && onHeaderContainerReady) {
-            onHeaderContainerReady(sectionContainer);
-          }
-          if (sectionName === 'skills' && onSkillsContainerReady) {
-            onSkillsContainerReady(sectionContainer);
-          }
-
-          const borderInset = 5;
-          const selectionBorder = new PIXI.Graphics();
-          if (selectionBorder.stroke) {
-            selectionBorder.rect(-borderInset, -borderInset, snapshot.width + borderInset * 2, snapshot.height + borderInset * 2);
-            selectionBorder.stroke({ color: 0x3b82f6, width: 2, alpha: 0.8 });
-          } else {
-            selectionBorder.lineStyle(2, 0x3b82f6, 0.8);
-            selectionBorder.drawRect(-borderInset, -borderInset, snapshot.width + borderInset * 2, snapshot.height + borderInset * 2);
-          }
-          selectionBorder.name = '_selectionBorder';
-          selectionBorder.visible = selectedId === sectionName;
-          sectionContainer.addChild(selectionBorder);
-
-          // 🎯 Visual feedback on hover
-          sectionContainer.on('pointerover', () => {
-            sectionContainer.cursor = 'pointer';
-            if (selectionBorder) selectionBorder.visible = true;
-          });
-          sectionContainer.on('pointerout', () => {
-            if (selectionBorder && selectedId !== sectionName) selectionBorder.visible = false;
-          });
-
-          sectionContainer.on('pointerdown', (event) => {
-            console.log(`[CLICK] Section: ${sectionName} | Pos: (${pos.x}, ${pos.y}) | Snap: ${snapshot.width}x${snapshot.height}`);
-            event.stopPropagation();
-
-            const pointerPos = event.data.getLocalPosition(sectionContainer.parent);
-            dragSession.current = {
-              active: true,
-              type: 'section',
-              id: sectionName,
-              target: sectionContainer,
-              startX: sectionContainer.x,
-              startY: sectionContainer.y,
-              dragStartX: pointerPos.x,
-              dragStartY: pointerPos.y
-            };
-            onSelect('section', sectionName);
-          });
-
-          sectionsLayer.addChild(sectionContainer);
-
-          await sharedRenderer.current.render(snapshot, { targetContainer: sectionContainer });
-        }
-      }
-
-      // Restore drag target if active
-      if (dragSession.current.active) {
-        const { type, id } = dragSession.current;
-        if (type === 'shape') {
-          dragSession.current.target = shapesLayer.children.find(c => c._id === id);
-        } else if (type === 'section') {
-          dragSession.current.target = sectionsLayer.children.find(c => c._sectionName === id);
-        }
-      }
-
-      // 📊 LOG TEXTURE COUNT FOR MEMORY LEAK TRACKING
-      if (app.renderer && app.renderer.texture && app.renderer.texture.managedTextures) {
-        console.log(`[PIXI MEMORY] Active textures in memory: ${app.renderer.texture.managedTextures.length}`);
-      }
-    };
-
-    renderAll();
-    return () => { active = false; };
-  }, [shapes, lines, sections, sectionSnapshots, selectedId, initTrigger, isAnimating, yOffset, width, height, resolution]);
-
-  // Animation Ticker - SEPARATE useEffect
-  useEffect(() => {
-    const app = pixiApp.current;
-    if (!app || !isAnimating) return;
-
-    let time = 0;
-    let frameCount = 0;
-    let lastLogTime = performance.now();
-
-    const animate = () => {
-      time += 0.05;
-      frameCount++;
-
-      // Animation loop (no logging)
-
-      // Animate Sections (Bounce)
-      const sectionsLayer = app.stage.children[1];
-      if (sectionsLayer) {
-        sectionsLayer.children.forEach((child, index) => {
-          // 🚫 Skip header if it's currently doing a layout animation
-          if (child._sectionName === 'header' && headerAnimating) return;
-
-          // Simple sine wave bounce based on index
-          child.y += Math.sin(time + index) * 4;
-        });
-      }
-    };
-
-    app.ticker.add(animate);
-
-    return () => {
-      app.ticker.remove(animate);
-    };
-  }, [isAnimating, initTrigger]);
-
-  // 🎬 Header Layout Animation Ticker
-  useEffect(() => {
-    const app = pixiApp.current;
-    if (!app || !headerAnimating) return;
-
-    let frameCount = 0; // Local frame counter for this ticker
-
-    const animateHeaderLayout = () => {
-      const anim = headerAnimationRef.current;
-      const sectionsLayer = app.stage.children[1];
-      const headerContainer = sectionsLayer?.children.find(c => c._sectionName === 'header');
-
-      if (!anim.active) return;
-
-      if (!headerContainer) {
-        frameCount++;
-        if (frameCount % 60 === 0) console.warn('⚠️ [ANIM] Header container not found in stage!');
-        return;
-      }
-
-      const elapsed = performance.now() - anim.startTime;
-      const progress = Math.min(elapsed / anim.duration, 1);
-
-      // Simple linear or ease-in fade
-      const alpha = 1 - progress;
-
-      // Force apply alpha to the container
-      headerContainer.alpha = alpha;
-
-      // Diagnostic logging
-      const progressPercent = Math.round(progress * 100);
-      if (progressPercent % 10 === 0 && progressPercent !== anim.lastLoggedPercent) {
-        console.log(`🎬 [FADE] ${progressPercent}% | Alpha: ${alpha.toFixed(2)}`);
-        anim.lastLoggedPercent = progressPercent;
-      }
-
-      if (progress >= 1) {
-        anim.active = false;
-        headerContainer.alpha = 1.0; // Reset to visible
-        if (setHeaderAnimating) setHeaderAnimating(false);
-        console.log('✅ Header fade-out (decoupled) complete!');
-      }
-    };
-
-    app.ticker.add(animateHeaderLayout);
-    return () => app.ticker.remove(animateHeaderLayout);
-  }, [headerAnimating, initTrigger]);
-
-  // 🎬 Skills Layout Animation Ticker
-  useEffect(() => {
-    const app = pixiApp.current;
-    if (!app || !skillsAnimating) return;
-
-    const animateSkillsLayout = () => {
-      const anim = skillsAnimationRef.current;
-      if (!anim.active) return;
-
-      const sectionsLayer = app.stage.children[1];
-      const skillsContainer = sectionsLayer?.children.find(c => c._sectionName === 'skills');
-      if (!skillsContainer) return;
-
-      const elapsed = performance.now() - anim.startTime;
-      const progress = Math.min(elapsed / anim.duration, 1);
-
-      // Fade out for skills too
-      skillsContainer.alpha = 1 - progress;
-
-      if (progress >= 1) {
-        anim.active = false;
-        skillsContainer.alpha = 1.0; // Reset to visible
-        if (setSkillsAnimating) setSkillsAnimating(false);
-      }
-    };
-
-    app.ticker.add(animateSkillsLayout);
-    return () => app.ticker.remove(animateSkillsLayout);
-  }, [skillsAnimating, initTrigger]);
-
-  return (
-    <div
-      ref={containerRef}
-      className="webgl-stage-container"
-      style={{
-        width: width,
-        height: height,
-        boxShadow: '0 0 20px rgba(0,0,0,0.1)',
-        background: 'white',
-        border: '2px solid red'
-      }}
-    />
-  );
-});
 
 
 // ==================== MAIN UI EDITOR COMPONENT ====================
@@ -772,6 +60,7 @@ const UIEditor = () => {
   const [selectedShape, setSelectedShape] = useState(null);
   const [selectedSection, setSelectedSection] = useState(null);
   const [showPage2, setShowPage2] = useState(false);
+  const [isAutoFlowEnabled, setIsAutoFlowEnabled] = useState(true); // 🎯 Default to true for "Auto Management"
   const [zoom, setZoom] = useState(1);
   const [sectionPositions, setSectionPositions] = useState({});
   const [lines, setLines] = useState([]);
@@ -934,6 +223,9 @@ const UIEditor = () => {
       setIsMobile(mobile);
       if (mobile) {
         setActiveTab('preview'); // Default to preview for clean look
+        setZoom(1); // 🔎 Default zoom to fit mobile screen
+      } else {
+        setZoom(1.0);
       }
     };
     checkMobile();
@@ -1285,23 +577,44 @@ const UIEditor = () => {
 
   // Download as image
   const downloadResume = async () => {
-    const app = webGLStageRef1.current?.app;
-    if (!app) {
+    const app1 = webGLStageRef1.current?.app;
+    if (!app1) {
       console.error("❌ WebGL App not found for Page 1");
       return;
     }
 
     try {
-      // Use Pixi extraction for Page 1
-      const canvas = await app.renderer.extract.canvas(app.stage);
-      const uri = canvas.toDataURL('image/png', 1.0);
+      const downloadCanvas = (canvas, filename) => {
+        const uri = canvas.toDataURL('image/png', 1.0);
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = uri;
+        link.click();
+      };
 
-      const link = document.createElement('a');
-      link.download = 'resume-design.png';
-      link.href = uri;
-      link.click();
+      // 1. Capture and Download Page 1
+      const canvas1 = await app1.renderer.extract.canvas({
+        target: app1.stage,
+        frame: new PIXI.Rectangle(0, 0, 595, 842)
+      });
+      downloadCanvas(canvas1, 'resume-page1.png');
 
-      console.log('✅ Resume downloaded via WebGL extraction');
+      // 2. Capture and Download Page 2 if active
+      if (showPage2) {
+        const app2 = webGLStageRef2.current?.app;
+        if (app2) {
+          const canvas2 = await app2.renderer.extract.canvas({
+            target: app2.stage,
+            frame: new PIXI.Rectangle(0, 0, 595, 842)
+          });
+          // Small timeout to ensure browser handles multiple clicks
+          setTimeout(() => {
+            downloadCanvas(canvas2, 'resume-page2.png');
+          }, 300);
+        }
+      }
+
+      console.log('✅ Resume PNG(s) downloaded');
     } catch (err) {
       console.error('Failed to download resume:', err);
     }
@@ -1324,7 +637,10 @@ const UIEditor = () => {
       const height = pdf.internal.pageSize.getHeight();
 
       // 2. Extract Page 1
-      const canvas1 = await app1.renderer.extract.canvas(app1.stage);
+      const canvas1 = await app1.renderer.extract.canvas({
+        target: app1.stage,
+        frame: new PIXI.Rectangle(0, 0, 595, 842)
+      });
       const imgData1 = canvas1.toDataURL('image/png', 1.0);
 
       pdf.addImage(imgData1, 'PNG', 0, 0, width, height);
@@ -1334,7 +650,10 @@ const UIEditor = () => {
         const app2 = webGLStageRef2.current?.app;
         if (app2) {
           console.log('📄 Adding Page 2...');
-          const canvas2 = await app2.renderer.extract.canvas(app2.stage);
+          const canvas2 = await app2.renderer.extract.canvas({
+            target: app2.stage,
+            frame: new PIXI.Rectangle(0, 0, 595, 842)
+          });
           const imgData2 = canvas2.toDataURL('image/png', 1.0);
 
           pdf.addPage();
@@ -1362,18 +681,18 @@ const UIEditor = () => {
     return {
       sections: Object.entries(sectionPositions || {}).filter(([name, pos]) => {
         if (!pos) return false;
-        const height = parseInt(sectionHeights[name]) || (sectionSnapshots[name]?.height) || 200;
+        const height = sectionHeights[name] || (sectionSnapshots[name]?.height) || 200;
         // Intersection check: top is in page OR bottom is in page
-        return (pos.y >= pageStart && pos.y < pageEnd) ||
-          (pos.y + height > pageStart && pos.y < pageEnd);
+        return (pos.y < pageEnd && pos.y + height > pageStart);
       }),
       lines: (lines || []).filter(line => {
-        return (line.y1 >= pageStart && line.y1 < pageEnd) ||
-          (line.y2 >= pageStart && line.y2 < pageEnd);
+        // Broaden range slightly to catch line thickness/overlap
+        const yMin = Math.min(line.y1, line.y2);
+        const yMax = Math.max(line.y1, line.y2);
+        return (yMax > pageStart && yMin < pageEnd);
       }),
       shapes: (backgroundShapes || []).filter(shape => {
-        return (shape.y >= pageStart && shape.y < pageEnd) ||
-          (shape.y + shape.height > pageStart && shape.y < pageEnd);
+        return (shape.y < pageEnd && shape.y + (shape.height || 100) > pageStart);
       })
     };
   };
@@ -1526,6 +845,7 @@ const UIEditor = () => {
     setLines(lines.map(line =>
       line.id === id ? { ...line, ...newPos } : line
     ));
+    // 🛡️ Selection persists (User Request)
   };
 
   // Handle line update
@@ -1574,6 +894,7 @@ const UIEditor = () => {
     setBackgroundShapes(backgroundShapes.map(shape =>
       shape.id === id ? { ...shape, x: newPos.x, y: newPos.y } : shape
     ));
+    // 🛡️ Selection persists (User Request)
   };
 
   // Handle shape update
@@ -1617,6 +938,7 @@ const UIEditor = () => {
         [sectionName]: newPos
       }));
     }
+    // 🛡️ Selection persists (User Request)
   };
 
   // Move section
@@ -1695,40 +1017,51 @@ const UIEditor = () => {
     }
   };
 
-  // Auto-flow sections - WITH PAGINATION
+  // Auto-flow sections - Header Aligned & Height Managed
   const autoFlowSections = () => {
-    let currentY = 50;
-    const spacing = 20;
-    const PAGE_HEIGHT = 842;
-    const PAGE_MARGIN = 50;
-    let currentPage = 1;
+    const spacing = 15; // Standard vertical spacing
+    const headerPos = sectionPositions['header'] || { x: 40, y: 50 };
+    const headerX = headerPos.x;
 
-    // Sort by current Y position to maintain relative order
+    // Start stack at header's Y
+    let currentY = headerPos.y;
+
+    // Sort sections by current Y to maintain user-intended order
     const sortedSections = Object.keys(sectionPositions).sort((a, b) => {
-      const posA = sectionPositions[a];
-      const posB = sectionPositions[b];
-      return (posA?.y || 0) - (posB?.y || 0);
+      return (sectionPositions[a]?.y || 0) - (sectionPositions[b]?.y || 0);
     });
 
     const newPositions = {};
 
-    sortedSections.forEach(sectionName => {
-      const snapshot = sectionSnapshots[sectionName];
-      const height = snapshot ? snapshot.height : 100;
-      const currentX = sectionPositions[sectionName]?.x || 40;
-
-      // Check if we need to break to next page
-      if (currentPage === 1 && (currentY + height) > (PAGE_HEIGHT - PAGE_MARGIN)) {
-        currentPage = 2;
-        currentY = PAGE_HEIGHT + PAGE_MARGIN;
-        setShowPage2(true);
+    sortedSections.forEach(name => {
+      // Find current position to keep if it's the header (header is the anchor)
+      if (name === 'header') {
+        newPositions[name] = headerPos;
+        const height = sectionSnapshots[name]?.height || sectionHeights[name] || 150;
+        currentY += height + spacing;
+        return;
       }
 
-      newPositions[sectionName] = { x: currentX, y: currentY };
+      const snapshot = sectionSnapshots[name];
+      const height = snapshot ? snapshot.height : (parseInt(sectionHeights[name]) || 100);
+
+      // 🎯 Auto-Align on X cross header
+      // 🎯 Auto-Manage Y based on previous heights
+      newPositions[name] = {
+        x: headerX,
+        y: currentY
+      };
+
       currentY += height + spacing;
     });
 
+    // Check if total height requires Page 2
+    if (currentY > 750 && !showPage2) {
+      setShowPage2(true);
+    }
+
     setSectionPositions(newPositions);
+    console.log("🚀 Auto-flow complete: aligned items to X:", headerX);
   };
 
 
@@ -1816,6 +1149,12 @@ const UIEditor = () => {
 
 
 
+  // 🎯 REACTIVE AUTO-FLOW: Trigger on content change
+  useEffect(() => {
+    if (isAutoFlowEnabled && Object.keys(sectionSnapshots).length > 0) {
+      autoFlowSections();
+    }
+  }, [sectionSnapshots, resumeData, isAutoFlowEnabled]);
 
   // Initialize layout on mount
   useEffect(() => {
@@ -1824,8 +1163,9 @@ const UIEditor = () => {
   }, [currentTemplate]);
 
   // Calculate page elements
-  const page1Elements = getElementsForPage(1);
-  const page2Elements = showPage2 ? getElementsForPage(2) : { sections: [], lines: [], shapes: [] };
+  // Calculate page elements - Optimized with Memo
+  const page1Elements = useMemo(() => getElementsForPage(1), [sectionPositions, lines, backgroundShapes, sectionHeights, sectionSnapshots]);
+  const page2Elements = useMemo(() => showPage2 ? getElementsForPage(2) : { sections: [], lines: [], shapes: [] }, [showPage2, sectionPositions, lines, backgroundShapes, sectionHeights, sectionSnapshots]);
 
 
 
@@ -1927,9 +1267,14 @@ const UIEditor = () => {
           <button onClick={resetLayout} className="btn-primary full-width">
             ↻ RESET LAYOUT
           </button>
+        </div>
 
-          <button onClick={autoFlowSections} className="btn-primary full-width btn-auto-flow-action">
-            ⚡ AUTO-FLOW CONTENT
+        <div className="flow-action">
+          <button
+            onClick={() => setIsAutoFlowEnabled(!isAutoFlowEnabled)}
+            className={`btn-primary full-width btn-auto-flow-action ${isAutoFlowEnabled ? 'active' : ''}`}
+          >
+            {isAutoFlowEnabled ? 'Auto-Flow: ON (Header Aligned)' : 'Auto-Flow: OFF'}
           </button>
         </div>
 
@@ -2202,70 +1547,7 @@ const UIEditor = () => {
 
 
 
-        <h3 className="panel-title">DIVIDER LINES</h3>
-        <div className="button-grid">
-          <button onClick={() => addLine('horizontal')} className="btn-secondary">─ H</button>
-          <button onClick={() => addLine('vertical')} className="btn-secondary">│ V</button>
-        </div>
-
-        {
-          lines.length > 0 && lines.map(line => (
-            <div key={line.id} className={`line-control ${selectedLine === line.id ? 'selected' : ''}`}>
-              <div className="line-header">
-                <span className="line-label">{line.label}</span>
-                <button onClick={() => deleteLine(line.id)} className="btn-delete">✕</button>
-              </div>
-
-              <div className="line-move-control">
-                <label className="control-label">Move Position</label>
-                <div className="arrow-grid">
-                  <div></div>
-                  <button onClick={() => moveLine(line.id, 'up')} className="btn-arrow">↑</button>
-                  <div></div>
-                  <button onClick={() => moveLine(line.id, 'left')} className="btn-arrow">←</button>
-                  <div className="arrow-center">MOVE</div>
-                  <button onClick={() => moveLine(line.id, 'right')} className="btn-arrow">→</button>
-                  <div></div>
-                  <button onClick={() => moveLine(line.id, 'down')} className="btn-arrow">↓</button>
-                  <div></div>
-                </div>
-              </div>
-
-              <div className="line-resize-control">
-                <label className="control-label">
-                  Resize {line.orientation === 'vertical' ? 'Height' : 'Width'}
-                </label>
-                <div className="resize-buttons">
-                  <button onClick={() => resizeLine(line.id, 'decrease')} className="btn-resize">−</button>
-                  <button onClick={() => resizeLine(line.id, 'increase')} className="btn-resize">+</button>
-                </div>
-              </div>
-
-              <div className="line-properties">
-                <div className="property-control">
-                  <label className="control-label">Thickness</label>
-                  <input
-                    type="number"
-                    value={line.thickness}
-                    onChange={(e) => updateLine(line.id, 'thickness', parseFloat(e.target.value))}
-                    step="0.5"
-                    className="control-input"
-                  />
-                </div>
-                <div className="property-control">
-                  <label className="control-label">Color</label>
-                  <input
-                    type="color"
-                    value={normalizeColorForInput(line.color)}
-                    onChange={(e) => updateLine(line.id, 'color', e.target.value)}
-                    className="control-color"
-                  />
-                </div>
-              </div>
-            </div>
-          ))
-        }
-      </div >
+      </div>
 
 
       {/* MIDDLE - Canvas */}
@@ -2279,33 +1561,32 @@ const UIEditor = () => {
             {/* Page 1 */}
             <div className="canvas-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
               <WebGLStage
-                width={isMobile ? 595 * 0.7 : 595}
-                height={isMobile ? 842 * 0.7 : 842}
+                width={595}
+                height={842}
                 shapes={page1Elements.shapes}
                 lines={page1Elements.lines}
                 sections={page1Elements.sections}
-                sectionSnapshots={sectionSnapshots}
+                snapshot={sectionSnapshots}
                 onDragEnd={(type, id, pos, allPositions) => {
                   if (type === 'section') handleSectionDragEnd(id, pos, allPositions);
                   if (type === 'shape') handleShapeDragEnd(id, pos);
                   if (type === 'line') handleLineDragEnd(id, pos);
                 }}
                 onSelect={(type, id) => {
+                  if (!type) {
+                    setSelectedShape(null);
+                    setSelectedLine(null);
+                    setSelectedSection(null);
+                    return;
+                  }
                   if (type === 'shape') setSelectedShape(id);
                   if (type === 'line') setSelectedLine(id);
                   if (type === 'section') setSelectedSection(id);
                 }}
                 selectedId={selectedShape || selectedLine || selectedSection}
-                isAnimating={isAnimating}
                 onHeaderContainerReady={(container) => {
                   headerContainerRef.current = container;
                 }}
-                headerAnimating={headerAnimating}
-                headerAnimationRef={headerAnimationRef}
-                setHeaderAnimating={setHeaderAnimating}
-                skillsAnimating={skillsAnimating}
-                skillsAnimationRef={skillsAnimationRef}
-                setSkillsAnimating={setSkillsAnimating}
                 onSkillsContainerReady={(container) => {
                   skillsContainerRef.current = container;
                 }}
@@ -2326,12 +1607,12 @@ const UIEditor = () => {
               }}
             >
               <WebGLStage
-                width={isMobile ? 595 * 0.7 : 595}
-                height={isMobile ? 842 * 0.7 : 842}
+                width={595}
+                height={842}
                 shapes={page2Elements.shapes}
                 lines={page2Elements.lines}
                 sections={page2Elements.sections}
-                sectionSnapshots={sectionSnapshots}
+                snapshot={sectionSnapshots}
                 yOffset={842}
                 onDragEnd={(type, id, pos, allPositions) => {
                   const adjustedPos = { ...pos, y: pos.y + 842 };
@@ -2359,12 +1640,17 @@ const UIEditor = () => {
                   }
                 }}
                 onSelect={(type, id) => {
+                  if (!type) {
+                    setSelectedShape(null);
+                    setSelectedLine(null);
+                    setSelectedSection(null);
+                    return;
+                  }
                   if (type === 'shape') setSelectedShape(id);
                   if (type === 'line') setSelectedLine(id);
                   if (type === 'section') setSelectedSection(id);
                 }}
                 selectedId={selectedShape || selectedLine || selectedSection}
-                isAnimating={isAnimating}
                 ref={webGLStageRef2}
               />
               <div className="page-number">Page 2</div>

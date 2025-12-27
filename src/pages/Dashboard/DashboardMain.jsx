@@ -1,8 +1,7 @@
 import React from "react";
 import { Edit3 } from "lucide-react";
 import "./css-files/DashboardMain.css";
-import { Routes, Route, useNavigate } from "react-router-dom";
-import ResumeEditor from "../Resume/ResumeEditor";
+import { useNavigate } from "react-router-dom";
 
 
 export default function DashboardMain() {
@@ -34,11 +33,7 @@ export default function DashboardMain() {
         </div>
       </div>
 
-      {/* Nested Route for ResumeEditor */}
-      <Routes>
-        <Route path="resume-editor" element={<ResumeEditor />} />
-        <Route path="resume-editor/:resumeId" element={<ResumeEditor />} />
-      </Routes>
+
     </>
   );
 }

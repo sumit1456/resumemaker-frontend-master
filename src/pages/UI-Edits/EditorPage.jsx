@@ -1,5 +1,5 @@
 import React from 'react';
-import UIEditor from './UIEditor';
+import UIEditor from './b3.jsx';
 
 /**
  * EditorPage - Route-safe wrapper for UIEditor
