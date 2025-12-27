@@ -1775,6 +1775,9 @@ export default function ResumeEditor({ resume: propsResume }) {
     const handleWebGLSelect = (type, id) => {
         if (type !== 'section') return;
 
+        // If syncing is disabled, do not react to WebGL clicks
+        if (!autoScrollEnabled) return;
+
         console.log(`[WebGL] Selected section: ${id}`);
 
         // 1. Expand the section in UI
@@ -1805,10 +1808,8 @@ export default function ResumeEditor({ resume: propsResume }) {
             const container = resumeRef.current; // Use the existing ref for .ats-resume
 
             if (element && container) {
-                // Use custom smooth scroll on the container if enabled
-                if (autoScrollEnabled) {
-                    smoothScrollTo(container, element, 800);
-                }
+                // Use custom smooth scroll on the container
+                smoothScrollTo(container, element, 800);
 
                 // Focus the first input or textarea
                 const input = element.querySelector('input, textarea');
