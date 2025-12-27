@@ -956,7 +956,7 @@ export const MODERN_TEMPLATE_CONFIG = {
   header: {
     container: {
       // This section must span the entire top width or be split manually in the UI code
-      width: "250px",
+      width: "220px",
       backgroundColor: "transparent",
       padding: "0",
       color: "#FFFFFF",
@@ -972,14 +972,14 @@ export const MODERN_TEMPLATE_CONFIG = {
     // Contact Configuration moved to header
     contactLayout: {
       display: "flex",
-      flexDirection: "row",
+      flexDirection: "column",
       gap: "12px",
       marginTop: "8px",
       justifyContent: "flex-start",
       flexWrap: "wrap"
     },
     contactOrder: ["phone", "email", "linkedin", "location"],
-    contactItemStyle: { fontSize: "px", color: "#FFFFFF" },
+    contactItemStyle: { fontSize: "8px", color: "#FFFFFF" },
     showContactIcons: true,
     contactIconColor: "#FFFFFF",
 
@@ -994,7 +994,7 @@ export const MODERN_TEMPLATE_CONFIG = {
     container: {
       width: "250px",
       backgroundColor: "transparent",
-      padding: "0",
+      padding: "5px",
       color: "#FFFFFF",
     },
     showTitle: true,

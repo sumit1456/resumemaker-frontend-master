@@ -787,7 +787,9 @@ const UIEditor = () => {
   const currentResume = useSelector((state) => state.resume.currentResume);
   const currentResumeId = useSelector((state) => state.resume.resumeId);
 
-  const [resumeDetails, setResumeDetails] = useState(defaultResumeData);
+  const globalResumeDetails = useSelector((state => state.resume.currentResume));
+  const [resumeDetails, setResumeDetails] = useState(currentResume ? currentResume : defaultResumeData);
+
   const API_BASE_URL = 'http://localhost:8080';
   const API_BASE_URL2 = 'https://resumemaker-1.onrender.com';
 

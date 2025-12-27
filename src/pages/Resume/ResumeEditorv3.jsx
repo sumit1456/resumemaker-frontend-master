@@ -764,6 +764,9 @@ export default function ResumeEditor({ resume: propsResume }) {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState("Loading...");
 
+    // Auto-scroll toggle state
+    const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
+
     // ⚡ WebGL Snapshot Capture Effect
     useEffect(() => {
         const sections = [
@@ -1482,7 +1485,7 @@ export default function ResumeEditor({ resume: propsResume }) {
     const uiEditor = () => {
         const payload = buildResumePayload();
         dispatch(setCurrentResume(payload));
-        navigate("/ui-editor");
+        navigate("/ui-editor/webgl");
     };
 
 
@@ -1723,6 +1726,51 @@ export default function ResumeEditor({ resume: propsResume }) {
         setSectionPositions(newPositions);
     };
 
+    // Custom Smooth Scroll Helper
+    const smoothScrollTo = (container, targetElement, duration = 800) => {
+        if (!targetElement || !container) return;
+
+        // Calculate position relative to the scrollable container
+        // currentScrollTop is the number of pixels the container is currently scrolled vertically
+        const startPosition = container.scrollTop;
+
+        // target.offsetTop is distance from top of offsetParent. 
+        // We want to center it or put it at top with some padding.
+        // But offsetTop is relative to the nearest positioned ancestor.
+        // A safer way for nested scrollable containers:
+        const containerRect = container.getBoundingClientRect();
+        const targetRect = targetElement.getBoundingClientRect();
+
+        // Relative position of target inside the viewport-visible part of container
+        const relativeTop = targetRect.top - containerRect.top;
+
+        // Desired final scroll position: current scroll + relative difference - padding
+        // We want the element to be about 100px from the top of the container
+        const offset = 100;
+        const targetScrollTop = startPosition + relativeTop - offset;
+
+        const distance = targetScrollTop - startPosition;
+        let startTime = null;
+
+        function animation(currentTime) {
+            if (startTime === null) startTime = currentTime;
+            const timeElapsed = currentTime - startTime;
+
+            // Easing function (easeInOutCubic)
+            const ease = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+            const run = ease(Math.min(timeElapsed / duration, 1));
+
+            container.scrollTop = startPosition + distance * run;
+
+            if (timeElapsed < duration) {
+                requestAnimationFrame(animation);
+            }
+        }
+
+        requestAnimationFrame(animation);
+    };
+
     // Handle selection from WebGL canvas
     const handleWebGLSelect = (type, id) => {
         if (type !== 'section') return;
@@ -1740,29 +1788,47 @@ export default function ResumeEditor({ resume: propsResume }) {
             // header is always visible
         }
 
-        // 2. Scroll to the section (with slight delay for React render)
+        // 2. Scroll to the section (with slight delay to allow React render)
         setTimeout(() => {
-            const sectionId = `editor-section-${id}`;
-            const element = document.getElementById(sectionId);
+            // For standard sections
+            let sectionId = `editor-section-${id}`;
 
-            if (element) {
-                // Scroll into view
-                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // For custom sections, the ID handling is a bit different 
+            // The WebGL layer passes the raw ID (e.g., 'custom-1735...')
+            // Our DOM elements have IDs like `editor-section-custom-1735...`
+            if (id.startsWith('custom-')) {
+                sectionId = `editor-section-${id}`;
+            }
+
+            const element = document.getElementById(sectionId);
+            // The scrollable container
+            const container = resumeRef.current; // Use the existing ref for .ats-resume
+
+            if (element && container) {
+                // Use custom smooth scroll on the container if enabled
+                if (autoScrollEnabled) {
+                    smoothScrollTo(container, element, 800);
+                }
 
                 // Focus the first input or textarea
                 const input = element.querySelector('input, textarea');
                 if (input) {
-                    input.focus();
+                    input.focus({ preventScroll: true });
                 }
 
                 // Visual highlight effect
-                element.style.transition = 'box-shadow 0.3s ease';
-                element.style.boxShadow = '0 0 0 2px #3b82f6, 0 4px 6px -1px rgba(0, 0, 0, 0.1)';
+                element.style.transition = 'box-shadow 0.5s ease';
+                element.style.boxShadow = '0 0 0 2px #3b82f6, 0 8px 20px -2px rgba(59, 130, 246, 0.2)';
+
+                // Add a temporary highlight class for animation
+                element.classList.add('section-highlight-pulse');
+
                 setTimeout(() => {
                     element.style.boxShadow = '';
-                }, 2000);
+                    element.classList.remove('section-highlight-pulse');
+                }, 1500);
             } else {
-                console.warn(`[WebGL] DOM element not found: ${sectionId}`);
+                console.warn(`[WebGL] DOM element not found: ${sectionId} or container missing`);
             }
         }, 100);
     };
@@ -2132,6 +2198,34 @@ export default function ResumeEditor({ resume: propsResume }) {
                                             {isTemplateLoading ? "Loading template..." : "Generating preview..."}
                                         </span>
                                     )}
+
+                                    <button
+                                        onClick={() => setAutoScrollEnabled(!autoScrollEnabled)}
+                                        style={{
+                                            padding: '8px 12px',
+                                            backgroundColor: autoScrollEnabled ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
+                                            color: autoScrollEnabled ? '#60a5fa' : '#9ca3af',
+                                            border: `1px solid ${autoScrollEnabled ? '#3b82f6' : '#4b5563'}`,
+                                            borderRadius: '6px',
+                                            cursor: 'pointer',
+                                            fontSize: '13px',
+                                            fontWeight: '600',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            transition: 'all 0.2s ease'
+                                        }}
+                                        title={autoScrollEnabled ? "Click to disable auto-scroll" : "Click to enable auto-scroll"}
+                                    >
+                                        <div style={{
+                                            width: '8px',
+                                            height: '8px',
+                                            borderRadius: '50%',
+                                            backgroundColor: autoScrollEnabled ? '#60a5fa' : '#4b5563',
+                                            boxShadow: autoScrollEnabled ? '0 0 8px #3b82f6' : 'none'
+                                        }} />
+                                        {autoScrollEnabled ? "Auto-Scroll ON" : "Auto-Scroll OFF"}
+                                    </button>
                                 </div>
                             </div>
 
