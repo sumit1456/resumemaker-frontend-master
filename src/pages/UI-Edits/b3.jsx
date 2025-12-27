@@ -35,7 +35,7 @@ const normalizeColorForInput = (color) => {
 const WebGLStage = forwardRef(({ width, height, shapes, lines, sections, sectionSnapshots, onDragEnd, onSelect, selectedId, type, isAnimating, onHeaderContainerReady, headerAnimating, headerAnimationRef, setHeaderAnimating, skillsAnimating, skillsAnimationRef, setSkillsAnimating, onSkillsContainerReady, yOffset = 0 }, ref) => {
   // Device-specific config (Calculated once per render)
   const isMobile = window.innerWidth < 768;
-  const resolution = isMobile ? 1.25 : 2;
+  const resolution = isMobile ? 1.5 : 2;
 
   const containerRef = useRef(null);
   const pixiApp = useRef(null);
@@ -127,7 +127,7 @@ const WebGLStage = forwardRef(({ width, height, shapes, lines, sections, section
 
 
         // ⬜ Add White Background Graphic immediately
-        const bgValues = { width: width / (isMobile ? 0.8 : 1), height: height / (isMobile ? 0.8 : 1) };
+        const bgValues = { width: width / (isMobile ? 1 : 1), height: height / (isMobile ? 1 : 1) };
         const bgGraphic = new PIXI.Graphics();
         bgGraphic.rect(0, 0, bgValues.width, bgValues.height);
         bgGraphic.fill({ color: 0xffffff, alpha: 1 });
@@ -3079,7 +3079,8 @@ const UIEditor = () => {
 
 
 
-    </div >
+    </div>
+
 
   );
 };
