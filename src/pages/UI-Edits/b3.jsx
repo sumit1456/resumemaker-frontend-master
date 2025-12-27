@@ -796,7 +796,7 @@ const UIEditor = () => {
   // 🎬 GPU Animation State
   const [headerAnimating, setHeaderAnimating] = useState(false);
   const [skillsAnimating, setSkillsAnimating] = useState(false); // New state for skills
-  const [activeSectionAccordion, setActiveSectionAccordion] = useState('header'); // 🗂 Sub-section accordion state
+  const [activeSectionAccordion, setActiveSectionAccordion] = useState(null); // 🗂 Sub-section accordion state
   const headerContainerRef = useRef(null);
   const skillsContainerRef = useRef(null); // New ref for skills container
 
@@ -1911,71 +1911,138 @@ const UIEditor = () => {
           </div>
         )}
 
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button onClick={downloadResume} className="btn-secondary full-width" style={{ backgroundColor: 'white', color: '#1f2937' }}>📥 DOWNLOAD PNG</button>
+            <button onClick={downloadPDF} className="btn-secondary full-width" style={{ backgroundColor: 'white', color: '#1f2937' }}>📄 DOWNLOAD PDF</button>
+          </div>
+          <button
+            onClick={handleSaveAll}
+            className="btn-primary full-width"
+            style={{ backgroundColor: 'white', color: '#1f2937', border: '1px solid #e5e7eb' }}
+            disabled={saving}
+          >
+            {saving ? 'SAVING...' : '💾 SAVE TEMPLATE'}
+          </button>
+          <button onClick={resetLayout} className="btn-primary full-width">
+            ↻ RESET LAYOUT
+          </button>
+
+          <button onClick={autoFlowSections} className="btn-primary full-width btn-auto-flow-action">
+            ⚡ AUTO-FLOW CONTENT
+          </button>
+        </div>
+
         {/* --- ACCORDION SECTIONS --- */}
 
-        {/* HEADER LAYOUTS SECTION */}
-        <h3 className="panel-title">HEADER LAYOUTS</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '20px' }}>
-          {HEADER_LAYOUTS && Object.entries(HEADER_LAYOUTS).map(([key, layout]) => (
-            <button
-              key={key}
-              onClick={() => setStyleConfig(prev => ({
-                ...prev,
-                header: {
-                  ...prev.header,
-                  ...layout.config,
-                  // Deep merge styles
-                  nameStyle: { ...prev.header?.nameStyle, ...layout.config.nameStyle },
-                  titleStyle: { ...prev.header?.titleStyle, ...layout.config.titleStyle }
-                }
-              }))}
-              className="btn-secondary"
-              style={{
-                fontSize: '10px',
-                padding: '8px',
-                border: styleConfig.header?.nameAlign === layout.config.nameAlign ? '2px solid #3b82f6' : '1px solid #ddd'
-              }}
-            >
-              {layout.label}
-            </button>
-          ))}
-        </div>
 
-        {/* SKILLS LAYOUTS SECTION */}
-        <h3 className="panel-title">SKILLS LAYOUTS</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '20px' }}>
-          {SKILLS_LAYOUTS && Object.entries(SKILLS_LAYOUTS).map(([key, layout]) => (
-            <button
-              key={key}
-              onClick={() => setStyleConfig(prev => ({
-                ...prev,
-                skills: { ...prev.skills, ...layout.config }
-              }))}
-              className="btn-secondary"
-              style={{
-                fontSize: '10px',
-                padding: '8px',
-                border: styleConfig.skills?.categoryValueSeparator === layout.config.categoryValueSeparator ? '2px solid #3b82f6' : '1px solid #ddd'
-              }}
-            >
-              {layout.label}
-            </button>
-          ))}
-        </div>
 
-        {/* CONTACT LAYOUTS SECTION */}
-        <h3 className="panel-title">CONTACT LAYOUTS</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '20px' }}>
-          {CONTACT_LAYOUTS && Object.entries(CONTACT_LAYOUTS).map(([key, layout]) => (
-            <button
-              key={key}
-              onClick={() => animateHeaderLayoutChange(layout.config)}
-              className="btn-secondary"
-              style={{ fontSize: '10px', padding: '8px' }}
-            >
-              {layout.label}
-            </button>
-          ))}
+        {/* SECTION SIZES & POSITIONS SECTION */}
+        <h3 className="panel-title">Section Layouts</h3>
+        <div className="section-widths-container" style={{ marginBottom: '20px' }}>
+          {Object.keys(sectionWidths).map(sectionName => {
+            const isTransparent = styleConfig[sectionName]?.container?.backgroundColor === 'transparent';
+            const position = sectionPositions[sectionName] || { x: 0, y: 0 };
+            const isOnPage2 = position.y >= 800;
+            const isOpen = activeSectionAccordion === sectionName;
+
+            return (
+              <div key={sectionName} className={`sub-accordion-item ${isOpen ? 'active' : ''}`}>
+                <div
+                  className="sub-accordion-trigger"
+                  onClick={() => setActiveSectionAccordion(isOpen ? null : sectionName)}
+                >
+                  <span className="section-name">{sectionName}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {isTransparent && <span className="badge-mini">T</span>}
+                    {isOnPage2 && <span className="badge-mini blue">P2</span>}
+                    <span className="arrow">{isOpen ? '▼' : '▶'}</span>
+                  </div>
+                </div>
+
+                <div className={`sub-accordion-content ${isOpen ? 'expanded' : ''}`}>
+                  <div className="position-controls-wrapper">
+
+                    {/* HEADER LAYOUTS (Embedded) */}
+                    {sectionName === 'header' && (
+                      <div style={{ marginBottom: '16px' }}>
+                        <label className="control-label-small" style={{ marginBottom: '8px', display: 'block' }}>Header Style</label>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+                          {HEADER_LAYOUTS && Object.entries(HEADER_LAYOUTS).map(([key, layout]) => (
+                            <button
+                              key={key}
+                              onClick={() => setStyleConfig(prev => ({
+                                ...prev,
+                                header: {
+                                  ...prev.header,
+                                  ...layout.config,
+                                  nameStyle: { ...prev.header?.nameStyle, ...layout.config.nameStyle },
+                                  titleStyle: { ...prev.header?.titleStyle, ...layout.config.titleStyle }
+                                }
+                              }))}
+                              className="btn-secondary"
+                              style={{
+                                fontSize: '10px',
+                                padding: '6px',
+                                border: styleConfig.header?.nameAlign === layout.config.nameAlign ? '2px solid #3b82f6' : '1px solid #ddd'
+                              }}
+                            >
+                              {layout.label}
+                            </button>
+                          ))}
+                        </div>
+
+                        <label className="control-label-small" style={{ marginBottom: '8px', display: 'block' }}>Contact Style</label>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                          {CONTACT_LAYOUTS && Object.entries(CONTACT_LAYOUTS).map(([key, layout]) => (
+                            <button
+                              key={key}
+                              onClick={() => animateHeaderLayoutChange(layout.config)}
+                              className="btn-secondary"
+                              style={{ fontSize: '10px', padding: '6px' }}
+                            >
+                              {layout.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* SKILLS LAYOUTS (Embedded) */}
+                    {sectionName === 'skills' && (
+                      <div style={{ marginBottom: '16px' }}>
+                        <label className="control-label-small" style={{ marginBottom: '8px', display: 'block' }}>Skills Layout</label>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                          {SKILLS_LAYOUTS && Object.entries(SKILLS_LAYOUTS).map(([key, layout]) => (
+                            <button
+                              key={key}
+                              onClick={() => setStyleConfig(prev => ({
+                                ...prev,
+                                skills: { ...prev.skills, ...layout.config }
+                              }))}
+                              className="btn-secondary"
+                              style={{
+                                fontSize: '10px',
+                                padding: '6px',
+                                border: styleConfig.skills?.categoryValueSeparator === layout.config.categoryValueSeparator ? '2px solid #3b82f6' : '1px solid #ddd'
+                              }}
+                            >
+                              {layout.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                  </div>
+
+
+                </div>
+
+              </div>
+
+            );
+          })}
         </div>
 
         {/* BACKGROUND ZONES SECTION */}
@@ -2067,137 +2134,73 @@ const UIEditor = () => {
           ))}
         </div>
 
+        <h3 className="panel-title">DIVIDER LINES</h3>
+        <div className="button-grid">
+          <button onClick={() => addLine('horizontal')} className="btn-secondary">─ H</button>
+          <button onClick={() => addLine('vertical')} className="btn-secondary">│ V</button>
+        </div>
 
+        {
+          lines.length > 0 && lines.map(line => (
+            <div key={line.id} className={`line-control ${selectedLine === line.id ? 'selected' : ''}`}>
+              <div className="line-header">
+                <span className="line-label">{line.label}</span>
+                <button onClick={() => deleteLine(line.id)} className="btn-delete">✕</button>
+              </div>
 
-        {/* SECTION SIZES & POSITIONS SECTION */}
-        <h3 className="panel-title">SECTION SIZES & POSITIONS</h3>
-        <div className="section-widths-container" style={{ marginBottom: '20px' }}>
-          {Object.keys(sectionWidths).map(sectionName => {
-            const isTransparent = styleConfig[sectionName]?.container?.backgroundColor === 'transparent';
-            const position = sectionPositions[sectionName] || { x: 0, y: 0 };
-            const isOnPage2 = position.y >= 800;
-            const isOpen = activeSectionAccordion === sectionName;
-
-            return (
-              <div key={sectionName} className={`sub-accordion-item ${isOpen ? 'active' : ''}`}>
-                <div
-                  className="sub-accordion-trigger"
-                  onClick={() => setActiveSectionAccordion(isOpen ? null : sectionName)}
-                >
-                  <span className="section-name">{sectionName}</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {isTransparent && <span className="badge-mini">T</span>}
-                    {isOnPage2 && <span className="badge-mini blue">P2</span>}
-                    <span className="arrow">{isOpen ? '▼' : '▶'}</span>
-                  </div>
-                </div>
-
-                <div className={`sub-accordion-content ${isOpen ? 'expanded' : ''}`}>
-                  <div className="position-controls-wrapper">
-                    <div className="position-grid-layout">
-                      <div className="control-item">
-                        <label className="control-label-small">X Pos</label>
-                        <input
-                          type="number"
-                          value={Math.round(position.x)}
-                          onChange={(e) => {
-                            setSectionPositions(p => ({
-                              ...p,
-                              [sectionName]: { ...p[sectionName], x: parseInt(e.target.value) || 0 }
-                            }));
-                          }}
-                          className="control-input-small"
-                        />
-                      </div>
-                      <div className="control-item">
-                        <label className="control-label-small">Y Pos</label>
-                        <input
-                          type="number"
-                          value={Math.round(position.y)}
-                          onChange={(e) => {
-                            setSectionPositions(p => ({
-                              ...p,
-                              [sectionName]: { ...p[sectionName], y: parseInt(e.target.value) || 0 }
-                            }));
-                          }}
-                          className="control-input-small"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Nudge Controls for Section */}
-                    <div className="line-move-control" style={{ marginTop: '12px', marginBottom: '12px' }}>
-                      <label className="control-label" style={{ fontSize: '10px' }}>Nudge Position</label>
-                      <div className="arrow-grid">
-                        <div></div>
-                        <button onClick={() => moveSection(sectionName, 'up')} className="btn-arrow">↑</button>
-                        <div></div>
-                        <button onClick={() => moveSection(sectionName, 'left')} className="btn-arrow">←</button>
-                        <div className="arrow-center">MOVE</div>
-                        <button onClick={() => moveSection(sectionName, 'right')} className="btn-arrow">→</button>
-                        <div></div>
-                        <button onClick={() => moveSection(sectionName, 'down')} className="btn-arrow">↓</button>
-                        <div></div>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                      <button
-                        onClick={() => {
-                          setSectionPositions(p => ({
-                            ...p,
-                            [sectionName]: { ...p[sectionName], y: 50 }
-                          }));
-                        }}
-                        className="btn-secondary btn-page-nav"
-                      >
-                        → Page 1
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSectionPositions(p => ({
-                            ...p,
-                            [sectionName]: { ...p[sectionName], y: 900 }
-                          }));
-                          setShowPage2(true);
-                        }}
-                        className="btn-secondary btn-page-nav"
-                      >
-                        → Page 2
-                      </button>
-                    </div>
-                  </div>
-
+              <div className="line-move-control">
+                <label className="control-label">Move Position</label>
+                <div className="arrow-grid">
+                  <div></div>
+                  <button onClick={() => moveLine(line.id, 'up')} className="btn-arrow">↑</button>
+                  <div></div>
+                  <button onClick={() => moveLine(line.id, 'left')} className="btn-arrow">←</button>
+                  <div className="arrow-center">MOVE</div>
+                  <button onClick={() => moveLine(line.id, 'right')} className="btn-arrow">→</button>
+                  <div></div>
+                  <button onClick={() => moveLine(line.id, 'down')} className="btn-arrow">↓</button>
+                  <div></div>
                 </div>
               </div>
-            );
-          })}
-        </div>
+
+              <div className="line-resize-control">
+                <label className="control-label">
+                  Resize {line.orientation === 'vertical' ? 'Height' : 'Width'}
+                </label>
+                <div className="resize-buttons">
+                  <button onClick={() => resizeLine(line.id, 'decrease')} className="btn-resize">−</button>
+                  <button onClick={() => resizeLine(line.id, 'increase')} className="btn-resize">+</button>
+                </div>
+              </div>
+
+              <div className="line-properties">
+                <div className="property-control">
+                  <label className="control-label">Thickness</label>
+                  <input
+                    type="number"
+                    value={line.thickness}
+                    onChange={(e) => updateLine(line.id, 'thickness', parseFloat(e.target.value))}
+                    step="0.5"
+                    className="control-input"
+                  />
+                </div>
+                <div className="property-control">
+                  <label className="control-label">Color</label>
+                  <input
+                    type="color"
+                    value={normalizeColorForInput(line.color)}
+                    onChange={(e) => updateLine(line.id, 'color', e.target.value)}
+                    className="control-color"
+                  />
+                </div>
+              </div>
+            </div>
+          ))
+        }
 
 
 
-        <button onClick={resetLayout} className="btn-primary full-width">
-          ↻ RESET LAYOUT
-        </button>
 
-        <button onClick={autoFlowSections} className="btn-primary full-width btn-auto-flow-action">
-          ⚡ AUTO-FLOW CONTENT
-        </button>
-
-
-
-        <div className="button-grid">
-          <button onClick={downloadResume} className="btn-secondary">📥 PNG</button>
-          <button onClick={downloadPDF} className="btn-secondary">📄 PDF</button>
-          <button
-            onClick={handleSaveAll}
-            className="btn-primary"
-            style={{ background: '#2563eb' }}
-            disabled={saving}
-          >
-            {saving ? 'Saving...' : '💾 SAVE TEMPLATE'}
-          </button>
-        </div>
 
         <h3 className="panel-title">DIVIDER LINES</h3>
         <div className="button-grid">
@@ -2410,6 +2413,40 @@ const UIEditor = () => {
                 📝 {selectedSection.toUpperCase()}
               </div>
 
+              {/* X/Y Position Controls - Moved from Left Panel */}
+              <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+                <div className="control-item" style={{ flex: 1 }}>
+                  <label className="control-label-small" style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>X Position</label>
+                  <input
+                    type="number"
+                    value={Math.round(sectionPositions[selectedSection]?.x || 0)}
+                    onChange={(e) => {
+                      setSectionPositions(p => ({
+                        ...p,
+                        [selectedSection]: { ...p[selectedSection], x: parseInt(e.target.value) || 0 }
+                      }));
+                    }}
+                    className="control-input"
+                    style={{ width: '100%', padding: '8px', border: '1px solid #e5e7eb', borderRadius: '4px' }}
+                  />
+                </div>
+                <div className="control-item" style={{ flex: 1 }}>
+                  <label className="control-label-small" style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>Y Position</label>
+                  <input
+                    type="number"
+                    value={Math.round(sectionPositions[selectedSection]?.y || 0)}
+                    onChange={(e) => {
+                      setSectionPositions(p => ({
+                        ...p,
+                        [selectedSection]: { ...p[selectedSection], y: parseInt(e.target.value) || 0 }
+                      }));
+                    }}
+                    className="control-input"
+                    style={{ width: '100%', padding: '8px', border: '1px solid #e5e7eb', borderRadius: '4px' }}
+                  />
+                </div>
+              </div>
+
               {/* Height Control (Moved to Quick Style for convenience) */}
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
@@ -2575,6 +2612,71 @@ const UIEditor = () => {
                   />
                 </div>
               )}
+
+              {/* Content Font Size (Bullet Points) - Specifically for Experience, Projects, etc. */}
+              {styleConfig[selectedSection]?.bulletConfig && (
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                    Content Font Size
+                  </label>
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                    <button
+                      onClick={() => {
+                        const current = parseInt(styleConfig[selectedSection]?.bulletConfig?.textSize) || 9;
+                        handleStyleChange(selectedSection, 'bulletConfig', `${Math.max(6, current - 1)}px`, 'textSize');
+                      }}
+                      className="btn-secondary"
+                      style={{ padding: '8px 14px', fontSize: '16px', flex: 1 }}
+                    >
+                      −
+                    </button>
+                    <span style={{
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      minWidth: '40px',
+                      textAlign: 'center',
+                      background: 'white',
+                      padding: '8px',
+                      borderRadius: '4px',
+                      border: '1px solid #e5e7eb'
+                    }}>
+                      {parseInt(styleConfig[selectedSection]?.bulletConfig?.textSize) || 9}
+                    </span>
+                    <button
+                      onClick={() => {
+                        const current = parseInt(styleConfig[selectedSection]?.bulletConfig?.textSize) || 9;
+                        handleStyleChange(selectedSection, 'bulletConfig', `${Math.min(32, current + 1)}px`, 'textSize');
+                      }}
+                      className="btn-secondary"
+                      style={{ padding: '8px 14px', fontSize: '16px', flex: 1 }}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Content Color (Bullet Points) */}
+              {styleConfig[selectedSection]?.bulletConfig && (
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                    Content Color
+                  </label>
+                  <input
+                    type="color"
+                    value={normalizeColorForInput(styleConfig[selectedSection]?.bulletConfig?.textColor)}
+                    onChange={(e) => handleStyleChange(selectedSection, 'bulletConfig', e.target.value, 'textColor')}
+                    style={{
+                      width: '100%',
+                      height: '40px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      cursor: 'pointer'
+                    }}
+                  />
+                </div>
+              )}
+
 
               {/* Background Color */}
               <div style={{ marginBottom: '16px' }}>
