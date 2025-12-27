@@ -2540,7 +2540,7 @@ const WebGLStage = forwardRef(({
                     width,
                     height,
                     background,
-                    resolution: isMobile ? 1.25 : resolution,
+                    resolution: isMobile ? 1.5 : resolution,
                     antialias: true,
                     preference: 'webgl',
                     autoDensity: true

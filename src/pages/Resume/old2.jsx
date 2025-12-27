@@ -11,6 +11,7 @@
  * - Mode 3: Best performance, GPU rendering
  */
 
+import React, { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
 import * as PIXI from 'pixi.js';
 
 // ==================== UTILITY FUNCTIONS ====================
@@ -280,6 +281,42 @@ class GeometrySnapshot {
         }
 
         console.groupEnd();
+    }
+
+    /**
+     * SMART SNAPSHOT LOGIC
+     * returns true if the style difference requires a full DOM capture
+     * returns false if we can just update the Pixi object directly (position/scale)
+     */
+    static shouldReCapture(oldStyle = {}, newStyle = {}) {
+        // Properties we can safely ignore (handled by Pixi/Layout engine directly)
+        const ignoredProperties = new Set(['x', 'y', 'left', 'top', 'transform', 'opacity', 'zIndex', 'position']);
+
+        const isDifferent = (a, b) => {
+            // If one is null/undefined and other isn't (but allow null vs undefined mismatch if both falsy?? No, strict check better)
+            if (a === b) return false;
+
+            // Deep compare objects
+            if (typeof a === 'object' && a !== null && typeof b === 'object' && b !== null) {
+                const keysA = Object.keys(a);
+                const keysB = Object.keys(b);
+
+                // If specialized keys differ, we need capture
+                if (keysA.length !== keysB.length) return true;
+
+                for (const key of keysA) {
+                    if (ignoredProperties.has(key)) continue;
+                    if (isDifferent(a[key], b[key])) return true;
+                }
+                return false;
+            }
+
+            return true;
+        };
+
+        // We compare everything EXCEPT the ignored properties.
+        // This implicitly includes width/height, causing a snapshot if they change.
+        return isDifferent(oldStyle, newStyle);
     }
 
     // Recurse into children
@@ -873,7 +910,7 @@ class GeometrySnapshot {
 
 // ==================== MODE 3: PIXI RENDERER (GPU ACCELERATED) ====================
 
-class PixiRenderer {
+class PixiRendererEngine {
     constructor(container, options = {}) {
         this.container = container;
         this.options = {
@@ -1537,45 +1574,32 @@ class PixiRenderer {
             this.textureCache.forEach(texture => {
                 try {
                     texture.destroy(true);
-                } catch (e) { }
+                } catch (e) {
+                }
             });
             this.textureCache.clear();
         }
     }
 
     destroyDisplayObject(obj) {
-        if (!obj) return;
-
-        // Recurse children
-        if (obj.children && obj.children.length > 0) {
-            const children = [...obj.children];
-            children.forEach(c => this.destroyDisplayObject(c));
-        }
-
-        // Text textures should always be destroyed as they are unique to the text/style
-        const isText = (obj.text !== undefined || obj.constructor.name === 'Text' || obj.constructor.name === 'HTMLText' || obj.label !== undefined);
-
-        // Check if texture is in cache
-        let isCached = false;
-        if (obj.texture) {
-            for (const cached of this.textureCache.values()) {
-                if (cached === obj.texture) {
-                    isCached = true;
-                    break;
-                }
-            }
-        }
+        if (!obj || obj.destroyed) return;
 
         try {
-            // Only destroy texture if it's text or NOT in our cache (images/gradients)
-            // Actually for images from Assets, we shouldn't destroy them either.
-            // Text is the safe one to destroy every time.
+            // Text textures in Pixi v8 are handled by systems. 
+            // We should generally let the object destruction handle its textures 
+            // unless we are sure about pooling.
+            const isText = (obj.text !== undefined || obj.constructor.name === 'Text' || obj.constructor.name === 'HTMLText' || obj.label !== undefined);
+
+            // In Pixi v8, destroy({ children: true }) is very recursive.
+            // We only destroy textures for text nodes we created manually (not cached images).
             obj.destroy({
                 children: true,
                 texture: isText,
                 baseTexture: isText
             });
-        } catch (e) { }
+        } catch (e) {
+            // console.warn('[PixiRendererEngine] Error destroying object:', e);
+        }
     }
 
     destroy() {
@@ -1583,6 +1607,19 @@ class PixiRenderer {
         if (this.app) {
             this.app.destroy(true);
             this.app = null;
+        }
+    }
+
+    /**
+     * High-speed position update
+     * @param {PIXI.Container} container - The container returned by render()
+     * @param {number} x 
+     * @param {number} y 
+     */
+    updatePosition(container, x, y) {
+        if (container && container.transform) {
+            container.x = x;
+            container.y = y;
         }
     }
 }
@@ -2445,19 +2482,470 @@ function parseConfigToLayout(config, data) {
     }
 }
 
-export {
-    CanvasLayoutEngine,
-    LayoutNode,
-    FlexNode,
-    GridNode,
-    BlockNode,
-    TextNode,
-    ImageNode,
-    SpacerNode,
-    parseConfigToLayout,
-    GeometrySnapshot,
-    PixiRenderer,
-    HybridRenderer
+
+
+// ==================== REACT COMPONENT: WEBGL STAGE ====================
+
+const WebGLStage = forwardRef(({
+    width = 595,
+    height = 842,
+    shapes = [],
+    lines = [],
+    sections = [],
+    snapshot = null,
+    onDragEnd = () => { },
+    onSelect = () => { },
+    selectedId = null,
+    resolution = 2,
+    background = 0xffffff,
+    physicsEnabled = false,
+    yOffset = 0,
+    onHeaderContainerReady = null,
+    onSkillsContainerReady = null,
+    className = "",
+    style = {}
+}, ref) => {
+    const containerRef = useRef(null);
+    const pixiApp = useRef(null);
+    const layers = useRef({ background: null, shapes: null, sections: null, lines: null });
+    const sharedRenderer = useRef(null);
+    const [initialized, setInitialized] = useState(false);
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
+    const dragSession = useRef({
+        active: false,
+        type: null,
+        id: null,
+        target: null,
+        startX: 0,
+        startY: 0,
+        dragStartX: 0,
+        dragStartY: 0
+    });
+
+    // --- PIXI INITIALIZATION ---
+    useEffect(() => {
+        let isMounted = true;
+        const startTime = performance.now();
+
+        const initPixi = async () => {
+            if (!containerRef.current || !isMounted) return;
+
+            const PIXI_LIB = PIXI || window.PIXI;
+            const app = new PIXI_LIB.Application();
+
+            try {
+                await app.init({
+                    width,
+                    height,
+                    background,
+                    resolution: isMobile ? 1.25 : resolution,
+                    antialias: true,
+                    preference: 'webgl',
+                    autoDensity: true
+                });
+
+                if (!isMounted) {
+                    app.destroy(true, { children: true, texture: true });
+                    return;
+                }
+
+                pixiApp.current = app;
+                containerRef.current.innerHTML = '';
+                containerRef.current.appendChild(app.canvas || app.view);
+
+                // Initialize Layers
+                layers.current.background = new PIXI_LIB.Container();
+                layers.current.shapes = new PIXI_LIB.Container();
+                layers.current.sections = new PIXI_LIB.Container();
+                layers.current.sections.sortableChildren = true;
+                layers.current.lines = new PIXI_LIB.Container();
+
+                app.stage.addChild(layers.current.background);
+                app.stage.addChild(layers.current.shapes);
+                app.stage.addChild(layers.current.sections);
+                app.stage.addChild(layers.current.lines);
+
+                // Setup Interaction
+                app.stage.interactive = true;
+                app.stage.hitArea = app.screen;
+
+                bindEvents(app);
+
+                // FIX: Ensure stage event mode is set for v7/v8 compatibility
+                app.stage.eventMode = 'static';
+                app.stage.hitArea = app.screen;
+
+                const duration = performance.now() - startTime;
+                console.log(`[WebGLStage] Init complete in ${duration.toFixed(2)}ms`);
+                setInitialized(true);
+
+            } catch (err) {
+                console.error("[WebGLStage] Init failed:", err);
+            }
+        };
+
+        const bindEvents = (app) => {
+            app.stage.on('pointermove', (e) => {
+                const session = dragSession.current;
+                if (!session.active || !session.target || session.target.destroyed) return;
+
+                const newPos = e.data.global;
+                const deltaX = newPos.x - session.dragStartX;
+                const deltaY = newPos.y - session.dragStartY;
+
+                session.target.x = session.startX + deltaX;
+                session.target.y = session.startY + deltaY;
+
+                if (physicsEnabled && session.type === 'section') {
+                    handlePhysics(session.target);
+                }
+            });
+
+            const endDrag = () => {
+                const session = dragSession.current;
+                if (!session.active) return;
+
+                if (session.target && !session.target.destroyed) {
+                    const finalX = Math.round(session.target.x);
+                    const finalY = Math.round(session.target.y);
+
+                    // Batch positions for all sections if physics was moving them
+                    const allPositions = {};
+                    if (session.type === 'section' && layers.current.sections) {
+                        layers.current.sections.children.forEach(c => {
+                            if (c._id) allPositions[c._id] = { x: Math.round(c.x), y: Math.round(c.y) };
+                            c.tint = 0xFFFFFF; // Clear physics tints
+                        });
+                    }
+
+                    onDragEnd(session.type, session.id, { x: finalX, y: finalY }, allPositions);
+                }
+                session.active = false;
+                session.target = null;
+            };
+
+            app.stage.on('pointerup', endDrag);
+            app.stage.on('pointerupoutside', endDrag);
+            app.stage.on('pointerdown', (e) => {
+                if (e.target === app.stage) onSelect(null, null);
+            });
+        };
+
+        const handlePhysics = (dragged) => {
+            const sectionsLayer = layers.current.sections;
+            if (!sectionsLayer) return;
+
+            const b1 = dragged.getBounds();
+            sectionsLayer.children.forEach(other => {
+                if (other === dragged) return;
+                const b2 = other.getBounds();
+
+                const isOverlapping = (
+                    b1.x < b2.x + b2.width &&
+                    b1.x + b1.width > b2.x &&
+                    b1.y < b2.y + b2.height &&
+                    b1.y + b1.height > b2.y
+                );
+
+                if (isOverlapping) {
+                    other.tint = 0xFF9999;
+                    const dx = (b2.x + b2.width / 2) - (b1.x + b1.width / 2);
+                    const dy = (b2.y + b2.height / 2) - (b1.y + b1.height / 2);
+
+                    if (Math.abs(dy) > Math.abs(dx)) {
+                        other.y += dy > 0 ? 5 : -5;
+                    } else {
+                        other.x += dx > 0 ? 5 : -5;
+                    }
+                } else {
+                    other.tint = 0xFFFFFF;
+                }
+            });
+        };
+
+        initPixi();
+
+        return () => {
+            isMounted = false;
+            setInitialized(false);
+            if (pixiApp.current) {
+                console.log('🧹 [WebGLStage] Cleanup');
+                const app = pixiApp.current;
+                try {
+                    // Defend against Pixi v8 _cancelResize issue
+                    if (app.renderer && !app.renderer._cancelResize) {
+                        app.renderer._cancelResize = () => { };
+                    }
+
+                    app.ticker.stop();
+                    // Explicitly destroy stages/layers first to avoid pool issues
+                    if (app.stage) {
+                        app.stage.removeChildren();
+                    }
+                    app.destroy(true, { children: true, texture: true });
+                } catch (e) {
+                    console.warn('[WebGLStage] App destroy warning:', e);
+                }
+                pixiApp.current = null;
+            }
+        };
+    }, [width, height]); // Re-init on size change
+
+    // --- RENDERING LOGIC ---
+    useEffect(() => {
+        const app = pixiApp.current;
+        if (!app || !app.stage) return;
+
+        const renderStartTime = performance.now();
+
+        if (!sharedRenderer.current) {
+            sharedRenderer.current = new PixiRendererEngine(null, { width, height, resolution });
+        }
+
+        let isCancelled = false;
+
+        const render = async () => {
+            if (isCancelled) return;
+
+            // Surgical Cleanup
+            const engine = sharedRenderer.current;
+            Object.values(layers.current).forEach(layer => {
+                if (!layer) return;
+                [...layer.children].forEach(child => engine.destroyDisplayObject(child));
+                layer.removeChildren();
+            });
+
+            if (isCancelled) return;
+
+            // 1. Background
+            const bg = new PIXI.Graphics();
+            bg.rect(0, 0, width, height).fill({ color: background, alpha: 1 });
+            layers.current.background.addChild(bg);
+
+            // 2. Shapes
+            shapes.forEach(shape => {
+                const g = new PIXI.Graphics();
+                const color = engine.parseColor(shape.color);
+
+                if (shape.type === 'circle') g.circle(shape.width / 2, shape.height / 2, shape.width / 2);
+                else g.rect(0, 0, shape.width, shape.height);
+
+                g.fill({ color: color.hex, alpha: color.alpha });
+                g.x = shape.x; g.y = shape.y - yOffset;
+                g._id = shape.id;
+                g.eventMode = 'static';
+                g.cursor = 'pointer';
+
+                g.on('pointerdown', (e) => {
+                    onSelect('shape', shape.id);
+                    const pos = e.data.global;
+                    dragSession.current = { active: true, type: 'shape', id: shape.id, target: g, startX: g.x, startY: g.y, dragStartX: pos.x, dragStartY: pos.y };
+                });
+
+                layers.current.shapes.addChild(g);
+            });
+
+            // 3. Sections (Hybrid: Single Snapshot or Multi-Section Snapshots)
+            const renderSection = async (id, pos, snapshotData, isSelected) => {
+                const sectionContainer = new PIXI.Container();
+                sectionContainer.x = pos.x;
+                sectionContainer.y = pos.y - yOffset;
+                sectionContainer._id = id;
+                sectionContainer.eventMode = 'static'; // Use modern PIXI event mode
+                sectionContainer.cursor = 'move';
+                sectionContainer.zIndex = isSelected ? 100 : 0;
+
+                if (id === 'header' && onHeaderContainerReady) onHeaderContainerReady(sectionContainer);
+                if (id === 'skills' && onSkillsContainerReady) onSkillsContainerReady(sectionContainer);
+
+                // Selection Border / Hover Effect
+                // MOVED: Border creation is now handled dynamically or initially hidden
+                const borderInset = 5;
+                const border = new PIXI.Graphics();
+                border.name = 'selectionBorder'; // Tag for easy finding
+                border.rect(-borderInset, -borderInset, snapshotData.width + borderInset * 2, snapshotData.height + borderInset * 2);
+                border.stroke({ color: 0x3b82f6, width: 2, alpha: 0.8 });
+                border.visible = isSelected; // Initial state
+                sectionContainer.addChild(border);
+
+                sectionContainer.on('pointerover', () => {
+                    if (selectedId !== id) border.visible = true;
+                });
+                sectionContainer.on('pointerout', () => {
+                    if (selectedId !== id) border.visible = false;
+                });
+
+                sectionContainer.on('pointerdown', (e) => {
+                    e.stopPropagation();
+                    // Track position immediately for drag
+                    const globalPos = e.data.global;
+                    onSelect('section', id);
+
+                    dragSession.current = {
+                        active: true,
+                        type: 'section',
+                        id: id,
+                        target: sectionContainer,
+                        startX: sectionContainer.x,
+                        startY: sectionContainer.y,
+                        dragStartX: globalPos.x,
+                        dragStartY: globalPos.y
+                    };
+                });
+
+                layers.current.sections.addChild(sectionContainer);
+                await engine.render(snapshotData, { targetContainer: sectionContainer });
+            };
+
+            if (snapshot && snapshot.nodes) {
+                // Single Page Mode (ResumeEditorv3)
+                const sortedNodes = [...snapshot.nodes].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+                for (const node of sortedNodes) {
+                    const displayObj = await engine.renderNode(node);
+                    if (displayObj) layers.current.sections.addChild(displayObj);
+                }
+            } else if (sections && sections.length > 0) {
+                // Multi-Section Mode (b3.jsx)
+                for (const [sectionId, pos] of sections) {
+                    const sectionSnapshot = snapshot?.sectionSnapshots?.[sectionId] || snapshot?.[sectionId];
+                    if (sectionSnapshot) {
+                        const secStart = performance.now();
+                        await renderSection(sectionId, pos, sectionSnapshot, selectedId === sectionId);
+                        const secDuration = performance.now() - secStart;
+                        console.log(`  └─ GPU Render [${sectionId.padEnd(12)}] : ${secDuration.toFixed(2)}ms`);
+                    }
+                }
+            }
+
+            // 4. Lines
+            lines.forEach(line => {
+                const g = new PIXI.Graphics();
+                const color = engine.parseColor(line.color);
+                const thickness = line.thickness || 1;
+                g.moveTo(line.x1, line.y1 - yOffset).lineTo(line.x2, line.y2 - yOffset).stroke({ color: color.hex, width: thickness, alpha: color.alpha });
+                g.interactive = true;
+                g.hitArea = new PIXI.Rectangle(Math.min(line.x1, line.x2) - 5, Math.min(line.y1, line.y2) - yOffset - 5, Math.abs(line.x2 - line.x1) + 10, Math.abs(line.y2 - line.y1) + 10);
+                g.on('pointerdown', () => onSelect('line', line.id));
+                if (isCancelled) return;
+                layers.current.lines.addChild(g);
+            });
+
+            const renderDuration = performance.now() - renderStartTime;
+            const nodeCount = snapshot?.nodes?.length || Object.values(snapshot || {}).reduce((acc, s) => acc + (s?.nodes?.length || 0), 0);
+            if (!isCancelled) {
+                console.log(`[WebGLStage] Render cycle: ${renderDuration.toFixed(2)}ms (Nodes: ${nodeCount}, Sections: ${sections?.length || 0})`);
+            }
+        };
+
+        render();
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [initialized, shapes, lines, sections, snapshot, background, physicsEnabled, resolution, yOffset]); // REMOVED selectedId
+
+    // --- SELECTION UPDATE EFFECT (Lightweight) ---
+    useEffect(() => {
+        if (!initialized) return;
+
+        // Update Shapes
+        if (layers.current.shapes) {
+            layers.current.shapes.children.forEach(g => {
+                // If we had a visual indicator for shapes, update it here
+                // Currently shapes don't show a border on select in the original code, 
+                // but we can add logic if needed. 
+            });
+        }
+
+        // Update Sections
+        if (layers.current.sections) {
+            layers.current.sections.children.forEach(container => {
+                const isSelected = container._id === selectedId;
+
+                // Find or create border
+                let border = container.children.find(c => c.name === 'selectionBorder');
+
+                if (isSelected) {
+                    if (!border) {
+                        const borderInset = 5;
+                        border = new PIXI.Graphics();
+                        border.name = 'selectionBorder';
+                        // We need the size. 
+                        // Note: getBounds() might be expensive or local bounds might be 0 if empty.
+                        // But we passed snapshotData before. 
+                        // Best way relies on the fact the container usually has children.
+                        // For now, we'll try to use the container's calculated bounds.
+                        const bounds = container.getLocalBounds();
+                        border.rect(bounds.x - borderInset, bounds.y - borderInset, bounds.width + borderInset * 2, bounds.height + borderInset * 2);
+                        border.stroke({ color: 0x3b82f6, width: 2, alpha: 0.8 });
+                        container.addChild(border);
+                    }
+                    border.visible = true;
+                    container.zIndex = 100; // Bring to front
+                } else {
+                    if (border) border.visible = false;
+                    container.zIndex = 0; // Reset zIndex
+                }
+            });
+            // Re-sort to apply zIndex changes
+            layers.current.sections.sortChildren();
+        }
+
+        // Update Lines
+        if (layers.current.lines) {
+            // Similar logic for lines if needed
+        }
+
+    }, [selectedId, initialized]);
+
+    useImperativeHandle(ref, () => ({
+        app: pixiApp.current,
+        exportImage: () => sharedRenderer.current ? sharedRenderer.current.exportImage() : null
+    }));
+
+    return (
+        <div
+            ref={containerRef}
+            className={`webgl-stage-container ${className}`}
+            style={{
+                width: '100%', height: '100%',
+                display: 'flex', justifyContent: 'center', alignItems: 'center',
+                overflow: 'hidden', backgroundColor: '#525659',
+                touchAction: 'none', // Critical for mobile dragging
+                ...style
+            }}
+        />
+    );
+});
+
+// ==================== HOOK: WEBGL SNAPSHOT ====================
+
+const useWebGLSnapshot = () => {
+    const [snapshot, setSnapshot] = useState(null);
+    const [isCapturing, setIsCapturing] = useState(false);
+    const engineRef = useRef(new GeometrySnapshot());
+
+    const capture = useCallback(async (element) => {
+        if (!element) return null;
+        const startTime = performance.now();
+        setIsCapturing(true);
+
+        try {
+            const data = await engineRef.current.capture(element);
+            setSnapshot(data);
+            const duration = performance.now() - startTime;
+            console.log(`[useWebGLSnapshot] Capture complete in ${duration.toFixed(2)}ms`);
+            setIsCapturing(false);
+            return data;
+        } catch (err) {
+            console.error("[useWebGLSnapshot] Capture failed:", err);
+            setIsCapturing(false);
+            return null;
+        }
+    }, []);
+
+    return { snapshot, capture, isCapturing };
 };
 
 // ==================== HYBRID RENDERING ORCHESTRATOR ====================
@@ -2515,7 +3003,7 @@ class HybridRenderer {
      */
     async renderWithPixi(geometrySnapshot, config = {}) {
         if (!this.pixiRenderer) {
-            this.pixiRenderer = new PixiRenderer(this.container, {
+            this.pixiRenderer = new PixiRendererEngine(this.container, {
                 width: geometrySnapshot.width,
                 height: geometrySnapshot.height
             });
@@ -2551,4 +3039,21 @@ class HybridRenderer {
         }
     }
 }
+
+export {
+    CanvasLayoutEngine,
+    LayoutNode,
+    FlexNode,
+    GridNode,
+    BlockNode,
+    TextNode,
+    ImageNode,
+    SpacerNode,
+    parseConfigToLayout,
+    GeometrySnapshot,
+    PixiRendererEngine,
+    HybridRenderer,
+    WebGLStage,
+    useWebGLSnapshot
+};
 

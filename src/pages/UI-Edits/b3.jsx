@@ -223,7 +223,7 @@ const UIEditor = () => {
       setIsMobile(mobile);
       if (mobile) {
         setActiveTab('preview'); // Default to preview for clean look
-        setZoom(1); // 🔎 Default zoom to fit mobile screen
+        setZoom(0.6); // 🔎 Default zoom to fit mobile screen
       } else {
         setZoom(1.0);
       }
