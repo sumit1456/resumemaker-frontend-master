@@ -247,6 +247,8 @@ const UIEditor = () => {
 
 
 
+
+
   useEffect(() => {
     if (!currentResume) return;
     setResumeData(currentResume);
