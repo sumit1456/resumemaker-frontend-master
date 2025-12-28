@@ -488,6 +488,8 @@ export default function ResumeEditor({ resume: propsResume }) {
     const [showPage2, setShowPage2] = useState(false);
     const prevStyleConfigRef = useRef({});
     const [isAutoFlowEnabled, setIsAutoFlowEnabled] = useState(false); // Auto-flow OFF by default
+    const [sectionWidths, setSectionWidths] = useState({});
+    const [sectionHeights, setSectionHeights] = useState({});
     // ============================================================
 
     const [customSections, setCustomSections] = useState([]);
@@ -1729,34 +1731,32 @@ export default function ResumeEditor({ resume: propsResume }) {
     };
 
 
+
+
     // ==================== MULTI-PAGE LOGIC ====================
 
-    // Calculate elements for a specific page (1 or 2)
-    const getElementsForPage = (pageNumber) => {
-        const PAGE_HEIGHT = 842;
-        const PAGE_OFFSET = (pageNumber - 1) * PAGE_HEIGHT;
-        const pageStart = PAGE_OFFSET;
-        const pageEnd = pageStart + PAGE_HEIGHT;
-
-        const pageSections = Object.entries(sectionPositions)
-            .filter(([_, pos]) => pos.y >= pageStart && pos.y < pageEnd);
-
-        const pageLines = lines.filter(line =>
-            Math.min(line.y1, line.y2) >= pageStart && Math.min(line.y1, line.y2) < pageEnd
-        );
-
-        const pageShapes = backgroundShapes.filter(shape =>
-            shape.y >= pageStart && shape.y < pageEnd
-        );
+    // Separate elements by page (from b3.jsx line 703)
+    const getElementsForPage = (pageNum) => {
+        const pageStart = (pageNum - 1) * 842;
+        const pageEnd = pageNum * 842;
 
         return {
-            sections: pageSections,
-            lines: pageLines,
-            shapes: pageShapes
+            sections: Object.entries(sectionPositions || {}).filter(([name, pos]) => {
+                if (!pos) return false;
+                const height = sectionHeights[name] || (sectionSnapshots[name]?.height) || 200;
+                // Intersection check: top is in page OR bottom is in page
+                return (pos.y < pageEnd && pos.y + height > pageStart);
+            }),
+            lines: (lines || []).filter(line => {
+                const yMin = Math.min(line.y1, line.y2);
+                const yMax = Math.max(line.y1, line.y2);
+                return (yMax > pageStart && yMin < pageEnd);
+            }),
+            shapes: (backgroundShapes || []).filter(shape => {
+                return (shape.y < pageEnd && shape.y + (shape.height || 100) > pageStart);
+            })
         };
     };
-
-    // Auto-flow sections - Header Aligned & Height Managed (from b3.jsx line 1139)
     const autoFlowSections = () => {
         const spacing = 15; // Standard vertical spacing
         const headerPos = sectionPositions['header'] || { x: 40, y: 50 };
@@ -1802,6 +1802,10 @@ export default function ResumeEditor({ resume: propsResume }) {
         setSectionPositions(newPositions);
         console.log("🚀 Auto-flow complete: aligned items to X:", headerX);
     };
+
+    // Calculate page elements - Optimized with Memo (from b3.jsx line 1290)
+    const page1Elements = useMemo(() => getElementsForPage(1), [sectionPositions, lines, backgroundShapes, sectionHeights, sectionSnapshots]);
+    const page2Elements = useMemo(() => showPage2 ? getElementsForPage(2) : { sections: [], lines: [], shapes: [] }, [showPage2, sectionPositions, lines, backgroundShapes, sectionHeights, sectionSnapshots]);
 
     // Custom Smooth Scroll Helper
     const smoothScrollTo = (container, targetElement, duration = 800) => {
@@ -1911,9 +1915,6 @@ export default function ResumeEditor({ resume: propsResume }) {
         }, 100);
     };
 
-    // Calculate page elements for rendering
-    const page1Elements = getElementsForPage(1);
-    const page2Elements = showPage2 ? getElementsForPage(2) : { sections: [], lines: [], shapes: [] };
 
 
     if (isLoadingResume) {
