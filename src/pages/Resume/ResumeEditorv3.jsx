@@ -487,6 +487,7 @@ export default function ResumeEditor({ resume: propsResume }) {
     });
     const [showPage2, setShowPage2] = useState(false);
     const prevStyleConfigRef = useRef({});
+    const [isAutoFlowEnabled, setIsAutoFlowEnabled] = useState(false); // Auto-flow OFF by default
     // ============================================================
 
     const [customSections, setCustomSections] = useState([]);
@@ -865,6 +866,31 @@ export default function ResumeEditor({ resume: propsResume }) {
         const timer = setTimeout(renderAllSections, 100);
         return () => clearTimeout(timer);
     }, [selectedTemplate, styleConfig, resumeDetails, skills, experiences, projects, educationList, certifications, customSections]);
+
+    // 🎯 REACTIVE AUTO-FLOW: Trigger on content change (from b3.jsx line 1272)
+    useEffect(() => {
+        // 🛡️ Disable auto-flow for multi-column templates based on Config ID/Type
+        const isMultiColumn = styleConfig.type === 'multi-column' || styleConfig.id === 'two-column-professional';
+
+        // Debug logging
+        console.log('🔍 Auto-flow check:', {
+            templateType: styleConfig.type,
+            templateId: styleConfig.id,
+            isMultiColumn,
+            isAutoFlowEnabled,
+            snapshotCount: Object.keys(sectionSnapshots).length
+        });
+
+        if (isMultiColumn) {
+            console.log('🚫 Auto-flow DISABLED: Multi-column template detected');
+            return;
+        }
+
+        if (isAutoFlowEnabled && Object.keys(sectionSnapshots).length > 0) {
+            console.log('✅ Auto-flow TRIGGERED');
+            autoFlowSections();
+        }
+    }, [sectionSnapshots, resumeDetails, isAutoFlowEnabled, styleConfig.type, styleConfig.id]);
 
 
 
@@ -1730,40 +1756,51 @@ export default function ResumeEditor({ resume: propsResume }) {
         };
     };
 
-    // Auto-flow sections handling pagination
+    // Auto-flow sections - Header Aligned & Height Managed (from b3.jsx line 1139)
     const autoFlowSections = () => {
-        let currentY = 50;
-        const spacing = 20;
-        const PAGE_HEIGHT = 842;
-        const PAGE_MARGIN = 50;
-        let currentPage = 1;
+        const spacing = 15; // Standard vertical spacing
+        const headerPos = sectionPositions['header'] || { x: 40, y: 50 };
+        const headerX = headerPos.x;
 
-        // Sort by current Y position to maintain relative order
+        // Start stack at header's Y
+        let currentY = headerPos.y;
+
+        // Sort sections by current Y to maintain user-intended order
         const sortedSections = Object.keys(sectionPositions).sort((a, b) => {
-            const posA = sectionPositions[a];
-            const posB = sectionPositions[b];
-            return (posA?.y || 0) - (posB?.y || 0);
+            return (sectionPositions[a]?.y || 0) - (sectionPositions[b]?.y || 0);
         });
 
         const newPositions = {};
 
-        sortedSections.forEach(sectionName => {
-            const snapshot = sectionSnapshots[sectionName];
-            const height = snapshot ? snapshot.height : 100;
-            const currentX = sectionPositions[sectionName]?.x || 40;
-
-            // Check if we need to break to next page
-            if (currentPage === 1 && (currentY + height) > (PAGE_HEIGHT - PAGE_MARGIN)) {
-                currentPage = 2;
-                currentY = PAGE_HEIGHT + PAGE_MARGIN;
-                setShowPage2(true);
+        sortedSections.forEach(name => {
+            // Find current position to keep if it's the header (header is the anchor)
+            if (name === 'header') {
+                newPositions[name] = headerPos;
+                const height = sectionSnapshots[name]?.height || 150;
+                currentY += height + spacing;
+                return;
             }
 
-            newPositions[sectionName] = { x: currentX, y: currentY };
+            const snapshot = sectionSnapshots[name];
+            const height = snapshot ? snapshot.height : 100;
+
+            // 🎯 Auto-Align on X with header
+            // 🎯 Auto-Manage Y based on previous heights
+            newPositions[name] = {
+                x: headerX,
+                y: currentY
+            };
+
             currentY += height + spacing;
         });
 
+        // Check if total height requires Page 2
+        if (currentY > 750 && !showPage2) {
+            setShowPage2(true);
+        }
+
         setSectionPositions(newPositions);
+        console.log("🚀 Auto-flow complete: aligned items to X:", headerX);
     };
 
     // Custom Smooth Scroll Helper
@@ -2345,20 +2382,23 @@ export default function ResumeEditor({ resume: propsResume }) {
                                     >
                                         {showPage2 ? 'Show 1 Page' : 'Show 2 Pages'}
                                     </button>
+
                                     <button
-                                        onClick={autoFlowSections}
+                                        onClick={() => setIsAutoFlowEnabled(!isAutoFlowEnabled)}
                                         className="btn-primary"
                                         style={{
                                             padding: '6px 12px',
                                             borderRadius: '4px',
                                             border: 'none',
-                                            background: '#8b5cf6',
+                                            background: isAutoFlowEnabled ? '#10b981' : '#6b7280',
                                             color: 'white',
                                             fontSize: '12px',
-                                            cursor: 'pointer'
+                                            cursor: 'pointer',
+                                            transition: 'background 0.2s'
                                         }}
+                                        title={isAutoFlowEnabled ? "Auto-flow is ON - sections align automatically" : "Auto-flow is OFF - manual positioning"}
                                     >
-                                        ⚡ Auto-Flow
+                                        {isAutoFlowEnabled ? '✓ Auto-Flow ON' : 'Auto-Flow OFF'}
                                     </button>
                                 </div>
                             </div>
