@@ -37,7 +37,20 @@ import {
 } from "../UI-Edits/BaseTemplates.jsx";
 import * as PIXI from 'pixi.js';
 import { jsPDF } from "jspdf";
-import { ATS_TEMPLATE_CONFIG, MODERN_TEMPLATE_CONFIG, TWO_COLUMN_TEMPLATE_CONFIG } from "../UI-Edits/TemplateConfigs.js";
+import {
+    ATS_TEMPLATE_CONFIG, MODERN_TEMPLATE_CONFIG, TWO_COLUMN_TEMPLATE_CONFIG,
+    TEMPLATE5_CONFIG,
+    NEW_ATS_CONFIG,
+} from "../UI-Edits/TemplateConfigs.js";
+
+// ==================== TEMPLATE MAPPINGS ====================
+const TEMPLATES = {
+    ats: ATS_TEMPLATE_CONFIG,
+    modern: MODERN_TEMPLATE_CONFIG,
+    twoColumn: TWO_COLUMN_TEMPLATE_CONFIG,
+    template5: TEMPLATE5_CONFIG,
+    newAts: NEW_ATS_CONFIG
+};
 
 Font.register({
     family: "Arial, sans-serif",
@@ -791,7 +804,7 @@ export default function ResumeEditor({ resume: propsResume }) {
     const [downloading, setDownloading] = useState(false);
     const [saveError, setSaveError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
-    const [selectedTemplate, setSelectedTemplate] = useState("1");
+    const [selectedTemplate, setSelectedTemplate] = useState("modern"); // Changed from "1" to "modern" template key
     const [isTemplateLoading, setIsTemplateLoading] = useState(false);
     const [pdfBlob, setPdfBlob] = useState(null);
     const [generatingPreview, setGeneratingPreview] = useState(false);
@@ -1279,16 +1292,8 @@ export default function ResumeEditor({ resume: propsResume }) {
         setIsTemplateLoading(true);
         setSelectedTemplate(newTemplate);
 
-        // Sync WebGL Layout
-        const configs = {
-            "1": MODERN_TEMPLATE_CONFIG,
-            "2": MODERN_TEMPLATE_CONFIG,
-            "3": ATS_TEMPLATE_CONFIG,
-            "7": ATS_TEMPLATE_CONFIG,
-            "two": TWO_COLUMN_TEMPLATE_CONFIG
-        };
-
-        const config = configs[newTemplate];
+        // Sync WebGL Layout using TEMPLATES object
+        const config = TEMPLATES[newTemplate];
         if (config) {
             if (config.positions) setSectionPositions(config.positions);
             if (config.lines) setLines(config.lines);
@@ -2220,14 +2225,11 @@ export default function ResumeEditor({ resume: propsResume }) {
                                 <div className="template-selector-controls">
                                     <label className="template-label">Choose Template:</label>
                                     <select value={selectedTemplate} onChange={(e) => handleTemplateChange(e.target.value)} className="template-select">
-                                        <option value="1">Classic Template</option>
-                                        <option value="2">Modern Template</option>
-                                        <option value="3">ATS-Friendly Template</option>
-                                        <option value="4">Executive Elite</option>
-                                        <option value="5">Tech Innovator</option>
-                                        <option value="6">Academic Scholar</option>
-                                        <option value="7">New ATS-Friendly Template</option>
-                                        <option value="8">Creative Bold</option>
+                                        {Object.keys(TEMPLATES).map(key => (
+                                            <option key={key} value={key}>
+                                                {TEMPLATES[key].name || key.charAt(0).toUpperCase() + key.slice(1)}
+                                            </option>
+                                        ))}
                                     </select>
                                     {(isTemplateLoading || generatingPreview) && (
                                         <span className="template-loading">

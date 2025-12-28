@@ -7,7 +7,7 @@ export const TWO_COLUMN_TEMPLATE_CONFIG = {
 
   // Default section positions for this template
   positions: {
-    header: { x: 4, y: -3, scaleX: 1, scaleY: 1 },
+    header: { x: 24, y: 14, scaleX: 1, scaleY: 1 },
     summary: { x: 19, y: 114, scaleX: 1, scaleY: 1 },
     skills: { x: 24, y: 244, scaleX: 1, scaleY: 1 },
     experience: { x: 282, y: 245, scaleX: 1, scaleY: 1 },
