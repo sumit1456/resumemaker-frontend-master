@@ -4,7 +4,16 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { setCurrentResume, setCurrentResumeId } from "../../redux/store.js";
 import { mergeResumeData } from "./Utils";
-import { ATS_TEMPLATE_CONFIG, MODERN_TEMPLATE_CONFIG, TWO_COLUMN_TEMPLATE_CONFIG, TEMPLATE5_CONFIG, HEADER_LAYOUTS, CONTACT_LAYOUTS, SKILLS_LAYOUTS } from "./TemplateConfigs";
+import {
+  ATS_TEMPLATE_CONFIG,
+  MODERN_TEMPLATE_CONFIG,
+  TWO_COLUMN_TEMPLATE_CONFIG,
+  TEMPLATE5_CONFIG,
+  NEW_ATS_CONFIG,
+  HEADER_LAYOUTS,
+  CONTACT_LAYOUTS,
+  SKILLS_LAYOUTS
+} from "./TemplateConfigs";
 import { defaultResumeData } from "./Utils";
 import "./b3.css";
 import {
@@ -16,6 +25,15 @@ import {
 import { GeometrySnapshot, WebGLStage } from "../../components/engine/WebEngine.jsx";
 import { jsPDF } from "jspdf";
 import * as PIXI from 'pixi.js';
+
+// ==================== TEMPLATE MAPPINGS ====================
+const TEMPLATES = {
+  ats: ATS_TEMPLATE_CONFIG,
+  modern: MODERN_TEMPLATE_CONFIG,
+  twoColumn: TWO_COLUMN_TEMPLATE_CONFIG,
+  template5: TEMPLATE5_CONFIG,
+  newAts: NEW_ATS_CONFIG
+};
 
 
 
@@ -348,12 +366,7 @@ const UIEditor = () => {
     }, 600);
   };
 
-  const TEMPLATES = {
-    ats: ATS_TEMPLATE_CONFIG,
-    modern: MODERN_TEMPLATE_CONFIG,
-    twoColumn: TWO_COLUMN_TEMPLATE_CONFIG,
-    template5: TEMPLATE5_CONFIG
-  };
+
 
   // Initialize template on mount
 
@@ -746,7 +759,9 @@ const UIEditor = () => {
 
   const handleTemplateSwitch = (templateName) => {
     setCurrentTemplate(templateName);
-    const template = TEMPLATES[templateName];
+
+    // 🛡️ Robust Lookup from TEMPLATES map
+    const template = TEMPLATES[templateName] || ATS_TEMPLATE_CONFIG;
 
     setStyleConfig(template);
     setSectionPositions(template.positions || {});
@@ -756,7 +771,7 @@ const UIEditor = () => {
     setSectionHeights(heights);
 
     setLines(template.lines || []);
-    setBackgroundShapes(template.shapes || []);
+    setBackgroundShapes(template.shapes || []); // Ensure this maps to config key 'backgroundShapes' or 'shapes' based on config structure
     setZoom(1);
     setSelectedLine(null);
     setSelectedShape(null);
@@ -768,8 +783,10 @@ const UIEditor = () => {
     } else {
       setNextLineId(1);
     }
-    if (template.shapes && template.shapes.length > 0) {
-      setNextShapeId(Math.max(...template.shapes.map(s => s.id)) + 1);
+    // 🛡️ Handle legacy shape key vs new key if needed
+    const shapes = template.shapes || template.backgroundShapes || [];
+    if (shapes && shapes.length > 0) {
+      setNextShapeId(Math.max(...shapes.map(s => s.id)) + 1);
     } else {
       setNextShapeId(1);
     }
@@ -945,32 +962,119 @@ const UIEditor = () => {
         ...prev,
         ...allPositions
       }));
+      // Batch update linked lines
+      Object.entries(allPositions).forEach(([name, pos]) => {
+        updateLinkedLines(name, pos);
+      });
     } else {
       setSectionPositions(prev => ({
         ...prev,
         [sectionName]: newPos
       }));
+      updateLinkedLines(sectionName, newPos);
     }
     // 🛡️ Selection persists (User Request)
   };
 
-  // Move section
   const moveSection = (sectionName, direction) => {
-    const step = 2; // Fine-grained movement for sections
+    const step = 2;
     setSectionPositions(prev => {
       const pos = prev[sectionName] || { x: 0, y: 0 };
+      let newPos = { ...pos };
       switch (direction) {
-        case 'up':
-          return { ...prev, [sectionName]: { ...pos, y: pos.y - step } };
-        case 'down':
-          return { ...prev, [sectionName]: { ...pos, y: pos.y + step } };
-        case 'left':
-          return { ...prev, [sectionName]: { ...pos, x: pos.x - step } };
-        case 'right':
-          return { ...prev, [sectionName]: { ...pos, x: pos.x + step } };
-        default:
-          return prev;
+        case 'up': newPos.y -= step; break;
+        case 'down': newPos.y += step; break;
+        case 'left': newPos.x -= step; break;
+        case 'right': newPos.x += step; break;
       }
+      updateLinkedLines(sectionName, newPos);
+      return { ...prev, [sectionName]: newPos };
+    });
+  };
+
+  const updateLinkedLines = (sectionName, newPos, newWidth) => {
+    setLines(prevLines => prevLines.map(line => {
+      if (line.isSectionDivider === sectionName) {
+        const width = newWidth ? (parseInt(newWidth) || 560) : Math.abs(line.x2 - line.x1);
+        const offsetY = line.offsetY || 22;
+        return {
+          ...line,
+          x1: newPos.x,
+          y1: newPos.y + offsetY,
+          x2: newPos.x + width,
+          y2: newPos.y + offsetY
+        };
+      }
+      return line;
+    }));
+  };
+
+  const updateGlobalSectionDividers = (updates) => {
+    const sections = ['summary', 'skills', 'experience', 'projects', 'education', 'certifications'];
+
+    setStyleConfig(prev => {
+      const currentGlobal = prev.globalSectionDividers || { enabled: false, thickness: 2, color: '#000000' };
+      const globalConfig = { ...currentGlobal, ...updates };
+
+      // Update styleConfig state
+      const newConfig = {
+        ...prev,
+        globalSectionDividers: globalConfig
+      };
+
+      // Handle actual line objects in lines array
+      if (updates.enabled === true || (globalConfig.enabled && (updates.thickness !== undefined || updates.color !== undefined))) {
+        // We need to sync/add lines
+        setLines(currentLines => {
+          let newLines = [...currentLines];
+          let localNextId = nextLineId;
+
+          sections.forEach(section => {
+            const existingLineIndex = newLines.findIndex(l => l.isSectionDivider === section);
+            const pos = sectionPositions[section];
+            const widthStr = sectionWidths[section] || "560px";
+            const width = parseInt(widthStr) || 560;
+
+            if (pos) {
+              if (existingLineIndex > -1) {
+                // Update existing
+                newLines[existingLineIndex] = {
+                  ...newLines[existingLineIndex],
+                  thickness: globalConfig.thickness,
+                  color: globalConfig.color,
+                  x1: pos.x,
+                  y1: pos.y + 22,
+                  x2: pos.x + width,
+                  y2: pos.y + 22,
+                  offsetY: 22
+                };
+              } else {
+                // Add new
+                newLines.push({
+                  id: localNextId++,
+                  label: `${section.charAt(0).toUpperCase() + section.slice(1)} Divider`,
+                  orientation: 'horizontal',
+                  x1: pos.x,
+                  y1: pos.y + 22,
+                  x2: pos.x + width,
+                  y2: pos.y + 22,
+                  thickness: globalConfig.thickness,
+                  color: globalConfig.color,
+                  isSectionDivider: section,
+                  offsetY: 22
+                });
+              }
+            }
+          });
+          setNextLineId(localNextId);
+          return newLines;
+        });
+      } else if (updates.enabled === false) {
+        // Remove all section divider lines
+        setLines(currentLines => currentLines.filter(l => !l.isSectionDivider));
+      }
+
+      return newConfig;
     });
   };
 
@@ -986,6 +1090,7 @@ const UIEditor = () => {
         y: newAttrs.y
       }
     }));
+    updateLinkedLines(sectionName, { x: newAttrs.x, y: newAttrs.y }, newAttrs.width);
 
     // Update WIDTH
     if (newAttrs.width) {
@@ -1074,11 +1179,12 @@ const UIEditor = () => {
     }
 
     setSectionPositions(newPositions);
+    // Batch update linked lines
+    Object.entries(newPositions).forEach(([name, pos]) => {
+      updateLinkedLines(name, pos);
+    });
     console.log("🚀 Auto-flow complete: aligned items to X:", headerX);
   };
-
-
-
 
 
 
@@ -1164,10 +1270,14 @@ const UIEditor = () => {
 
   // 🎯 REACTIVE AUTO-FLOW: Trigger on content change
   useEffect(() => {
+    // 🛡️ User Request: Disable auto-flow for multi-column templates based on Config ID/Type
+    // We check both 'type' (new) and 'id' (legacy/specific) to be safe
+    if (styleConfig.type === 'multi-column' || styleConfig.id === 'two-column-professional') return;
+
     if (isAutoFlowEnabled && Object.keys(sectionSnapshots).length > 0) {
       autoFlowSections();
     }
-  }, [sectionSnapshots, resumeData, isAutoFlowEnabled]);
+  }, [sectionSnapshots, resumeData, isAutoFlowEnabled, styleConfig.type, styleConfig.id]);
 
   // Initialize layout on mount
   useEffect(() => {
@@ -1202,7 +1312,8 @@ const UIEditor = () => {
         pointerEvents: 'none',
         transform: 'scale(1)',
         transformOrigin: 'top right',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        maxWidth: 'none',
       }}>
         {TemplateComponents && Object.entries(sectionRefs.current).map(([key, ref]) => {
           const Component = TemplateComponents[key];
@@ -1234,6 +1345,7 @@ const UIEditor = () => {
                 boxSizing: 'border-box',
                 position: 'relative',
                 minWidth: 0,
+                maxWidth: 'none',
               }}>
               <Component {...propsMap[key]} />
             </div>
@@ -1257,7 +1369,7 @@ const UIEditor = () => {
             >
               {Object.keys(TEMPLATES).map(key => (
                 <option key={key} value={key}>
-                  {key.charAt(0).toUpperCase() + key.slice(1)}
+                  {TEMPLATES[key].name || key.charAt(0).toUpperCase() + key.slice(1)}
                 </option>
               ))}
             </select>
@@ -1443,7 +1555,7 @@ const UIEditor = () => {
 
               <div className="shape-properties">
                 <div className="property-control">
-                  <label className="control-label">X Position</label>
+                  <label className="control-label">X Position (px)</label>
                   <input
                     type="number"
                     value={shape.x}
@@ -1452,7 +1564,7 @@ const UIEditor = () => {
                   />
                 </div>
                 <div className="property-control">
-                  <label className="control-label">Y Position</label>
+                  <label className="control-label">Y Position (px)</label>
                   <input
                     type="number"
                     value={shape.y}
@@ -1461,7 +1573,7 @@ const UIEditor = () => {
                   />
                 </div>
                 <div className="property-control">
-                  <label className="control-label">Width</label>
+                  <label className="control-label">Width (px)</label>
                   <input
                     type="number"
                     value={shape.width}
@@ -1470,7 +1582,7 @@ const UIEditor = () => {
                   />
                 </div>
                 <div className="property-control">
-                  <label className="control-label">Height</label>
+                  <label className="control-label">Height (px)</label>
                   <input
                     type="number"
                     value={shape.height}
@@ -1490,6 +1602,44 @@ const UIEditor = () => {
               </div>
             </div>
           ))}
+        </div>
+
+        <h3 className="panel-title">GLOBAL SECTION DIVIDERS</h3>
+        <div style={{ marginBottom: '20px', padding: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
+          <div className="property-control" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <label className="control-label" style={{ marginBottom: 0 }}>Enable Lines</label>
+            <input
+              type="checkbox"
+              checked={styleConfig.globalSectionDividers?.enabled || false}
+              onChange={(e) => updateGlobalSectionDividers({ enabled: e.target.checked })}
+              style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+            />
+          </div>
+
+          <div className="property-control" style={{ marginBottom: '12px' }}>
+            <label className="control-label">Thickness ({styleConfig.globalSectionDividers?.thickness || 2}px)</label>
+            <input
+              type="range"
+              min="0.5"
+              max="10"
+              step="0.5"
+              value={styleConfig.globalSectionDividers?.thickness || 2}
+              onChange={(e) => updateGlobalSectionDividers({ thickness: parseFloat(e.target.value) })}
+              className="control-input"
+              style={{ padding: 0 }}
+            />
+          </div>
+
+          <div className="property-control">
+            <label className="control-label">Line Color</label>
+            <input
+              type="color"
+              value={styleConfig.globalSectionDividers?.color || '#000000'}
+              onChange={(e) => updateGlobalSectionDividers({ color: e.target.value })}
+              className="control-color"
+              style={{ height: '30px' }}
+            />
+          </div>
         </div>
 
         <h3 className="panel-title">DIVIDER LINES</h3>
@@ -1532,6 +1682,50 @@ const UIEditor = () => {
               </div>
 
               <div className="line-properties">
+                <div className="property-control">
+                  <label className="control-label">X Position (px)</label>
+                  <input
+                    type="number"
+                    value={line.x1}
+                    onChange={(e) => {
+                      const newX1 = parseInt(e.target.value) || 0;
+                      const dx = newX1 - line.x1;
+                      handleLineUpdate(line.id, { x1: newX1, x2: line.x2 + dx });
+                    }}
+                    className="control-input"
+                  />
+                </div>
+                <div className="property-control">
+                  <label className="control-label">Y Position (px)</label>
+                  <input
+                    type="number"
+                    value={line.y1}
+                    onChange={(e) => {
+                      const newY1 = parseInt(e.target.value) || 0;
+                      const dy = newY1 - line.y1;
+                      handleLineUpdate(line.id, { y1: newY1, y2: line.y2 + dy });
+                    }}
+                    className="control-input"
+                  />
+                </div>
+                <div className="property-control">
+                  <label className="control-label">
+                    {line.orientation === 'horizontal' ? 'Width (px)' : 'Height (px)'}
+                  </label>
+                  <input
+                    type="number"
+                    value={line.orientation === 'horizontal' ? Math.abs(line.x2 - line.x1) : Math.abs(line.y2 - line.y1)}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 0;
+                      if (line.orientation === 'horizontal') {
+                        handleLineUpdate(line.id, { x2: line.x1 + val });
+                      } else {
+                        handleLineUpdate(line.id, { y2: line.y1 + val });
+                      }
+                    }}
+                    className="control-input"
+                  />
+                </div>
                 <div className="property-control">
                   <label className="control-label">Thickness</label>
                   <input

@@ -2,17 +2,18 @@
 
 export const TWO_COLUMN_TEMPLATE_CONFIG = {
   id: "two-column-professional",
+  type: "multi-column", // 🛡️ Explicit ID for Auto-Flow Logic
   name: "Two Column Professional",
 
   // Default section positions for this template
   positions: {
-    header: { x: 20, y: 20, scaleX: 1, scaleY: 1 },
-    summary: { x: 273, y: 410, scaleX: 1, scaleY: 1 },
-    skills: { x: 20, y: 200, scaleX: 1, scaleY: 1 },
-    experience: { x: 273, y: 200, scaleX: 1, scaleY: 1 },
-    projects: { x: 273, y: 520, scaleX: 1, scaleY: 1 },
-    education: { x: 25, y: 450, scaleX: 1, scaleY: 1 },
-    certifications: { x: 20, y: 750, scaleX: 1, scaleY: 1 }
+    header: { x: 4, y: -3, scaleX: 1, scaleY: 1 },
+    summary: { x: 19, y: 114, scaleX: 1, scaleY: 1 },
+    skills: { x: 24, y: 244, scaleX: 1, scaleY: 1 },
+    experience: { x: 282, y: 245, scaleX: 1, scaleY: 1 },
+    projects: { x: 282, y: 382, scaleX: 1, scaleY: 1 },
+    education: { x: 26, y: 573, scaleX: 1, scaleY: 1 },
+    certifications: { x: 285, y: 745, scaleX: 1, scaleY: 1 }
   },
 
   // Default line positions for this template
@@ -20,7 +21,7 @@ export const TWO_COLUMN_TEMPLATE_CONFIG = {
     {
       id: 1,
       x1: 260,
-      y1: 0,
+      y1: 210,
       x2: 260,
       y2: 842,
       color: '#000000',
@@ -66,9 +67,10 @@ export const TWO_COLUMN_TEMPLATE_CONFIG = {
   // Section Styles
   header: {
     container: {
-      width: "730px",
-      backgroundColor: "red",
-      padding: "0"
+      width: "560px",
+      backgroundColor: "transparent",
+      padding: "0",
+      borderBottom: "2px solid #000000"
     },
     mainLayout: { display: "flex", flexDirection: "column", gap: "8px" },
     nameSection: { display: "flex", flexDirection: "column", gap: "0" },
@@ -89,22 +91,29 @@ export const TWO_COLUMN_TEMPLATE_CONFIG = {
     showContact: true,
     contactLayout: {
       display: "flex",
-      flexDirection: "column",
-      gap: "3px",
-      marginTop: "10px"
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      gap: "20px",
+      flexWrap: "nowrap",
+      marginTop: "8px"
     },
     contactOrder: ["phone", "email", "linkedin", "github", "location"],
     contactItemStyle: { fontSize: "9px", color: "#000000", lineHeight: "1.4" },
-    showContactIcons: true,
+    contactLeftGroup: ["phone", "email"],
+    contactRightGroup: ["linkedin", "github", "location"],
+    showContactIcons: false,
     showDivider: true,
     dividerStyle: "2px solid #000000",
-    dividerMarginTop: "10px",
-    dividerMarginBottom: "0"
+    dividerMarginTop: "2px",
+    dividerMarginBottom: "10px",
+    sectionOrder: ["nameRow", "contact"],
+    nameRowMarginBottom: "4px"
   },
 
   summary: {
     container: {
-      width: "480px",
+      width: "560px",
       backgroundColor: "transparent",
       padding: "0"
     },
@@ -113,10 +122,10 @@ export const TWO_COLUMN_TEMPLATE_CONFIG = {
       fontSize: "13px",
       fontWeight: "bold",
       color: "#000000",
-      borderBottom: "2px solid #000000",
       marginBottom: "6px",
-      paddingBottom: "0px",
-      letterSpacing: "0.5px"
+      paddingBottom: "1px",
+      letterSpacing: "0.5px",
+      textTransform: "uppercase"
     },
     bodyStyle: {
       fontSize: "10px",
@@ -137,10 +146,10 @@ export const TWO_COLUMN_TEMPLATE_CONFIG = {
       fontSize: "13px",
       fontWeight: "bold",
       color: "#000000",
-      borderBottom: "2px solid #000000",
       marginBottom: "8px",
-      paddingBottom: "0px",
-      letterSpacing: "0.5px"
+      paddingBottom: "1px",
+      letterSpacing: "0.5px",
+      textTransform: "uppercase"
     },
     contentLayout: { display: "flex", flexDirection: "column", gap: "10px" },
     showCategories: true,
@@ -171,10 +180,10 @@ export const TWO_COLUMN_TEMPLATE_CONFIG = {
       fontSize: "13px",
       fontWeight: "bold",
       color: "#000000",
-      borderBottom: "2px solid #000000",
       marginBottom: "8px",
-      paddingBottom: "4px",
-      letterSpacing: "0.5px"
+      paddingBottom: "1px",
+      letterSpacing: "0.5px",
+      textTransform: "uppercase"
     },
     headerLayout: {
       display: "flex",
@@ -229,10 +238,10 @@ export const TWO_COLUMN_TEMPLATE_CONFIG = {
       fontSize: "13px",
       fontWeight: "bold",
       color: "#000000",
-      borderBottom: "2px solid #000000",
       marginBottom: "8px",
-      paddingBottom: "4px",
-      letterSpacing: "0.5px"
+      paddingBottom: "1px",
+      letterSpacing: "0.5px",
+      textTransform: "uppercase"
     },
     headerLayout: {
       display: "flex",
@@ -284,10 +293,10 @@ export const TWO_COLUMN_TEMPLATE_CONFIG = {
       fontSize: "13px",
       fontWeight: "bold",
       color: "#000000",
-      borderBottom: "2px solid #000000",
       marginBottom: "8px",
-      paddingBottom: "4px",
-      letterSpacing: "0.5px"
+      paddingBottom: "1px",
+      letterSpacing: "0.5px",
+      textTransform: "uppercase"
     },
     degreeStyle: {
       fontSize: "10px",
@@ -333,10 +342,10 @@ export const TWO_COLUMN_TEMPLATE_CONFIG = {
       fontSize: "13px",
       fontWeight: "bold",
       color: "#000000",
-      borderBottom: "2px solid #000000",
       marginBottom: "8px",
-      paddingBottom: "4px",
-      letterSpacing: "0.5px"
+      paddingBottom: "1px",
+      letterSpacing: "0.5px",
+      textTransform: "uppercase"
     },
     displayType: "list",
     bulletConfig: {
@@ -360,6 +369,7 @@ export const TWO_COLUMN_TEMPLATE_CONFIG = {
 
 export const ATS_TEMPLATE_CONFIG = {
   id: "ats-optimized",
+  type: "single-column", // 🛡️ Explicit ID for Auto-Flow Logic
   name: "ATS Optimized",
 
   // Default section positions and heights for ATS template (user custom)
@@ -393,7 +403,7 @@ export const ATS_TEMPLATE_CONFIG = {
   // Header Section
   header: {
     container: {
-      width: "550px",
+      width: "545px",
       backgroundColor: "transparent",
       padding: "0"
     },
@@ -455,7 +465,7 @@ export const ATS_TEMPLATE_CONFIG = {
 
   summary: {
     container: {
-      width: "550px",
+      width: "545px",
       backgroundColor: "transparent",
       padding: "0"
     },
@@ -466,7 +476,7 @@ export const ATS_TEMPLATE_CONFIG = {
 
   skills: {
     container: {
-      width: "550px",
+      width: "545px",
       backgroundColor: "transparent",
       padding: "0"
     },
@@ -483,7 +493,7 @@ export const ATS_TEMPLATE_CONFIG = {
 
   experience: {
     container: {
-      width: "550px",
+      width: "545px",
       backgroundColor: "transparent",
       padding: "0"
     },
@@ -511,7 +521,7 @@ export const ATS_TEMPLATE_CONFIG = {
 
   projects: {
     container: {
-      width: "550px",
+      width: "545px",
       backgroundColor: "transparent",
       padding: "0"
     },
@@ -539,7 +549,7 @@ export const ATS_TEMPLATE_CONFIG = {
 
   education: {
     container: {
-      width: "550px",
+      width: "545px",
       backgroundColor: "transparent",
       padding: "0"
     },
@@ -559,7 +569,7 @@ export const ATS_TEMPLATE_CONFIG = {
 
   certifications: {
     container: {
-      width: "550px",
+      width: "545px",
       backgroundColor: "transparent",
       padding: "0"
     },
@@ -625,7 +635,7 @@ export const ATS_TEMPLATE_CONFIG = {
 //   /* ================= HEADER ================= */
 //   header: {
 //     container: {
-//       width: 500,
+//       width: 545,
 //       padding: 0
 //     },
 
@@ -688,7 +698,7 @@ export const ATS_TEMPLATE_CONFIG = {
 
 //   /* ================= SUMMARY ================= */
 //   summary: {
-//     container: { width: 550 },
+//     container: { width: 545 },
 
 //     showTitle: true,
 
@@ -706,7 +716,7 @@ export const ATS_TEMPLATE_CONFIG = {
 
 //   /* ================= SKILLS ================= */
 //   skills: {
-//     container: { width: 550 },
+//     container: { width: 545 },
 
 //     showTitle: true,
 
@@ -739,7 +749,7 @@ export const ATS_TEMPLATE_CONFIG = {
 
 //   /* ================= EXPERIENCE ================= */
 //   experience: {
-//     container: { width: 550 },
+//     container: { width: 545 },
 
 //     showTitle: true,
 
@@ -791,7 +801,7 @@ export const ATS_TEMPLATE_CONFIG = {
 
 //   /* ================= PROJECTS ================= */
 //   projects: {
-//     container: { width: 550 },
+//     container: { width: 545 },
 
 //     showTitle: true,
 
@@ -837,7 +847,7 @@ export const ATS_TEMPLATE_CONFIG = {
 
 //   /* ================= EDUCATION ================= */
 //   education: {
-//     container: { width: 550 },
+//     container: { width: 545 },
 
 //     showTitle: true,
 
@@ -874,7 +884,7 @@ export const ATS_TEMPLATE_CONFIG = {
 
 //   /* ================= CERTIFICATIONS ================= */
 //   certifications: {
-//     container: { width: 550 },
+//     container: { width: 545 },
 
 //     showTitle: true,
 
@@ -904,6 +914,7 @@ export const ATS_TEMPLATE_CONFIG = {
 export const MODERN_TEMPLATE_CONFIG = {
   id: "modern-ats-two-column",
   name: "Modern ATS (Two Column)",
+  type: "multi-column",
 
   // --- 1. Global Positions ---
   // Note: These positions are relative to the main resume container, 
@@ -1159,7 +1170,7 @@ export const MODERN_TEMPLATE_CONFIG = {
 //     // Right Column Positions (on white background)
 //     summary: { x: 320, y: 200, scaleX: 1, scaleY: 1 },
 //     experience: { x: 320, y: 300, scaleX: 1, scaleY: 1 },
-//     projects: { x: 320, y: 550, scaleX: 1, scaleY: 1 },
+//     projects: { x: 320, y: 545, scaleX: 1, scaleY: 1 },
 //   },
 
 //   lines: [],
@@ -2047,6 +2058,42 @@ export const HEADER_LAYOUTS = {
         fontSize: "13px"
       }
     }
+  },
+  splitWide: {
+    label: "Split Wide",
+    config: {
+      layoutDisplay: "flex",
+      layoutDirection: "column",
+      sectionOrder: ["nameRow", "contact"],
+      nameRowMarginBottom: "4px",
+      nameStyle: {
+        fontSize: "28px",
+        fontWeight: "bold",
+        textAlign: "left"
+      },
+      titleStyle: {
+        fontSize: "13px",
+        fontWeight: "bold",
+        textAlign: "right",
+        textTransform: "capitalize"
+      },
+      contactLayout: {
+        display: "flex",
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "flex-start",
+        gap: "20px",
+        flexWrap: "nowrap",
+        marginTop: "8px"
+      },
+      contactLeftGroup: ["phone", "email"],
+      contactRightGroup: ["linkedin", "github", "location"],
+      showContactIcons: false,
+      showDivider: true,
+      dividerStyle: "2px solid #000000",
+      dividerMarginTop: "2px",
+      dividerMarginBottom: "10px"
+    }
   }
 };
 
@@ -2163,3 +2210,393 @@ export const SKILLS_LAYOUTS = {
     }
   }
 };
+
+
+
+// ==================== TEMPLATE 8: NEW ATS FRIENDLY ====================
+export const NEW_ATS_CONFIG = {
+  id: "ats-edgy",
+  type: "single-column",
+  name: "ATS Edgy",
+
+  // Default section positions and heights (mapping structure from ATS_TEMPLATE_CONFIG)
+  positions: {
+    header: { x: 30, y: 30, height: 80, scaleX: 1, scaleY: 1 },
+    summary: { x: 30, y: 130, height: 100, scaleX: 1, scaleY: 1 },
+    skills: { x: 30, y: 240, height: 120, scaleX: 1, scaleY: 1 },
+    experience: { x: 30, y: 370, height: 250, scaleX: 1, scaleY: 1 },
+    projects: { x: 30, y: 640, height: 120, scaleX: 1, scaleY: 1 },
+    education: { x: 30, y: 780, height: 80, scaleX: 1, scaleY: 1 },
+    certifications: { x: 30, y: 880, height: 60, scaleX: 1, scaleY: 1 }
+  },
+
+  lines: [],
+  shapes: [],
+
+  // Page Configuration matching Template8.jsx styles
+  page: {
+    width: "210mm",
+    height: "297mm",
+    backgroundColor: "#FFFFFF",
+    fontFamily: "Helvetica",
+    fontSize: "9px"
+  },
+
+  // Header Section matching Template8.jsx
+  header: {
+    container: {
+      width: "535px",
+      padding: "0",
+      textAlign: "center",
+      paddingBottom: "8px",
+      borderBottom: "2px solid #000"
+    },
+    mainLayout: {
+      display: "flex",
+      flexDirection: "column",
+      gap: "2px"
+    },
+    nameSection: {
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center"
+    },
+    nameStyle: {
+      fontSize: "26px",
+      fontWeight: "bold",
+      color: "#000000",
+      marginBottom: "2px",
+      textAlign: "center",
+      letterSpacing: "2.5px",
+      textTransform: "uppercase",
+      fontFamily: "Times-Bold"
+    },
+    titleStyle: {
+      fontSize: "10px",
+      color: "#333333",
+      marginBottom: "4px",
+      textAlign: "center",
+      letterSpacing: "0.8px",
+      fontFamily: "Times-Italic"
+    },
+    showTitle: true,
+    showContact: true,
+    contactLayout: {
+      display: "flex",
+      flexDirection: "row",
+      justifyContent: "center",
+      gap: "6px"
+    },
+    contactOrder: ["phone", "email", "linkedin", "github", "location"],
+    contactItemStyle: {
+      fontSize: "8.5px",
+      color: "#000000",
+      fontFamily: "Helvetica"
+    },
+    showContactIcons: false,
+    showDivider: true,
+    dividerStyle: "none",
+    dividerChar: "●"
+  },
+
+  // Section titles across all sections use the edgy style
+  // (12px Times-Bold, uppercase, letterspacing 2, borderBottom 2px, borderLeft 4px)
+  summary: {
+    container: { width: "535px" },
+    showTitle: true,
+    titleStyle: {
+      fontSize: "12px",
+      fontWeight: "bold",
+      color: "#000000",
+      marginTop: "8px",
+      marginBottom: "4px",
+      paddingBottom: "3px",
+      borderBottom: "2px solid #000000",
+      borderLeft: "4px solid #000000",
+      paddingLeft: "8px",
+      textTransform: "uppercase",
+      letterSpacing: "2px",
+      fontFamily: "Times-Bold"
+    },
+    bodyStyle: {
+      fontSize: "9px",
+      lineHeight: "1.4",
+      color: "#1a1a1a",
+      textAlign: "justify",
+      fontFamily: "Times-Roman"
+    }
+  },
+
+  skills: {
+    container: { width: "535px" },
+    showTitle: true,
+    titleStyle: {
+      fontSize: "12px",
+      fontWeight: "bold",
+      color: "#000000",
+      marginTop: "8px",
+      marginBottom: "4px",
+      paddingBottom: "3px",
+      borderBottom: "2px solid #000000",
+      borderLeft: "4px solid #000000",
+      paddingLeft: "8px",
+      textTransform: "uppercase",
+      letterSpacing: "2px",
+      fontFamily: "Times-Bold"
+    },
+    contentLayout: {
+      display: "flex",
+      flexDirection: "column",
+      gap: "2.5px",
+      padding: "6px",
+      borderLeft: "2px solid #000",
+      marginLeft: "0px"
+    },
+    showCategories: true,
+    categoryStyle: {
+      fontSize: "9px",
+      fontWeight: "bold",
+      width: "120px",
+      fontFamily: "Helvetica-Bold",
+      color: "#000"
+    },
+    valueStyle: {
+      fontSize: "9px",
+      flex: 1,
+      fontFamily: "Times-Roman",
+      color: "#1a1a1a",
+      lineHeight: "1.3"
+    },
+    displayType: "inline",
+    separator: ", ",
+    itemMarginBottom: "2px"
+  },
+
+  experience: {
+    container: { width: "535px" },
+    showTitle: true,
+    titleStyle: {
+      fontSize: "12px",
+      fontWeight: "bold",
+      color: "#000000",
+      marginTop: "8px",
+      marginBottom: "4px",
+      paddingBottom: "3px",
+      borderBottom: "2px solid #000000",
+      borderLeft: "4px solid #000000",
+      paddingLeft: "8px",
+      textTransform: "uppercase",
+      letterSpacing: "2px",
+      fontFamily: "Times-Bold"
+    },
+    headerLayout: {
+      display: "flex",
+      justifyContent: "space-between",
+      marginBottom: "1px",
+      alignItems: "baseline"
+    },
+    subHeaderLayout: {
+      display: "flex",
+      marginBottom: "2px"
+    },
+    positionFirst: true,
+    positionStyle: {
+      fontSize: "10.5px",
+      fontWeight: "bold",
+      color: "#000000",
+      letterSpacing: "0.3px",
+      fontFamily: "Times-Bold"
+    },
+    companyStyle: {
+      fontSize: "9px",
+      fontFamily: "Times-Italic",
+      color: "#1a1a1a",
+      marginBottom: "2px"
+    },
+    durationStyle: {
+      fontSize: "8.5px",
+      color: "#333",
+      fontFamily: "Helvetica-Bold",
+      letterSpacing: "0.3px",
+      whiteSpace: "nowrap"
+    },
+    showLocation: true,
+    showAchievements: true,
+    bulletConfig: {
+      bulletStyle: "-",
+      bulletWidth: "10px",
+      bulletColor: "#000",
+      textSize: "9px",
+      textColor: "#1a1a1a",
+      lineHeight: "1.35",
+      itemMarginBottom: "2px",
+      fontFamily: "Times-Roman"
+    },
+    itemStyle: {
+      marginBottom: "6px",
+      borderLeft: "2px solid #000",
+      paddingLeft: "6px"
+    },
+    itemMarginBottom: "10px"
+  },
+
+  projects: {
+    container: { width: "535px" },
+    showTitle: true,
+    titleStyle: {
+      fontSize: "12px",
+      fontWeight: "bold",
+      color: "#000000",
+      marginTop: "8px",
+      marginBottom: "4px",
+      paddingBottom: "3px",
+      borderBottom: "2px solid #000000",
+      borderLeft: "4px solid #000000",
+      paddingLeft: "8px",
+      textTransform: "uppercase",
+      letterSpacing: "2px",
+      fontFamily: "Times-Bold"
+    },
+    headerLayout: {
+      display: "flex",
+      justifyContent: "space-between",
+      marginBottom: "1px",
+      alignItems: "baseline"
+    },
+    nameStyle: {
+      fontSize: "10.5px",
+      fontWeight: "bold",
+      color: "#000000",
+      letterSpacing: "0.3px",
+      fontFamily: "Helvetica-Bold"
+    },
+    durationStyle: {
+      fontSize: "8.5px",
+      color: "#333",
+      fontFamily: "Helvetica-Bold",
+      letterSpacing: "0.3px",
+      whiteSpace: "nowrap"
+    },
+    techStyle: {
+      fontSize: "8.5px",
+      fontFamily: "Helvetica-Oblique",
+      color: "#333",
+      marginBottom: "2px",
+      letterSpacing: "0.2px"
+    },
+    showDuration: true,
+    showTechnologies: true,
+    showDescription: true,
+    bulletConfig: {
+      bulletStyle: "-",
+      bulletWidth: "10px",
+      bulletColor: "#000",
+      textSize: "9px",
+      textColor: "#1a1a1a",
+      lineHeight: "1.35",
+      itemMarginBottom: "2px",
+      fontFamily: "Times-Roman"
+    },
+    itemStyle: {
+      marginBottom: "5px",
+      borderLeft: "2px solid #000",
+      paddingLeft: "6px"
+    },
+    itemMarginBottom: "10px"
+  },
+
+  education: {
+    container: { width: "535px" },
+    showTitle: true,
+    titleStyle: {
+      fontSize: "12px",
+      fontWeight: "bold",
+      color: "#000000",
+      marginTop: "8px",
+      marginBottom: "4px",
+      paddingBottom: "3px",
+      borderBottom: "2px solid #000000",
+      borderLeft: "4px solid #000000",
+      paddingLeft: "8px",
+      textTransform: "uppercase",
+      letterSpacing: "2px",
+      fontFamily: "Times-Bold"
+    },
+    headerLayout: {
+      display: "flex",
+      justifyContent: "space-between",
+      marginBottom: "1px",
+      alignItems: "baseline"
+    },
+    degreeStyle: {
+      fontSize: "10.5px",
+      fontWeight: "bold",
+      color: "#000000",
+      letterSpacing: "0.3px",
+      fontFamily: "Helvetica-Bold"
+    },
+    institutionStyle: {
+      fontSize: "9px",
+      color: "#1a1a1a",
+      fontFamily: "Times-Roman"
+    },
+    durationStyle: {
+      fontSize: "8.5px",
+      color: "#333",
+      fontFamily: "Helvetica-Bold",
+      letterSpacing: "0.3px",
+      whiteSpace: "nowrap"
+    },
+    detailsStyle: {
+      fontSize: "8.5px",
+      fontFamily: "Helvetica-Oblique",
+      color: "#333",
+      marginTop: "1px"
+    },
+    showInstitution: true,
+    showGpa: true,
+    showLocation: true,
+    itemStyle: {
+      marginBottom: "5px",
+      borderLeft: "2px solid #000",
+      paddingLeft: "6px"
+    },
+    itemMarginBottom: "10px"
+  },
+
+  certifications: {
+    container: { width: "535px" },
+    showTitle: true,
+    titleStyle: {
+      fontSize: "12px",
+      fontWeight: "bold",
+      color: "#000000",
+      marginTop: "8px",
+      marginBottom: "4px",
+      paddingBottom: "3px",
+      borderBottom: "2px solid #000000",
+      borderLeft: "4px solid #000000",
+      paddingLeft: "8px",
+      textTransform: "uppercase",
+      letterSpacing: "2px",
+      fontFamily: "Times-Bold"
+    },
+    displayType: "list",
+    bulletConfig: {
+      bulletStyle: "-",
+      bulletWidth: "12px",
+      bulletColor: "#000",
+      textSize: "9px",
+      textColor: "#1a1a1a",
+      lineHeight: "1.35",
+      itemMarginBottom: "2px",
+      fontFamily: "Times-Roman"
+    },
+    itemStyle: {
+      borderLeft: "2px solid #000",
+      paddingLeft: "6px",
+      marginBottom: "2px"
+    }
+  }
+};
+

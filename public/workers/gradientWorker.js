@@ -22,7 +22,8 @@ function parseGradient(bgImage) {
 }
 
 function parseLinearGradient(content) {
-    const parts = content.split(',').map(s => s.trim());
+    // Split by commas that are not inside parentheses (to handle rgb/rgba)
+    const parts = content.split(/,(?![^(]*\))/).map(s => s.trim());
 
     // First part might be angle or direction
     let angle = 180; // default to bottom
@@ -59,7 +60,7 @@ function parseLinearGradient(content) {
 }
 
 function parseRadialGradient(content) {
-    const parts = content.split(',').map(s => s.trim());
+    const parts = content.split(/,(?![^(]*\))/).map(s => s.trim());
 
     // Simple radial gradient (center by default)
     const stops = parseColorStops(parts, 0);

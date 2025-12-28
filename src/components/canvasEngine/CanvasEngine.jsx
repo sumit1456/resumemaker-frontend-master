@@ -42,6 +42,302 @@ function parseMargin(margin) {
   return parsePadding(margin);
 }
 
+// ==================== GEOMETRY SNAPSHOT ENGINE ====================
+// Captures DOM layout geometry (positions, styles) 
+// Mirroring functionality from WebEngine.jsx for DOM -> Canvas conversion
+
+class GeometrySnapshot {
+  constructor(options = {}) {
+    this.options = {
+      mode: 'performance', // 'performance' (fast) or 'deep' (high fidelity)
+      useWorkers: !!options.styleWorker, // Auto-enable if workers provided
+      ...options
+    };
+    this.nodes = [];
+    this.rootWidth = 0;
+    this.rootHeight = 0;
+
+    // Workers for offloading heavy processing
+    this.styleWorker = options.styleWorker;
+    this.gradientWorker = options.gradientWorker;
+
+    // Promise queues for async worker resolution
+    this.stylePromises = [];
+    this.gradientPromises = [];
+    this.captureStartTime = 0;
+  }
+
+  async capture(element, overrideOptions = {}) {
+    if (!element) return null;
+
+    this.captureStartTime = performance.now();
+    const options = { ...this.options, ...overrideOptions };
+    this.currentMode = options.mode;
+
+    // Store original transform if needed
+    const transforms = [];
+    let current = element;
+    while (current && current !== document.body) {
+      const transform = current.style.transform;
+      if (transform && transform !== 'none') {
+        transforms.push({ element: current, transform });
+        current.style.transform = 'none';
+      }
+      current = current.parentElement;
+    }
+
+    const rootRect = element.getBoundingClientRect();
+    this.rootRect = rootRect;
+    this.rootWidth = Math.ceil(rootRect.width);
+    this.rootHeight = Math.ceil(rootRect.height);
+    this.nodes = [];
+    this.processedNodes = new Set();
+    this.stylePromises = [];
+    this.gradientPromises = [];
+
+    // New: collect all nodes for deferred style processing
+    this.pendingStyles = [];
+
+    this.captureNode(element);
+
+    // Restore transforms
+    transforms.forEach(({ element, transform }) => {
+      element.style.transform = transform;
+    });
+
+    // Resolve workers - Batch all pending styles
+    if (this.options.useWorkers && this.styleWorker && this.pendingStyles.length > 0) {
+      console.log(`[GeometrySnapshot] Processing ${this.pendingStyles.length} nodes with worker`);
+      await this.dispatchAllStyles();
+    } else if (this.pendingStyles.length > 0) {
+      console.log(`[GeometrySnapshot] Processing ${this.pendingStyles.length} nodes locally`);
+      this.pendingStyles.forEach(item => this.processStyleFromRaw(item.nodeData, item.raw));
+    }
+
+    if (this.gradientPromises.length > 0) {
+      console.log(`[GeometrySnapshot] Resolving ${this.gradientPromises.length} gradients`);
+      await Promise.all(this.gradientPromises);
+    }
+
+    return {
+      nodes: this.nodes,
+      width: this.rootWidth,
+      height: this.rootHeight,
+      stats: { nodeCount: this.nodes.length, captureTime: performance.now() - this.captureStartTime }
+    };
+  }
+
+  captureNode(element) {
+    if (!element || element.nodeType !== Node.ELEMENT_NODE) return;
+    if (this.processedNodes.has(element)) return;
+
+    const rect = element.getBoundingClientRect();
+    const x = rect.left - this.rootRect.left;
+    const y = rect.top - this.rootRect.top;
+    const width = rect.width;
+    const height = rect.height;
+
+    const computed = window.getComputedStyle(element);
+    if (computed.display === 'none' || parseFloat(computed.opacity) === 0) return;
+
+    const type = this.getNodeType(element, computed);
+
+    const nodeData = {
+      type,
+      x, y, width, height,
+      styles: {},
+      zIndex: parseInt(computed.zIndex) || 0
+    };
+
+    // Extract basic styles immediately, defer complex ones
+    const styles = nodeData.styles;
+    styles.opacity = parseFloat(computed.opacity) || 1;
+    styles.zIndex = computed.zIndex !== 'auto' ? parseInt(computed.zIndex) : 0;
+    styles.display = computed.display;
+
+    if (this.currentMode === 'deep' && (computed.backgroundImage && computed.backgroundImage !== 'none')) {
+      if (this.gradientWorker && this.options.useWorkers) {
+        this.gradientPromises.push(this.dispatchGradientTask(nodeData, computed.backgroundImage));
+      } else {
+        styles.gradient = this.parseGradient(computed.backgroundImage);
+      }
+    }
+
+    const raw = this.extractRawStyles(element, computed);
+    this.pendingStyles.push({ nodeData, raw });
+
+    if (type === 'text') {
+      nodeData.text = element.textContent.trim();
+      if (!nodeData.text) return;
+      this.markProcessedRecursive(element);
+    } else if (type === 'image') {
+      nodeData.src = element.src;
+      this.processedNodes.add(element);
+    } else {
+      this.processedNodes.add(element);
+    }
+
+    // Handle background text for boxes
+    if (type === 'box') {
+      const directTextNodes = Array.from(element.childNodes)
+        .filter(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim().length > 0);
+      if (directTextNodes.length > 0) {
+        nodeData.text = directTextNodes.map(n => n.textContent).join(' ').trim();
+      }
+    }
+
+    this.nodes.push(nodeData);
+
+    if (type !== 'text') {
+      for (const child of element.children) {
+        this.captureNode(child);
+      }
+    }
+  }
+
+  markProcessedRecursive(element) {
+    this.processedNodes.add(element);
+    for (const child of element.children) {
+      this.markProcessedRecursive(child);
+    }
+  }
+
+  getNodeType(element, computed) {
+    if (element.tagName === 'IMG') return 'image';
+
+    const hasVisibleBoxStyle =
+      (computed.backgroundColor !== 'rgba(0, 0, 0, 0)' && computed.backgroundColor !== 'transparent') ||
+      (computed.backgroundImage && computed.backgroundImage !== 'none') ||
+      (parseFloat(computed.borderTopWidth) > 0 && computed.borderTopStyle !== 'none') ||
+      (computed.boxShadow && computed.boxShadow !== 'none');
+
+    if (hasVisibleBoxStyle) return 'box';
+
+    const textContent = element.textContent.trim();
+    const isTextElement = ['SPAN', 'P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'STRONG', 'EM', 'B', 'I', 'LABEL', 'A', 'LI'].includes(element.tagName);
+    const hasLeafText = Array.from(element.children).every(child =>
+      ['BR', 'WBR', 'SPAN', 'STRONG', 'EM', 'B', 'I'].includes(child.tagName)
+    );
+
+    if (isTextElement && textContent.length > 0 && hasLeafText) return 'text';
+
+    return 'box';
+  }
+
+  // Removed extractStyles and processStyleLocally in favor of a clean deferral
+
+  extractRawStyles(element, computed) {
+    const raw = {
+      backgroundColor: computed.backgroundColor,
+      backgroundImage: computed.backgroundImage,
+      borderTopWidth: computed.borderTopWidth,
+      borderTopColor: computed.borderTopColor,
+      borderTopStyle: computed.borderTopStyle,
+      borderRadius: computed.borderRadius,
+      color: computed.color,
+      fontSize: computed.fontSize,
+      fontFamily: computed.fontFamily,
+      fontWeight: computed.fontWeight,
+      fontStyle: computed.fontStyle,
+      textAlign: computed.textAlign,
+      paddingTop: computed.paddingTop,
+      paddingRight: computed.paddingRight,
+      paddingBottom: computed.paddingBottom,
+      paddingLeft: computed.paddingLeft,
+      boxShadow: computed.boxShadow,
+      transform: computed.transform,
+      lineHeight: computed.lineHeight,
+      opacity: computed.opacity
+    };
+
+    if (raw.backgroundColor !== 'rgba(0, 0, 0, 0)' && raw.backgroundColor !== 'transparent') {
+      // Only log if it has a background to avoid spam
+      console.log(`[GeometrySnapshot] Extracted raw styles:`, {
+        bg: raw.backgroundColor,
+        color: raw.color
+      });
+    }
+
+    return raw;
+  }
+
+  processStyleFromRaw(nodeData, raw) {
+    Object.assign(nodeData.styles, {
+      backgroundColor: raw.backgroundColor,
+      backgroundImage: raw.backgroundImage,
+      borderWidth: parseFloat(raw.borderTopWidth) || 0,
+      borderColor: raw.borderTopColor,
+      borderStyle: raw.borderTopStyle,
+      borderRadius: raw.borderRadius.includes('%') ? raw.borderRadius : (parseFloat(raw.borderRadius) || 0),
+      color: raw.color,
+      fontSize: parseFloat(raw.fontSize) || 12,
+      fontFamily: raw.fontFamily,
+      fontWeight: raw.fontWeight,
+      fontStyle: raw.fontStyle,
+      textAlign: raw.textAlign,
+      lineHeight: parseFloat(raw.lineHeight) || parseFloat(raw.fontSize) * 1.2,
+      padding: {
+        top: parseFloat(raw.paddingTop) || 0,
+        right: parseFloat(raw.paddingRight) || 0,
+        bottom: parseFloat(raw.paddingBottom) || 0,
+        left: parseFloat(raw.paddingLeft) || 0
+      },
+      boxShadow: raw.boxShadow !== 'none' ? raw.boxShadow : null,
+      transform: raw.transform !== 'none' ? raw.transform : null
+    });
+  }
+
+  dispatchAllStyles() {
+    return new Promise((resolve) => {
+      const id = Math.random().toString(36).substr(2, 9);
+      const rawStylesBatch = this.pendingStyles.map(p => p.raw);
+
+      console.log(`[GeometrySnapshot] Dispatching ALL ${rawStylesBatch.length} styles to worker (ID: ${id})`);
+
+      const handler = (e) => {
+        if (e.data.type === 'STYLES_PROCESSED' && e.data.id === id) {
+          console.log(`[GeometrySnapshot] Received processed styles from worker (ID: ${id})`);
+          if (e.data.processedBatch.length > 0) {
+            console.log(`[GeometrySnapshot] Sample processed style (Node 0):`, e.data.processedBatch[0]);
+          }
+          e.data.processedBatch.forEach((styles, i) => {
+            Object.assign(this.pendingStyles[i].nodeData.styles, styles);
+          });
+          this.styleWorker.removeEventListener('message', handler);
+          resolve();
+        }
+      };
+      this.styleWorker.addEventListener('message', handler);
+      this.styleWorker.postMessage({ type: 'PARSE_STYLES', id, data: { rawStylesBatch } });
+    });
+  }
+
+  dispatchGradientTask(nodeData, bgImage) {
+    return new Promise((resolve) => {
+      const id = Math.random().toString(36).substr(2, 9);
+      const handler = (e) => {
+        if (e.data.type === 'GRADIENT_PARSED' && e.data.id === id) {
+          console.log(`[GeometrySnapshot] Received parsed gradient (ID: ${id}):`, e.data.gradient);
+          nodeData.styles.gradient = e.data.gradient;
+          this.gradientWorker.removeEventListener('message', handler);
+          resolve();
+        }
+      };
+      this.gradientWorker.addEventListener('message', handler);
+      this.gradientWorker.postMessage({ type: 'PARSE_GRADIENT', id, data: { backgroundImage: bgImage } });
+    });
+  }
+
+  parseGradient(bgImage) {
+    // Basic fallback parsing if worker not available
+    if (!bgImage || bgImage === 'none') return null;
+    if (bgImage.includes('linear-gradient')) {
+      return { type: 'linear', stops: [{ color: '#ffffff', position: 0 }, { color: '#000000', position: 1 }] };
+    }
+    return null;
+  }
+}
+
 // ==================== BASE LAYOUT NODE ====================
 
 class LayoutNode {
@@ -961,6 +1257,208 @@ class CanvasLayoutEngine {
     console.log('✓ Render complete');
   }
 
+  /**
+   * Render a snapshot captured by GeometrySnapshot
+   */
+  renderSnapshot(snapshot) {
+    if (!snapshot || !snapshot.nodes) {
+      console.warn('[CanvasLayoutEngine] renderSnapshot called with empty snapshot');
+      return;
+    }
+
+    console.log(`[CanvasLayoutEngine] Rendering dynamic snapshot:`, {
+      nodes: snapshot.nodes.length,
+      width: snapshot.width,
+      height: snapshot.height,
+      scale: this.scale
+    });
+
+    // Clear and scale
+    this.initialize(snapshot.width, snapshot.height);
+
+    // Sort by z-index
+    const sortedNodes = [...snapshot.nodes].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+
+    for (const node of sortedNodes) {
+      this.renderSnapshotNode(node);
+    }
+  }
+
+  renderSnapshotNode(node) {
+    const { x, y, width, height, type, styles, text, src } = node;
+    const ctx = this.ctx;
+
+    // Granular debug for ALL nodes
+    const hasBg = styles.backgroundColor && styles.backgroundColor !== 'transparent' && styles.backgroundColor !== 'rgba(0, 0, 0, 0)';
+    const hasGrad = !!styles.gradient;
+    const isVisible = hasBg || hasGrad || type === 'text' || type === 'image';
+
+    if (isVisible) {
+      console.log(`[CanvasLayoutEngine] DRAWING ${type} at (${Math.round(x)}, ${Math.round(y)}) ${width}x${height}`, {
+        bg: styles.backgroundColor,
+        color: styles.color,
+        grad: hasGrad
+      });
+    } else {
+      console.log(`[CanvasLayoutEngine] SKIPPED ${type} (invisible) at (${Math.round(x)}, ${Math.round(y)})`);
+    }
+
+    ctx.save();
+
+    // Handle transform
+    if (styles.transform && styles.transform !== 'none') {
+      const matrixMatch = styles.transform.match(/matrix\(([^)]+)\)/);
+      if (matrixMatch) {
+        const [a, b, c, d, tx, ty] = matrixMatch[1].split(',').map(v => parseFloat(v));
+        ctx.transform(a, b, c, d, tx, ty);
+      }
+    }
+
+    ctx.globalAlpha = styles.opacity || 1;
+
+    // Background & Borders
+    if (styles.backgroundColor && styles.backgroundColor !== 'transparent' && styles.backgroundColor !== 'rgba(0, 0, 0, 0)') {
+      ctx.fillStyle = styles.backgroundColor;
+      const radius = parseFloat(styles.borderRadius) || 0;
+      if (radius > 0) {
+        this.roundRect(ctx, { x, y, width, height }, radius);
+        ctx.fill();
+      } else {
+        ctx.fillRect(x, y, width, height);
+      }
+    }
+
+    // Gradient Background
+    if (styles.gradient) {
+      const g = styles.gradient;
+      let grad;
+      if (g.type === 'radial') {
+        const centerX = x + width / 2;
+        const centerY = y + height / 2;
+        const radius = Math.max(width, height) / 2;
+        grad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+      } else {
+        const angle = g.angle !== undefined ? g.angle : 180;
+        const angleRad = ((angle - 90) * Math.PI) / 180;
+        const length = Math.abs(width * Math.cos(angleRad)) + Math.abs(height * Math.sin(angleRad));
+        const centerX = x + width / 2;
+        const centerY = y + height / 2;
+        const x1 = centerX - (Math.cos(angleRad) * length) / 2;
+        const y1 = centerY - (Math.sin(angleRad) * length) / 2;
+        const x2 = centerX + (Math.cos(angleRad) * length) / 2;
+        const y2 = centerY + (Math.sin(angleRad) * length) / 2;
+        grad = ctx.createLinearGradient(x1, y1, x2, y2);
+      }
+      g.stops.forEach(stop => grad.addColorStop(stop.position, stop.color));
+      ctx.fillStyle = grad;
+      const radius = parseFloat(styles.borderRadius) || 0;
+      if (radius > 0) {
+        this.roundRect(ctx, { x, y, width, height }, radius);
+        ctx.fill();
+      } else {
+        ctx.fillRect(x, y, width, height);
+      }
+    }
+
+    // Shadow
+    if (styles.boxShadow && styles.boxShadow !== 'none') {
+      const parts = styles.boxShadow.split(/ (?![^(]*\))/);
+      let color = '#000000';
+      let ox = 0, oy = 0, blur = 0;
+      for (const part of parts) {
+        if (part.includes('rgb') || part.startsWith('#')) color = part;
+        else if (part.endsWith('px')) {
+          const val = parseFloat(part);
+          if (ox === 0) ox = val;
+          else if (oy === 0) oy = val;
+          else blur = val;
+        }
+      }
+      ctx.shadowColor = color;
+      ctx.shadowBlur = blur;
+      ctx.shadowOffsetX = ox;
+      ctx.shadowOffsetY = oy;
+    }
+
+    if (styles.borderWidth > 0 && styles.borderStyle !== 'none') {
+      ctx.strokeStyle = styles.borderColor;
+      ctx.lineWidth = styles.borderWidth;
+      const radius = parseFloat(styles.borderRadius) || 0;
+      if (radius > 0) {
+        this.roundRect(ctx, { x, y, width, height }, radius);
+        ctx.stroke();
+      } else {
+        ctx.strokeRect(x, y, width, height);
+      }
+    }
+
+    // Reset shadow
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+
+    // Content
+    if (type === 'text' && text) {
+      const weight = styles.fontWeight || 'normal';
+      const size = typeof styles.fontSize === 'number' ? `${styles.fontSize}px` : (styles.fontSize || '12px');
+      const family = styles.fontFamily || 'Arial';
+
+      ctx.font = `${weight} ${size} ${family}`;
+      ctx.fillStyle = styles.color || '#000000';
+      ctx.textBaseline = 'top';
+
+      console.log(`[CanvasLayoutEngine] Text Style applied: font="${ctx.font}", color="${ctx.fillStyle}"`);
+
+      const lineHeight = parseFloat(styles.lineHeight) || parseFloat(styles.fontSize) * 1.2;
+      const words = text.split(' ');
+      let line = '';
+      let currentY = y;
+
+      for (let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + ' ';
+        const metrics = ctx.measureText(testLine);
+        if (metrics.width > width && n > 0) {
+          ctx.fillText(line, x, currentY);
+          line = words[n] + ' ';
+          currentY += lineHeight;
+        } else {
+          line = testLine;
+        }
+      }
+      ctx.fillText(line, x, currentY);
+    } else if (type === 'image' && src) {
+      const img = new Image();
+      img.src = src;
+      if (img.complete) {
+        ctx.drawImage(img, x, y, width, height);
+      } else {
+        img.onload = () => {
+          ctx.save();
+          ctx.globalAlpha = styles.opacity || 1;
+          ctx.drawImage(img, x, y, width, height);
+          ctx.restore();
+        };
+      }
+    }
+
+    ctx.restore();
+  }
+
+  roundRect(ctx, bounds, radius) {
+    const { x, y, width: w, height: h } = bounds;
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + w - radius, y);
+    ctx.arcTo(x + w, y, x + w, y + radius, radius);
+    ctx.lineTo(x + w, y + h - radius);
+    ctx.arcTo(x + w, y + h, x + w - radius, y + h, radius);
+    ctx.lineTo(x + radius, y + h);
+    ctx.arcTo(x, y + h, x, y + h - radius, radius);
+    ctx.lineTo(x, y + radius);
+    ctx.arcTo(x, y, x + radius, y, radius);
+    ctx.closePath();
+  }
+
   drawDebugGrid(width, height) {
     this.ctx.strokeStyle = 'rgba(200, 200, 200, 0.3)';
     this.ctx.lineWidth = 0.5;
@@ -1050,6 +1548,7 @@ export {
   TextNode,
   ImageNode,
   SpacerNode,
+  GeometrySnapshot,
   parseConfigToLayout
 };
 

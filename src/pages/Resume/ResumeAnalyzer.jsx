@@ -578,76 +578,90 @@ export default function ResumeAnalyzer({
   const analyzeWithAI = async () => {
     setIsAIAnalysis(true);
     setLoading(true);
-    setMessage('AI Analysis...')
     setJobDescriptionInsights(<LoadingState />);
 
-    try {
-      const payload = {
-        jobDescription,
-        resume: buildResumeString()
-      };
+    const MAX_RETRIES = 3;
+    let attempt = 0;
 
-      const res = await fetch(`${API_BASE_URL}/analyze`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+    while (attempt <= MAX_RETRIES) {
+      try {
+        setMessage(attempt > 0 ? `Retrying AI Analysis (${attempt}/${MAX_RETRIES})...` : 'AI Analysis...');
+        const payload = {
+          jobDescription,
+          resume: buildResumeString()
+        };
 
-      if (!res.ok) throw new Error(`Status ${res.status}`);
+        const res = await fetch(`${API_BASE_URL}/analyze`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
 
-      const data = await res.json();
+        if (!res.ok) throw new Error(`Status ${res.status}`);
 
-      if (data.error) {
+        const data = await res.json();
+
+        if (data.error) {
+          setJobDescriptionInsights(
+            <ErrorState title="AI Analysis Failed" message={data.error} />
+          );
+          window.showMessage("Error", 'AI Analysis Failed', "error", 1500);
+          return;
+        }
+
+        const aiJson = data;
+
         setJobDescriptionInsights(
+          <div className="analysis-output-wrapper">
+            <div className="ai-response-container">
+              {/* Header */}
+              <div className="ai-response-header">
+                <h2 className="ai-response-header-title">🤖 AI Detailed Analysis</h2>
+                <p className="ai-response-header-subtitle">Powered by Advanced AI • Generated just now</p>
+              </div>
 
-          <ErrorState title="AI Analysis Failed" message={data.error} />
-        );
-        window.showMessage("Error", 'AI Analysis Failed', "error", 1500);
-        return;
-      }
+              {/* JSON rendered cleanly */}
+              <div>{formatAIResponse(aiJson)}</div>
 
-      const aiJson = data;
-
-      setJobDescriptionInsights(
-        <div className="analysis-output-wrapper">
-          <div className="ai-response-container">
-            {/* Header */}
-            <div className="ai-response-header">
-              <h2 className="ai-response-header-title">🤖 AI Detailed Analysis</h2>
-              <p className="ai-response-header-subtitle">Powered by Advanced AI • Generated just now</p>
-            </div>
-
-            {/* JSON rendered cleanly */}
-            <div>{formatAIResponse(aiJson)}</div>
-
-            {/* Next Steps */}
-            <div className="next-steps-card">
-              <h4 className="next-steps-title">💡 Next Steps</h4>
-              <p className="next-steps-content">
-                Review the AI suggestions above and update your resume accordingly.
-                For a quick overview, try <strong>Quick Analysis</strong>.
-              </p>
+              {/* Next Steps */}
+              <div className="next-steps-card">
+                <h4 className="next-steps-title">💡 Next Steps</h4>
+                <p className="next-steps-content">
+                  Review the AI suggestions above and update your resume accordingly.
+                  For a quick overview, try <strong>Quick Analysis</strong>.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-      );
+        );
 
-      window.showMessage("Success", 'AI Analysis Completed', "success", 1500);
+        window.showMessage("Success", 'AI Analysis Completed', "success", 1500);
+        break; // Success!
 
+      } catch (err) {
+        console.error(`AI Analysis attempt ${attempt + 1} failed:`, err);
+        const isRetryable = err.message.includes("Connection reset") || err.message.includes("recvAddress") || err.name === "TypeError"; // TypeError is often network-related in fetch
 
+        if (isRetryable && attempt < MAX_RETRIES) {
+          attempt++;
+          const delay = Math.pow(2, attempt - 1) * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
 
-    } catch (err) {
-      setJobDescriptionInsights(
-        <ErrorState
-          title="Connection Error"
-          message={err.message}
-          subtitle="Make sure your backend is running on API_BASE_URL"
-        />
-      );
-    } finally {
-      setIsAIAnalysis(false);
-      setLoading(false);
+        setJobDescriptionInsights(
+          <ErrorState
+            title="Connection Error"
+            message={err.message}
+            subtitle="Make sure your backend is running on API_BASE_URL"
+          />
+        );
+        break;
+      }
     }
+
+    setIsAIAnalysis(false);
+    setLoading(false);
   };
 
   const buildATSPayload = () => {
@@ -689,105 +703,135 @@ export default function ResumeAnalyzer({
       window.showMessage('For report Enhance your Resume first', 'info');
       return;
     }
-    try {
-      setCreateComparisonReport(true);
-      setReportOutput(<LoadingState />);
-      setLoading(true);
-      setMessage('Creating Report...')
 
-      const payload = {
-        oldResume: currentLocalResume,
-        newResume: newLocalResume,
-      };
+    const MAX_RETRIES = 3;
+    let attempt = 0;
 
-      const res = await fetch(`${API_BASE_URL}/create-report`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+    setCreateComparisonReport(true);
+    setLoading(true);
+    setReportOutput(<LoadingState />);
 
-      if (!res.ok) {
-        const text = await res.text();
-        setReportOutput(<ErrorState title="Report Generation Failed" message={`Backend responded with status ${res.status}: ${text}`} />);
-        return;
-      }
+    while (attempt <= MAX_RETRIES) {
+      try {
+        setMessage(attempt > 0 ? `Retrying Report (${attempt}/${MAX_RETRIES})...` : 'Creating Report...');
 
-      const resData = await res.json();
+        const payload = {
+          oldResume: currentLocalResume,
+          newResume: newLocalResume,
+        };
 
-      if (resData.error) {
-        setReportOutput(<ErrorState title="Report Generation Failed" message={resData.error} />);
-        return;
-      }
+        const res = await fetch(`${API_BASE_URL}/create-report`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
 
-      const reportData = resData.result || resData;
-      setReportOutput(
-        <div className="analysis-output-wrapper">
-          <div className="analysis-container">
-            <div className="analysis-header">
-              <h2 className="analysis-header-title">📄 Resume Comparison Report</h2>
-              <p className="analysis-header-subtitle">Generated from your old vs new resume • Powered by AI</p>
-            </div>
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`Backend responded with status ${res.status}: ${text}`);
+        }
 
-            <div>{formatComparisonReport(reportData)}</div>
+        const resData = await res.json();
 
-            <div className="next-steps-card light">
-              <h4 className="next-steps-title">💡 Next Steps</h4>
-              <p className="next-steps-content">
-                Review the comparison highlights above and update your resume accordingly.
-              </p>
+        if (resData.error) {
+          setReportOutput(<ErrorState title="Report Generation Failed" message={resData.error} />);
+          return;
+        }
+
+        const reportData = resData.result || resData;
+        setReportOutput(
+          <div className="analysis-output-wrapper">
+            <div className="analysis-container">
+              <div className="analysis-header">
+                <h2 className="analysis-header-title">📄 Resume Comparison Report</h2>
+                <p className="analysis-header-subtitle">Generated from your old vs new resume • Powered by AI</p>
+              </div>
+
+              <div>{formatComparisonReport(reportData)}</div>
+
+              <div className="next-steps-card light">
+                <h4 className="next-steps-title">💡 Next Steps</h4>
+                <p className="next-steps-content">
+                  Review the comparison highlights above and update your resume accordingly.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-      );
-      window.showMessage("Success", 'Report has been generated', "general", 1500);
+        );
+        window.showMessage("Success", 'Report has been generated', "general", 1500);
+        break; // Success!
 
-    } catch (err) {
-      window.showMessage("Error", 'Uable to generate report', "error", 1500);
-      // setReportOutput(<ErrorState title="Connection Error" message="Cannot reach backend. Make sure the server is running." />);
-    } finally {
-      setCreateComparisonReport(false);
-      setLoading(false);
+      } catch (err) {
+        console.error(`Create Report attempt ${attempt + 1} failed:`, err);
+        const isRetryable = err.message.includes("Connection reset") || err.message.includes("recvAddress") || err.name === "TypeError";
+
+        if (isRetryable && attempt < MAX_RETRIES) {
+          attempt++;
+          const delay = Math.pow(2, attempt - 1) * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+
+        window.showMessage("Error", 'Unable to generate report', "error", 1500);
+        setReportOutput(<ErrorState title="Connection Error" message={err.message} />);
+        break;
+      }
     }
+
+    setCreateComparisonReport(false);
+    setLoading(false);
   };
 
   const improveATSContent = async () => {
-    try {
-      setIsEnhancing(true);
-      setLoading(true);
-      setMessage('Enhancing your Resume...')
-      const payload = buildATSPayload();
+    setIsEnhancing(true);
+    setLoading(true);
 
-      setCurrentLocalResume(payload);
+    const MAX_RETRIES = 3;
+    let attempt = 0;
 
-      const res = await fetch(`${API_BASE_URL}/enhanceResume`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
+    const payload = buildATSPayload();
+    setCurrentLocalResume(payload);
 
-      if (!res.ok) {
-        console.error("Backend error:", res.status, res.statusText);
-        return;
+    while (attempt <= MAX_RETRIES) {
+      try {
+        setMessage(attempt > 0 ? `Retrying Enhancement (${attempt}/${MAX_RETRIES})...` : 'Enhancing your Resume...');
+
+        const res = await fetch(`${API_BASE_URL}/enhanceResume`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) throw new Error(`Status ${res.status}`);
+
+        const data = await res.json();
+        dispatch(setEnhancedResume(data));
+        window.showMessage('Success', 'Enhancement Completed', 'success', 1500);
+
+        setNewLocalResume(data);
+        break; // Success!
+
+      } catch (err) {
+        console.error(`Enhance Resume attempt ${attempt + 1} failed:`, err);
+        const isRetryable = err.message.includes("Connection reset") || err.message.includes("recvAddress") || err.name === "TypeError";
+
+        if (isRetryable && attempt < MAX_RETRIES) {
+          attempt++;
+          const delay = Math.pow(2, attempt - 1) * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+
+        window.showMessage(`${err.message || 'Error'} enhancing failed`, 'error');
+        break;
       }
-
-      const data = await res.json();
-      dispatch(setEnhancedResume(data));
-      window.showMessage('Sucess', 'Enhancement Completed', 'success', 1500);
-
-      setNewLocalResume(data);
-    } catch (err) {
-      console.error("❌ Error calling enhanceResume:", err);
-      window.showMessage(`${err.message || 'Error'} enhancing failed`, 'error');
-    } finally {
-      setIsEnhancing(false);
-      setLoading(false);
-
     }
+
+    setIsEnhancing(false);
+    setLoading(false);
   };
 
   const importResume = async (e) => {
-    setLoading(true);
-    setMessage('Importing...');
     const file = e.target.files[0];
     if (!file) return;
 
@@ -796,53 +840,68 @@ export default function ResumeAnalyzer({
       return;
     }
 
+    setLoading(true);
     const formData = new FormData();
     formData.append("file", file);
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/uploadResume`, {
-        method: "POST",
-        body: formData,
-      });
+    const MAX_RETRIES = 3;
+    let attempt = 0;
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Server error: ${response.status} - ${errorText}`);
-      }
+    while (attempt <= MAX_RETRIES) {
+      try {
+        setMessage(attempt > 0 ? `Retrying Import (${attempt}/${MAX_RETRIES})...` : 'Importing...');
+        const response = await fetch(`${API_BASE_URL}/uploadResume`, {
+          method: "POST",
+          body: formData,
+        });
 
-      const data = await response.json();
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      const resumeJsonString = data.choices?.[0]?.message?.content?.trim();
-
-      if (resumeJsonString) {
-        try {
-          const resumeData = JSON.parse(resumeJsonString);
-          dispatch(setImportedResume(resumeData));
-          window.showMessage("Success", 'Resume has been imported', "success", 1500);
-        } catch (err) {
-          console.error("Failed to parse AI resume JSON:", err, resumeJsonString);
-          throw new Error("Failed to parse AI response");
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Server error: ${response.status} - ${errorText}`);
         }
-      } else {
-        console.error("No content found in AI response", data);
-        throw new Error(data.error || "No content found in AI response");
+
+        const data = await response.json();
+
+        if (data.error) {
+          throw new Error(data.error);
+        }
+
+        const resumeJsonString = data.choices?.[0]?.message?.content?.trim();
+
+        if (resumeJsonString) {
+          try {
+            const resumeData = JSON.parse(resumeJsonString);
+            dispatch(setImportedResume(resumeData));
+            window.showMessage("Success", 'Resume has been imported', "success", 1500);
+            break; // Success!
+          } catch (err) {
+            console.error("Failed to parse AI resume JSON:", err, resumeJsonString);
+            throw new Error("Failed to parse AI response");
+          }
+        } else {
+          console.error("No content found in AI response", data);
+          throw new Error(data.error || "No content found in AI response");
+        }
+
+      } catch (error) {
+        console.error(`Upload attempt ${attempt + 1} failed:`, error);
+        const isRetryable = error.message.includes("Connection reset") || error.message.includes("recvAddress") || error.name === "TypeError";
+
+        if (isRetryable && attempt < MAX_RETRIES) {
+          attempt++;
+          const delay = Math.pow(2, attempt - 1) * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+
+        window.showMessage("Error", error.message || 'Importing Failed', "error", 3000);
+        break;
       }
-
-      console.log("Printing the response for resume import");
-      console.log("Upload successful:", data);
-
-    } catch (error) {
-      console.error("Upload failed:", error);
-      window.showMessage("Error", error.message || 'Importing Failed', "error", 3000);
-    } finally {
-      e.target.value = '';
-      setLoading(false);
-      setMessage('');
     }
+
+    e.target.value = '';
+    setLoading(false);
+    setMessage('');
   };
 
 

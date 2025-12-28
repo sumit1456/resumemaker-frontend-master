@@ -625,23 +625,44 @@ export default function ResumeEditor({ resume: propsResume }) {
 
 
         // ---------------- Projects ----------------
-        // Example for projects
-        setProjects(prev =>
-            enhancedResume.projects.map((proj, i) => {
-                const prevProj = prev[i] || {};
-                return {
-                    name: proj.name || prevProj.name || "",
-                    duration: proj.duration || prevProj.duration || "",
-                    technologies: proj.technologies || prevProj.technologies || "",
-                    description: proj.description && proj.description.length > 0
-                        ? [...proj.description]         // clone API array
-                        : prevProj.description
-                            ? [...prevProj.description]  // clone previous state array
-                            : [""],
-                    link: proj.link || prevProj.link || ""
-                };
-            })
-        );
+        if (Array.isArray(enhancedResume?.projects)) {
+            setProjects(prev =>
+                enhancedResume.projects.map((proj, i) => {
+                    const prevProj = prev[i] || {};
+                    return {
+                        name: proj.name || prevProj.name || "",
+                        duration: proj.duration || prevProj.duration || "",
+                        technologies: proj.technologies || prevProj.technologies || "",
+                        description: Array.isArray(proj.description) && proj.description.length > 0
+                            ? [...proj.description]         // clone API array
+                            : prevProj.description
+                                ? [...prevProj.description]  // clone previous state array
+                                : [""],
+                        link: proj.link || prevProj.link || ""
+                    };
+                })
+            );
+        }
+
+        // ---------------- Education ----------------
+        if (Array.isArray(enhancedResume?.educationList)) {
+            setEducationList(
+                enhancedResume.educationList.map(e => ({
+                    degree: e?.degree ?? "",
+                    gpa: e?.gpa ?? e?.grade ?? "",
+                    institution: e?.institution ?? e?.university ?? "",
+                    location: e?.location ?? "",
+                    year: e?.year ?? e?.date ?? "",
+                }))
+            );
+        }
+
+        // ---------------- Certifications ----------------
+        if (Array.isArray(enhancedResume?.certifications)) {
+            setCertifications(
+                enhancedResume.certifications.map(c => (typeof c === "string" ? c : c?.name ?? c?.title ?? ""))
+            );
+        }
 
 
     };
@@ -2381,7 +2402,8 @@ export default function ResumeEditor({ resume: propsResume }) {
                     pointerEvents: 'none',
                     transform: 'scale(1)',
                     transformOrigin: 'top right',
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    maxWidth: 'none'
                 }}>
                     {(() => {
                         const TemplateComponents = {
@@ -2425,6 +2447,7 @@ export default function ResumeEditor({ resume: propsResume }) {
                                             boxSizing: 'border-box',
                                             position: 'relative',
                                             minWidth: 0,
+                                            maxWidth: 'none'
                                         }}>
                                         <Component {...propsMap[key]} />
                                     </div>
@@ -2448,6 +2471,7 @@ export default function ResumeEditor({ resume: propsResume }) {
                                         boxSizing: 'border-box',
                                         position: 'relative',
                                         minWidth: 0,
+                                        maxWidth: 'none'
                                     }}>
                                     <FlexibleCustomSection
                                         customSections={[section]}

@@ -2496,7 +2496,7 @@ const WebGLStage = forwardRef(({
     onDragEnd = () => { },
     onSelect = () => { },
     selectedId = null,
-    resolution = 2,
+    resolution = 2.5,
     background = 0xffffff,
     physicsEnabled = false,
     yOffset = 0,
@@ -2954,13 +2954,13 @@ const useWebGLSnapshot = () => {
     const [isCapturing, setIsCapturing] = useState(false);
     const engineRef = useRef(new GeometrySnapshot());
 
-    const capture = useCallback(async (element) => {
+    const capture = useCallback(async (element, options = {}) => {
         if (!element) return null;
         const startTime = performance.now();
         setIsCapturing(true);
 
         try {
-            const data = await engineRef.current.capture(element);
+            const data = await engineRef.current.capture(element, options);
             setSnapshot(data);
             const duration = performance.now() - startTime;
             console.log(`[useWebGLSnapshot] Capture complete in ${duration.toFixed(2)}ms`);

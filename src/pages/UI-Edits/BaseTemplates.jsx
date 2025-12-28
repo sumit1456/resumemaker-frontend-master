@@ -270,6 +270,29 @@ export const FlexibleHeaderSection = ({ resumeDetails, styleConfig }) => {
 
 
         switch (sectionType) {
+            case 'nameRow':
+                return (
+                    <FlexibleLayout
+                        key="nameRow"
+                        config={{
+                            display: "flex",
+                            flexDirection: "row",
+                            justifyContent: "space-between",
+                            alignItems: "baseline",
+                            width: "100%",
+                            marginBottom: config.nameRowMarginBottom || "10px",
+                            ...config.nameRowZone
+                        }}
+                    >
+                        <FlexibleText config={config.nameStyle || { fontSize: "24px", fontWeight: "bold" }}>
+                            {resumeDetails.name || "Your Name"}
+                        </FlexibleText>
+                        <FlexibleText config={config.titleStyle || { fontSize: "14px" }}>
+                            {resumeDetails.title || "Your Title"}
+                        </FlexibleText>
+                    </FlexibleLayout>
+                );
+
             case 'name':
                 return (
                     <FlexibleLayout

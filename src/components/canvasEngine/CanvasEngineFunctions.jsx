@@ -9,7 +9,8 @@ import {
   GridNode,
   TextNode,
   BlockNode,
-  SpacerNode
+  SpacerNode,
+  GeometrySnapshot
 } from "./CanvasEngine.jsx";
 
 // ==================== UTILITIES ====================
@@ -189,6 +190,30 @@ export function renderHeaderWithLayoutEngine(resumeData, config) {
 
   const layout = buildHeaderLayout(resumeData, config);
   engine.renderLayoutTree(layout, { x: 0, y: 0, width, height });
+
+  return engine.toImage();
+}
+
+/**
+ * Capture a DOM element and render it to a Canvas image
+ */
+export async function captureDOMToCanvas(element, options = {}) {
+  if (!element) return null;
+
+  const scale = options.scale || 4;
+  const snapshotter = new GeometrySnapshot({
+    mode: options.mode || 'performance',
+    styleWorker: options.styleWorker,
+    gradientWorker: options.gradientWorker
+  });
+  const snapshot = await snapshotter.capture(element);
+
+  if (!snapshot) return null;
+
+  const canvas = document.createElement('canvas');
+  const engine = new CanvasLayoutEngine(canvas, { scale });
+
+  engine.renderSnapshot(snapshot);
 
   return engine.toImage();
 }

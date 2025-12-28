@@ -64,6 +64,11 @@ body,
   box-sizing: border-box;
 }
 
+.hidden-render,
+.hidden-render * {
+  max-width: none !important;
+}
+
 body {
   margin: 0;
   padding: 0;

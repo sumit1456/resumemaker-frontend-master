@@ -49,6 +49,7 @@ self.onmessage = function (e) {
 
     if (type === 'PARSE_STYLES') {
         const { rawStylesBatch } = data;
+        console.log(`[Worker] Processing style batch ${id} with ${rawStylesBatch.length} items`);
         const processedBatch = rawStylesBatch.map(raw => {
             return {
                 backgroundColor: raw.backgroundColor,
@@ -84,6 +85,7 @@ self.onmessage = function (e) {
             };
         });
 
+        console.log(`[Worker] Finished style batch ${id}`);
         self.postMessage({
             type: 'STYLES_PROCESSED',
             id,
