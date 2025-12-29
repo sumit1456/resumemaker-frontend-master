@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import { setCurrentResume, setCurrentResumeId } from "../../redux/store.js";
+import { setCurrentResume, setCurrentResumeId, setSavedStyleConfig, setCurrentTemplate } from "../../redux/store.js";
 import { mergeResumeData } from "./Utils";
 import {
   ATS_TEMPLATE_CONFIG,
@@ -155,12 +155,21 @@ const UIEditor = () => {
   };
 
   const globalCurrentTemplate = useSelector((state) => state.resume.currentTemplateName); // 🔄 Read template from Redux
+  const savedStyleConfig = useSelector((state) => state.resume.savedStyleConfig); // 🆕 Read saved style config from Redux
 
   // 🎯 Resolve initial template key
   const initialTemplateKey = useMemo(() => normalizeTemplateKey(globalCurrentTemplate || 'ats'), [globalCurrentTemplate]);
-  const initialConfig = useMemo(() => TEMPLATES[initialTemplateKey] || ATS_TEMPLATE_CONFIG, [initialTemplateKey]);
+  const initialConfig = useMemo(() => {
+    // 💎 Load saved/active style configuration from Redux as top priority
+    if (savedStyleConfig) {
+      console.log("💎 Applying saved style configuration from Redux on mount");
+      return savedStyleConfig;
+    }
+    // Fallback to template default if no saved config exists
+    return TEMPLATES[initialTemplateKey] || ATS_TEMPLATE_CONFIG;
+  }, [initialTemplateKey, savedStyleConfig]);
 
-  const [currentTemplateName, setCurrentTemplate] = useState(initialTemplateKey);
+  const [currentTemplateName, setLocalTemplateName] = useState(initialTemplateKey);
   const [sectionPositions, setSectionPositions] = useState(initialConfig.positions || {});
   const [lines, setLines] = useState(initialConfig.lines || []);
   const [backgroundShapes, setBackgroundShapes] = useState(initialConfig.shapes || []);
@@ -219,7 +228,7 @@ const UIEditor = () => {
   // 🧠 SMART SNAPSHOT: Track previous styles to avoid unnecessary re-captures
   const prevStyleConfigRef = useRef({});
 
-  const handleTemplateSwitch = (templateName) => {
+  const handleTemplateSwitch = (templateName, overrideConfig = null) => {
     console.log(`🔄 Switching to template: ${templateName}`);
 
 
@@ -227,10 +236,16 @@ const UIEditor = () => {
     // 2️⃣ STANDARD MODE: Load Default Template Config
     // 🔄 Normalize template identifier (handles both numeric IDs and string keys)
     const normalizedKey = normalizeTemplateKey(templateName);
-    setCurrentTemplate(normalizedKey);
+    setLocalTemplateName(normalizedKey);
 
     // 🛡️ Robust Lookup from TEMPLATES map
-    const template = TEMPLATES[normalizedKey] || ATS_TEMPLATE_CONFIG;
+    let template = overrideConfig || TEMPLATES[normalizedKey] || ATS_TEMPLATE_CONFIG;
+
+    // 🆕 If custom template and we have saved config, use it
+    if (normalizedKey === 'custom' && savedStyleConfig) {
+      console.log("✨ Using saved style config for custom template");
+      template = savedStyleConfig;
+    }
 
     if (!template) {
       console.error(`ERROR: Template '${normalizedKey}' not found and fallback failed.`);
@@ -355,12 +370,21 @@ const UIEditor = () => {
         throw new Error(errorData?.message || `Save failed: ${res.status}`);
       }
 
-      const data = await res.json();
+      const text = await res.text();
+      let data = {};
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        console.log("Server returned non-JSON response:", text);
+        data = { message: text };
+      }
 
       // Update Redux
       if (!targetResumeId && data.resumeId) {
         dispatch(setCurrentResumeId(data.resumeId));
       }
+      dispatch(setSavedStyleConfig(updatedConfig));
+      dispatch(setCurrentTemplate(currentTemplateName));
 
       const msg = "Resume configuration saved successfully!";
       setSuccessMessage(msg);
@@ -416,10 +440,10 @@ const UIEditor = () => {
   // 🔄 Sync local template state when Redux template changes (e.g., from ResumeEditorv3)
   useEffect(() => {
     if (globalCurrentTemplate && globalCurrentTemplate !== currentTemplateName) {
-      console.log(`📤 Syncing template from Redux: ${globalCurrentTemplate}`);
-      handleTemplateSwitch(globalCurrentTemplate);
+      console.log(`📤 Syncing template and styles from Redux: ${globalCurrentTemplate}`);
+      handleTemplateSwitch(globalCurrentTemplate, savedStyleConfig);
     }
-  }, [globalCurrentTemplate, currentTemplateName]);
+  }, [globalCurrentTemplate, currentTemplateName, savedStyleConfig]);
 
 
 

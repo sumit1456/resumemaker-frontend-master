@@ -21,7 +21,7 @@ import NewTemplate from './Template8.jsx';
 import CoustomTemplate from './CoustomTemplate.jsx';
 
 import { useDispatch, useSelector } from 'react-redux';
-import { setCurrentResume, setEnhancedResume, setCurrentTemplate } from "../../redux/store.js";
+import { setCurrentResume, setEnhancedResume, setCurrentTemplate, setSavedStyleConfig } from "../../redux/store.js";
 import { setCurrentResumeId } from "../../redux/store.js";
 import FatbricPDF from "../../FabricDemo.jsx";
 import { Font, BlobProvider } from "@react-pdf/renderer";
@@ -1051,6 +1051,7 @@ export default function ResumeEditor({ resume: propsResume }) {
                 // 5️⃣ OVERLAY Saved Style Config (The "Custom" Part)
                 if (data.styleConfig) {
                     console.log("✨ Applying Saved Style Config Overlay");
+                    dispatch(setSavedStyleConfig(data.styleConfig)); // 🔄 Sync to global Redux for b3.jsx
                     // We merge top-level keys. For nested style objects, we might want deeper merge, 
                     // but usually replacing the section config object is safer to ensure consistency.
                     Object.keys(data.styleConfig).forEach(key => {
@@ -1372,6 +1373,7 @@ export default function ResumeEditor({ resume: propsResume }) {
     const handleTemplateChange = useCallback((newTemplate) => {
         setIsTemplateLoading(true);
         setSelectedTemplate(newTemplate);
+        dispatch(setCurrentTemplate(newTemplate)); // 🔄 Sync to global Redux
 
         // Sync WebGL Layout using TEMPLATES object
         const config = TEMPLATES[newTemplate];
@@ -1384,7 +1386,16 @@ export default function ResumeEditor({ resume: propsResume }) {
             ["header", "summary", "skills", "experience", "projects", "education", "certifications"].forEach(key => {
                 if (config[key]) newStyle[key] = JSON.parse(JSON.stringify(config[key]));
             });
-            if (Object.keys(newStyle).length > 0) setStyleConfig(prev => ({ ...prev, ...newStyle }));
+            if (Object.keys(newStyle).length > 0) {
+                const updatedStyle = { ...styleConfig, ...newStyle };
+                setStyleConfig(updatedStyle);
+                dispatch(setSavedStyleConfig({
+                    ...updatedStyle,
+                    positions: config.positions || {},
+                    lines: config.lines || [],
+                    shapes: config.shapes || []
+                }));
+            }
         }
 
         setTimeout(() => setIsTemplateLoading(false), 100);
@@ -1609,9 +1620,18 @@ export default function ResumeEditor({ resume: propsResume }) {
         const targetId = resumeId || currentResumeId || localResumeId;
 
         // 🛡️ Ensure we pass a valid template identifier that b3.jsx understands
-        // If selectedTemplate is "1", "2" etc, b3 maps them.
-        // If it's a key like "ats", b3 uses it directly.
         let targetTemplateId = selectedTemplate || "1";
+
+        // 🆕 Sync current styles and template to Redux so b3 can use it immediately
+        dispatch(setCurrentTemplate(targetTemplateId));
+
+        const currentStyleSnapshot = {
+            ...styleConfig,
+            positions: sectionPositions,
+            lines: lines,
+            shapes: backgroundShapes
+        };
+        dispatch(setSavedStyleConfig(currentStyleSnapshot));
 
         if (targetId) {
             navigate(`/ui-editor/webgl/${targetId}/${targetTemplateId}`);

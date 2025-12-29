@@ -34,6 +34,7 @@ const resumeSlice = createSlice({
     enhancedResume: null,     // payload returned from ATS-enhancement
     globalCurrentPdf: null,   // 🆕 PDF Blob or URL stored globally
     currentTemplateName: 'modern', // 🆕 Current template key (ats, modern, twoColumn, etc.)
+    savedStyleConfig: null,   // 🆕 Saved style configuration from backend
   },
   reducers: {
     setImportedResume: (state, action) => {
@@ -51,12 +52,16 @@ const resumeSlice = createSlice({
     setCurrentTemplate: (state, action) => {
       state.currentTemplateName = action.payload;
     },
+    setSavedStyleConfig: (state, action) => {
+      state.savedStyleConfig = action.payload;
+    },
     clearResume: (state) => {
       state.importedResume = null;
       state.currentResume = null;
       state.enhancedResume = null;
       state.globalCurrentPdf = null;
       state.currentTemplateName = 'modern';
+      state.savedStyleConfig = null;
     },
   },
 });
@@ -74,6 +79,7 @@ export const {
   setEnhancedResume,
   setGlobalCurrentPdf,
   setCurrentTemplate,
+  setSavedStyleConfig,
   clearResume,
 } = resumeSlice.actions;
 
