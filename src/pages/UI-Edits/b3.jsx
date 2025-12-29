@@ -27,13 +27,68 @@ import { jsPDF } from "jspdf";
 import * as PIXI from 'pixi.js';
 
 // ==================== TEMPLATE MAPPINGS ====================
+// ==================== TEMPLATE MAPPINGS ====================
 const TEMPLATES = {
+  custom: { name: 'Custom (Saved)', ...ATS_TEMPLATE_CONFIG }, // 🆕 Custom Option
   ats: ATS_TEMPLATE_CONFIG,
   modern: MODERN_TEMPLATE_CONFIG,
   twoColumn: TWO_COLUMN_TEMPLATE_CONFIG,
   template5: TEMPLATE5_CONFIG,
   newAts: NEW_ATS_CONFIG
 };
+
+// 🔄 Map numeric templateIds from backend to template config keys
+const TEMPLATE_ID_MAP = {
+  1: 'ats',           // Classic Template -> ATS
+  2: 'modern',        // Modern Template
+  3: 'ats',           // ATS-Friendly Template
+  4: 'twoColumn',     // Executive Elite -> Two Column
+  5: 'template5',     // Tech Innovator
+  6: 'newAts',        // Academic Scholar -> New ATS
+  7: 'modern',        // Creative Bold -> Modern
+  10: 'ats',          // Template Coutom ats
+  11: 'modern'        // Template Coutom modern
+};
+
+// 🛡️ Normalize template identifier (handle both numeric IDs and string keys)
+// 🛡️ Normalize template identifier (handle both numeric IDs and string keys)
+const normalizeTemplateKey = (templateIdentifier) => {
+  if (templateIdentifier === 'custom') return 'custom'; // 🆕 Pass-through
+
+  // If it's already a valid string key, return it
+  if (typeof templateIdentifier === 'string' && TEMPLATES[templateIdentifier]) {
+    return templateIdentifier;
+  }
+
+  // 🆕 Extended ID Mapping (from ResumeEditorv3 friendly names)
+  const EXTENDED_MAP = {
+    "ats-optimized": "ats",
+    "modern-ats-two-column": "modern",
+    "two-column-professional": "twoColumn",
+    "ats-edgy": "newAts",
+    "tech-innovator": "template5"
+  };
+  if (EXTENDED_MAP[templateIdentifier]) {
+    return EXTENDED_MAP[templateIdentifier];
+  }
+
+  // If it's a numeric ID, map it to a string key
+  const numericId = typeof templateIdentifier === 'string' ? parseInt(templateIdentifier, 10) : templateIdentifier;
+  if (!isNaN(numericId) && TEMPLATE_ID_MAP[numericId]) {
+    return TEMPLATE_ID_MAP[numericId];
+  }
+
+  // Fallback to 'ats' if no match found
+  console.warn(`⚠️ Unknown template identifier: ${templateIdentifier}, falling back to 'ats'`);
+  return 'ats';
+};
+
+
+// ... (skipping unchanged code) ...
+
+
+// 🔄 Load template from URL param (HIGHEST PRIORITY) or Redux
+
 
 
 
@@ -67,7 +122,11 @@ const UIEditor = () => {
   // State
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { resumeId } = useParams();
+  const { resumeId: paramResumeId, templateId } = useParams();
+
+  // Handle 'new' keyword for resume creation flow
+  const resumeId = paramResumeId === 'new' ? null : paramResumeId;
+
   const userId = useSelector((s) => s.auth.userId);
 
   const [saving, setSaving] = useState(false);
@@ -80,14 +139,52 @@ const UIEditor = () => {
   const [showPage2, setShowPage2] = useState(false);
   const [isAutoFlowEnabled, setIsAutoFlowEnabled] = useState(true); // 🎯 Default to true for "Auto Management"
   const [zoom, setZoom] = useState(1);
-  const [sectionPositions, setSectionPositions] = useState({});
-  const [lines, setLines] = useState([]);
-  const [backgroundShapes, setBackgroundShapes] = useState([]);
-  const [nextLineId, setNextLineId] = useState(1);
-  const [nextShapeId, setNextShapeId] = useState(1);
-  const [currentTemplate, setCurrentTemplate] = useState('ats');
-  const [sectionWidths, setSectionWidths] = useState({});
-  const [styleConfig, setStyleConfig] = useState(ATS_TEMPLATE_CONFIG);
+
+  const extractWidthsAndHeightsFromConfig = (config) => {
+    const widths = {};
+    const heights = {};
+    Object.keys(config).forEach(key => {
+      if (config[key]?.container?.width) {
+        widths[key] = config[key].container.width;
+      }
+      if (config[key]?.container?.height) {
+        heights[key] = config[key].container.height;
+      }
+    });
+    return { widths, heights };
+  };
+
+  const globalCurrentTemplate = useSelector((state) => state.resume.currentTemplateName); // 🔄 Read template from Redux
+
+  // 🎯 Resolve initial template key
+  const initialTemplateKey = useMemo(() => normalizeTemplateKey(globalCurrentTemplate || 'ats'), [globalCurrentTemplate]);
+  const initialConfig = useMemo(() => TEMPLATES[initialTemplateKey] || ATS_TEMPLATE_CONFIG, [initialTemplateKey]);
+
+  const [currentTemplateName, setCurrentTemplate] = useState(initialTemplateKey);
+  const [sectionPositions, setSectionPositions] = useState(initialConfig.positions || {});
+  const [lines, setLines] = useState(initialConfig.lines || []);
+  const [backgroundShapes, setBackgroundShapes] = useState(initialConfig.shapes || []);
+  const [nextLineId, setNextLineId] = useState(() => {
+    return initialConfig.lines && initialConfig.lines.length > 0
+      ? Math.max(...initialConfig.lines.map(l => l.id)) + 1
+      : 1;
+  });
+  const [nextShapeId, setNextShapeId] = useState(() => {
+    const shapes = initialConfig.shapes || initialConfig.backgroundShapes || [];
+    return shapes && shapes.length > 0
+      ? Math.max(...shapes.map(s => s.id)) + 1
+      : 1;
+  });
+
+  const [sectionWidths, setSectionWidths] = useState(() => {
+    const { widths } = extractWidthsAndHeightsFromConfig(initialConfig);
+    return widths;
+  });
+  const [sectionHeights, setSectionHeights] = useState(() => {
+    const { heights } = extractWidthsAndHeightsFromConfig(initialConfig);
+    return heights;
+  });
+  const [styleConfig, setStyleConfig] = useState(initialConfig);
   const [sectionSnapshots, setSectionSnapshots] = useState({});
   const [TemplateComponents, setTemplateComponents] = useState(null);
   const [resumeData, setResumeData] = useState(defaultResumeData);
@@ -122,8 +219,57 @@ const UIEditor = () => {
   // 🧠 SMART SNAPSHOT: Track previous styles to avoid unnecessary re-captures
   const prevStyleConfigRef = useRef({});
 
+  const handleTemplateSwitch = (templateName) => {
+    console.log(`🔄 Switching to template: ${templateName}`);
+
+
+
+    // 2️⃣ STANDARD MODE: Load Default Template Config
+    // 🔄 Normalize template identifier (handles both numeric IDs and string keys)
+    const normalizedKey = normalizeTemplateKey(templateName);
+    setCurrentTemplate(normalizedKey);
+
+    // 🛡️ Robust Lookup from TEMPLATES map
+    const template = TEMPLATES[normalizedKey] || ATS_TEMPLATE_CONFIG;
+
+    if (!template) {
+      console.error(`ERROR: Template '${normalizedKey}' not found and fallback failed.`);
+      return;
+    }
+
+    setStyleConfig(template);
+    setSectionPositions(template.positions || {});
+
+    const { widths, heights } = extractWidthsAndHeightsFromConfig(template);
+    setSectionWidths(widths);
+    setSectionHeights(heights);
+
+    setLines(template.lines || []);
+    setBackgroundShapes(template.shapes || []);
+    setZoom(1);
+    setSelectedLine(null);
+    setSelectedShape(null);
+    setSelectedSection(null);
+
+    // Reset counters
+    if (template.lines && template.lines.length > 0) {
+      setNextLineId(Math.max(...template.lines.map(l => l.id)) + 1);
+    } else {
+      setNextLineId(1);
+    }
+
+    const shapes = template.shapes || template.backgroundShapes || [];
+    if (shapes && shapes.length > 0) {
+      setNextShapeId(Math.max(...shapes.map(s => s.id)) + 1);
+    } else {
+      setNextShapeId(1);
+    }
+  };
+
+
+
   const handleSaveAll = async () => {
-    console.log("🚀 [ANTIGRAVITY] handleSaveAll triggered");
+
     if (userId == null) {
       // Assuming simple alert or toast if window.showMessage not available, 
       // but strictly following user pattern:
@@ -164,7 +310,7 @@ const UIEditor = () => {
 
       const payload = {
         title: resumeDetails.resumeDetails?.title || "My Resume",
-        templateId: String(`Coutom ${currentTemplate}` || "custom"),
+        templateId: String(currentTemplateName || "custom"),
         userId: userId,
         details: {
           name: resumeDetails.resumeDetails?.name,
@@ -261,30 +407,21 @@ const UIEditor = () => {
   const canvasTargetWidth = isMobile ? (viewportWidth - 30) : 595;
   const canvasScale = canvasTargetWidth / 595;
   const canvasTargetHeight = 842 * canvasScale;
-
-
-
-
-
-
   useEffect(() => {
     if (!currentResume) return;
     setResumeData(currentResume);
     setResumeDetails(currentResume); // Sync local resumeDetails state
+  }, [currentResume]);
 
-    // If the resume has a saved style configuration, load it
-    if (currentResume.styleConfig) {
-      const savedConfig = currentResume.styleConfig;
-      setStyleConfig(savedConfig);
-
-      if (savedConfig.positions) setSectionPositions(savedConfig.positions);
-      if (savedConfig.lines) setLines(savedConfig.lines);
-      if (savedConfig.shapes) setBackgroundShapes(savedConfig.shapes);
-
-      // You might also want to load widths/heights if you decide to store them
-      // setSectionWidths(savedConfig.widths || {}); 
+  // 🔄 Sync local template state when Redux template changes (e.g., from ResumeEditorv3)
+  useEffect(() => {
+    if (globalCurrentTemplate && globalCurrentTemplate !== currentTemplateName) {
+      console.log(`📤 Syncing template from Redux: ${globalCurrentTemplate}`);
+      handleTemplateSwitch(globalCurrentTemplate);
     }
-  }, [currentResume])
+  }, [globalCurrentTemplate, currentTemplateName]);
+
+
 
   // 🎬 GPU Header Layout Animation Handler
   const animateHeaderLayoutChange = async (newLayoutConfig) => {
@@ -371,17 +508,22 @@ const UIEditor = () => {
   // Initialize template on mount
 
   useEffect(() => {
-    const defaultTemplate = TEMPLATES['ats'];
-    setSectionPositions(defaultTemplate.positions || {});
-    setLines(defaultTemplate.lines || []);
-    setBackgroundShapes(defaultTemplate.shapes || []);
+    const defaultTemplate = TEMPLATES['ats'] || ATS_TEMPLATE_CONFIG;
 
-    // Initialize IDs
-    if (defaultTemplate.lines && defaultTemplate.lines.length > 0) {
-      setNextLineId(Math.max(...defaultTemplate.lines.map(l => l.id || 0)) + 1);
-    }
-    if (defaultTemplate.shapes && defaultTemplate.shapes.length > 0) {
-      setNextShapeId(Math.max(...defaultTemplate.shapes.map(s => s.id || 0)) + 1);
+    if (defaultTemplate) {
+      setSectionPositions(defaultTemplate.positions || {});
+      setLines(defaultTemplate.lines || []);
+      setBackgroundShapes(defaultTemplate.shapes || []);
+
+      // Initialize IDs
+      if (defaultTemplate.lines && defaultTemplate.lines.length > 0) {
+        setNextLineId(Math.max(...defaultTemplate.lines.map(l => l.id || 0)) + 1);
+      }
+      if (defaultTemplate.shapes && defaultTemplate.shapes.length > 0) {
+        setNextShapeId(Math.max(...defaultTemplate.shapes.map(s => s.id || 0)) + 1);
+      }
+    } else {
+      console.error("CRITICAL: Default 'ats' template not found!");
     }
   }, []);
 
@@ -413,19 +555,6 @@ const UIEditor = () => {
 
 
 
-  const extractWidthsAndHeightsFromConfig = (config) => {
-    const widths = {};
-    const heights = {};
-    Object.keys(config).forEach(key => {
-      if (config[key]?.container?.width) {
-        widths[key] = config[key].container.width;
-      }
-      if (config[key]?.container?.height) {
-        heights[key] = config[key].container.height;
-      }
-    });
-    return { widths, heights };
-  };
 
 
   // Handle width change
@@ -437,7 +566,6 @@ const UIEditor = () => {
   };
 
 
-  const [sectionHeights, setSectionHeights] = useState({});
 
   // Add this helper function with your other helper functions
   const handleHeightChange = (sectionName, value) => {
@@ -554,7 +682,7 @@ const UIEditor = () => {
 
   // Reset Layout
   // const resetLayout = () => {
-  //   const template = TEMPLATES[currentTemplate];
+  //   const template = TEMPLATES[currentTemplateName];
   //   setSectionPositions(template.positions || {});
   //   setSectionWidths(extractWidthsFromConfig(template));
   //   setLines(template.lines || []);
@@ -577,7 +705,16 @@ const UIEditor = () => {
 
   // Reset Layout - UPDATED
   const resetLayout = () => {
-    const template = TEMPLATES[currentTemplate];
+    // 🔄 Normalize template identifier first
+    const normalizedKey = normalizeTemplateKey(currentTemplateName);
+    const template = TEMPLATES[normalizedKey] || ATS_TEMPLATE_CONFIG;
+
+    // 🛡️ Null safety: Only update if template exists
+    if (!template) {
+      console.warn(`⚠️ Template "${currentTemplateName}" not found, skipping reset`);
+      return;
+    }
+
     setSectionPositions(template.positions || {});
 
     const { widths, heights } = extractWidthsAndHeightsFromConfig(template);
@@ -757,40 +894,12 @@ const UIEditor = () => {
   // };
 
 
-  const handleTemplateSwitch = (templateName) => {
-    setCurrentTemplate(templateName);
 
-    // 🛡️ Robust Lookup from TEMPLATES map
-    const template = TEMPLATES[templateName] || ATS_TEMPLATE_CONFIG;
 
-    setStyleConfig(template);
-    setSectionPositions(template.positions || {});
 
-    const { widths, heights } = extractWidthsAndHeightsFromConfig(template);
-    setSectionWidths(widths);
-    setSectionHeights(heights);
 
-    setLines(template.lines || []);
-    setBackgroundShapes(template.shapes || []); // Ensure this maps to config key 'backgroundShapes' or 'shapes' based on config structure
-    setZoom(1);
-    setSelectedLine(null);
-    setSelectedShape(null);
-    setSelectedSection(null);
 
-    // Reset counters
-    if (template.lines && template.lines.length > 0) {
-      setNextLineId(Math.max(...template.lines.map(l => l.id)) + 1);
-    } else {
-      setNextLineId(1);
-    }
-    // 🛡️ Handle legacy shape key vs new key if needed
-    const shapes = template.shapes || template.backgroundShapes || [];
-    if (shapes && shapes.length > 0) {
-      setNextShapeId(Math.max(...shapes.map(s => s.id)) + 1);
-    } else {
-      setNextShapeId(1);
-    }
-  };
+
 
 
 
@@ -1283,7 +1392,7 @@ const UIEditor = () => {
   useEffect(() => {
     console.log('Initial layout reset');
     resetLayout();
-  }, [currentTemplate]);
+  }, [currentTemplateName]);
 
   // Calculate page elements
   // Calculate page elements - Optimized with Memo
@@ -1319,16 +1428,19 @@ const UIEditor = () => {
           const Component = TemplateComponents[key];
           if (!Component) return null;
 
+          // 🚀 DIRECT PASS: Use global config directly if editing (avoids async state lag)
+          const renderConfig = (resumeId && currentResume?.styleConfig) ? currentResume.styleConfig : styleConfig;
+
           // Map data according to your FlexibleSection component props
           const propsMap = {
-            header: { resumeDetails: resumeData?.resumeDetails, styleConfig: styleConfig },
-            contact: { resumeDetails: resumeData?.resumeDetails, styleConfig: styleConfig },
-            summary: { summary: resumeData?.resumeDetails?.summary, styleConfig: styleConfig },
-            skills: { skills: resumeData?.skills, styleConfig: styleConfig },
-            experience: { experiences: resumeData?.experiences, styleConfig: styleConfig },
-            projects: { projects: resumeData?.projects, styleConfig: styleConfig },
-            education: { educationList: resumeData?.educationList, styleConfig: styleConfig },
-            certifications: { certifications: resumeData?.certifications, styleConfig: styleConfig }
+            header: { resumeDetails: resumeData?.resumeDetails, styleConfig: renderConfig },
+            contact: { resumeDetails: resumeData?.resumeDetails, styleConfig: renderConfig },
+            summary: { summary: resumeData?.resumeDetails?.summary, styleConfig: renderConfig },
+            skills: { skills: resumeData?.skills, styleConfig: renderConfig },
+            experience: { experiences: resumeData?.experiences, styleConfig: renderConfig },
+            projects: { projects: resumeData?.projects, styleConfig: renderConfig },
+            education: { educationList: resumeData?.educationList, styleConfig: renderConfig },
+            certifications: { certifications: resumeData?.certifications, styleConfig: renderConfig }
           };
 
           return (
@@ -1337,10 +1449,10 @@ const UIEditor = () => {
               ref={ref}
               data-section={key}
               style={{
-                width: styleConfig[key]?.container?.width || 'auto',
-                height: styleConfig[key]?.container?.height || 'auto',
-                minHeight: styleConfig[key]?.container?.height || 'auto',
-                maxHeight: styleConfig[key]?.container?.height || 'none',
+                width: renderConfig[key]?.container?.width || 'auto',
+                height: renderConfig[key]?.container?.height || 'auto',
+                minHeight: renderConfig[key]?.container?.height || 'auto',
+                maxHeight: renderConfig[key]?.container?.height || 'none',
                 overflow: 'visible',
                 boxSizing: 'border-box',
                 position: 'relative',
@@ -1363,7 +1475,7 @@ const UIEditor = () => {
           <div className="control-group">
             <label className="control-label">Choose Template</label>
             <select
-              value={currentTemplate}
+              value={currentTemplateName}
               onChange={(e) => handleTemplateSwitch(e.target.value)}
               className="control-select"
             >
@@ -1373,6 +1485,20 @@ const UIEditor = () => {
                 </option>
               ))}
             </select>
+            {resumeId && (
+              <div style={{
+                marginTop: '8px',
+                padding: '6px',
+                backgroundColor: '#ecfdf5',
+                color: '#047857',
+                borderRadius: '4px',
+                fontSize: '12px',
+                border: '1px solid #a7f3d0',
+                textAlign: 'center'
+              }}>
+                ✨ Custom Template Active
+              </div>
+            )}
           </div>
         )}
 
@@ -1387,7 +1513,7 @@ const UIEditor = () => {
             style={{ backgroundColor: 'white', color: '#1f2937', border: '1px solid #e5e7eb' }}
             disabled={saving}
           >
-            {saving ? 'SAVING...' : '💾 SAVE TEMPLATE'}
+            {saving ? 'SAVING...' : (resumeId ? '💾 UPDATE TEMPLATE' : '💾 SAVE TEMPLATE')}
           </button>
           <button onClick={resetLayout} className="btn-primary full-width">
             ↻ RESET LAYOUT
@@ -1760,7 +1886,7 @@ const UIEditor = () => {
       {/* MIDDLE - Canvas */}
       < div className="canvas-container" >
         <div className="template-badge">
-          {currentTemplate === 'ats' ? '📄 ATS' : currentTemplate === 'modern' ? '✨ MODERN' : '📑 TWO COLUMN'}
+          {currentTemplateName === 'ats' ? '📄 ATS' : currentTemplateName === 'modern' ? '✨ MODERN' : '📑 TWO COLUMN'}
         </div>
         <div className="canvas-hint">💡 DRAG & RESIZE • Scroll to see more</div>
         <div className="canvas-scroll-wrapper">
@@ -2216,6 +2342,72 @@ const UIEditor = () => {
                 </span>
               </div>
 
+              {/* Section Title Color Picker */}
+              {styleConfig[selectedSection]?.sectionTitle && (
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                    Section Title Color
+                  </label>
+
+                  {/* Color Palette */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '6px', marginBottom: '8px' }}>
+                    {['#000000', '#3b82f6', '#ef4444', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899', '#6366f1'].map(color => (
+                      <button
+                        key={color}
+                        onClick={() => {
+                          setStyleConfig(prev => ({
+                            ...prev,
+                            [selectedSection]: {
+                              ...prev[selectedSection],
+                              sectionTitle: {
+                                ...prev[selectedSection]?.sectionTitle,
+                                color: color
+                              }
+                            }
+                          }));
+                          setInitTrigger(t => t + 1);
+                        }}
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          backgroundColor: color,
+                          border: styleConfig[selectedSection]?.sectionTitle?.color === color ? '3px solid #1f2937' : '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                        title={color}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Custom Color Picker */}
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <input
+                      type="color"
+                      value={styleConfig[selectedSection]?.sectionTitle?.color || '#000000'}
+                      onChange={(e) => {
+                        setStyleConfig(prev => ({
+                          ...prev,
+                          [selectedSection]: {
+                            ...prev[selectedSection],
+                            sectionTitle: {
+                              ...prev[selectedSection]?.sectionTitle,
+                              color: e.target.value
+                            }
+                          }
+                        }));
+                        setInitTrigger(t => t + 1);
+                      }}
+                      style={{ width: '50px', height: '32px', border: '1px solid #d1d5db', borderRadius: '4px', cursor: 'pointer' }}
+                    />
+                    <span style={{ fontSize: '11px', color: '#6b7280', fontFamily: 'monospace' }}>
+                      {styleConfig[selectedSection]?.sectionTitle?.color || '#000000'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Padding */}
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
@@ -2327,7 +2519,7 @@ const UIEditor = () => {
                             itemMarginBottom: `${e.target.value}px`
                           }
                         }));
-                        setInitTrigger(t => t + 1);
+
                       }}
                       style={{ width: '100%' }}
                     />
@@ -2361,7 +2553,7 @@ const UIEditor = () => {
                             }
                           }
                         }));
-                        setInitTrigger(t => t + 1);
+
                       }}
                       style={{ width: '100%' }}
                     />
@@ -2437,7 +2629,7 @@ const UIEditor = () => {
                             }
                           }
                         }));
-                        setInitTrigger(t => t + 1);
+
                       }}
                       style={{ width: '100%' }}
                     />

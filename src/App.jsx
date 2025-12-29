@@ -46,6 +46,8 @@ export default function App() {
 
         <Route path="ui-editor" element={<EditorPage></EditorPage>}></Route>
         <Route path="ui-editor/webgl" element={<B3 />} />
+        <Route path="ui-editor/webgl/:resumeId" element={<B3 />} />
+        <Route path="ui-editor/webgl/:resumeId/:templateId" element={<B3 />} />
         <Route
           path="/*"
           element={

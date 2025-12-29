@@ -46,7 +46,8 @@ export default function NavBar() {
           <p><Link to="/templates">Templates</Link></p>
           <p><Link to="/about">About</Link></p>
           <p><Link to="/user-templates">User Templates</Link></p>
-          <p><Link to="/ui-editor/webgl">WebGL Editor</Link></p>
+          <p><Link to="/dashboard/resume-editor">Text Editor</Link></p>
+          <p><Link to="/ui-editor/webgl">UI Editor</Link></p>
         </div>
 
         <div className="box-icons">
@@ -79,6 +80,7 @@ export default function NavBar() {
         <p><Link to="/templates" onClick={toggleSidebar}>Templates</Link></p>
         <p><Link to="/about" onClick={toggleSidebar}>About</Link></p>
         <p><Link to="/user-templates" onClick={toggleSidebar}>User Templates</Link></p>
+        <p><Link to="/dashboard/resume-editor" onClick={toggleSidebar}>Text Editor</Link></p>
         <p><Link to="/ui-editor/webgl" onClick={toggleSidebar} style={{ color: '#ec4899', fontWeight: 'bold' }}>WebGL Editor ✨</Link></p>
       </div>
 

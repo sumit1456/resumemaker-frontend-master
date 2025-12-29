@@ -188,12 +188,7 @@ const MyResumes = ({ userId }) => {
                 {/* Card Header */}
                 <div className="card-header">
                   <div className="card-header-top">
-                    <span
-                      className="template-badge"
-                      style={{ borderColor: getTemplateColor(resume.templateId), color: getTemplateColor(resume.templateId) }}
-                    >
-                      {getTemplateName(resume.templateId)}
-                    </span>
+
                   </div>
                   <div className="resume-icon-wrapper">
                     <span className="resume-emoji">📄</span>
@@ -228,18 +223,11 @@ const MyResumes = ({ userId }) => {
                   {/* Actions */}
                   <div className="card-actions">
                     <button
-                      onClick={() => navigate(`/my-resumes/getresume/${resume.id}`)}
+                      onClick={() => navigate(`/dashboard/resume-editorv3/${resume.id}`)}
                       className="view-button"
                     >
                       <span className="btn-icon">👁️</span>
                       View
-                    </button>
-                    <button
-                      onClick={() => navigate(`/dashboard/resume-editorv3/${resume.id}`)}
-                      className="edit-button"
-                    >
-                      <span className="btn-icon">✏️</span>
-                      Edit
                     </button>
                   </div>
                 </div>

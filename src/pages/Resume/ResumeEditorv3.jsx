@@ -21,7 +21,7 @@ import NewTemplate from './Template8.jsx';
 import CoustomTemplate from './CoustomTemplate.jsx';
 
 import { useDispatch, useSelector } from 'react-redux';
-import { setCurrentResume, setEnhancedResume } from "../../redux/store.js";
+import { setCurrentResume, setEnhancedResume, setCurrentTemplate } from "../../redux/store.js";
 import { setCurrentResumeId } from "../../redux/store.js";
 import FatbricPDF from "../../FabricDemo.jsx";
 import { Font, BlobProvider } from "@react-pdf/renderer";
@@ -894,6 +894,12 @@ export default function ResumeEditor({ resume: propsResume }) {
         }
     }, [sectionSnapshots, resumeDetails, isAutoFlowEnabled, styleConfig.type, styleConfig.id]);
 
+    // 🔄 Sync selectedTemplate to Redux global state for b3 advanced editor
+    useEffect(() => {
+        dispatch(setCurrentTemplate(selectedTemplate));
+        console.log('📤 Template synced to Redux:', selectedTemplate);
+    }, [selectedTemplate, dispatch]);
+
 
 
 
@@ -982,38 +988,86 @@ export default function ResumeEditor({ resume: propsResume }) {
                 console.log("DEBUG: Parsed Config:", config);
                 console.log("DEBUG: Config Keys:", config ? Object.keys(config) : "null");
 
-                if (config && Object.keys(config).length > 0) {
-                    console.log("DEBUG: Switching to CUSTOM template");
-                    setSelectedTemplate("custom");
-                    setStyleConfig(config);
-                    // Also attempt to load positions, lines, and shapes if they are in the config
-                    if (config.positions) setSectionPositions(config.positions);
-                    if (config.lines) setLines(config.lines);
-                    if (config.shapes) setBackgroundShapes(config.shapes);
-                } else {
-                    console.log("DEBUG: Switching to STANDARD template ID:", data.templateId);
-                    const tId = data.templateId ? String(data.templateId) : "1";
-                    setSelectedTemplate(tId);
+                // FIX_START
 
-                    // Load default config for the template if no custom config exists
-                    const configs = {
-                        "1": MODERN_TEMPLATE_CONFIG,
-                        "2": MODERN_TEMPLATE_CONFIG,
-                        "3": ATS_TEMPLATE_CONFIG,
-                        "7": ATS_TEMPLATE_CONFIG,
-                        "two": TWO_COLUMN_TEMPLATE_CONFIG
-                    };
-                    const templateDefault = configs[tId] || MODERN_TEMPLATE_CONFIG;
 
-                    const newStyle = {};
-                    ["header", "summary", "skills", "experience", "projects", "education", "certifications"].forEach(key => {
-                        if (templateDefault[key]) newStyle[key] = templateDefault[key];
-                    });
-                    setStyleConfig(newStyle);
-                    if (templateDefault.positions) setSectionPositions(templateDefault.positions);
-                    if (templateDefault.lines) setLines(templateDefault.lines);
-                    if (templateDefault.shapes) setBackgroundShapes(templateDefault.shapes);
+
+                // 1️⃣ Normalize Template ID
+                const tId = data.templateId ? String(data.templateId) : "1";
+
+                // 2️⃣ Resolve Base Configuration
+                // Try to find if the ID is a direct config key (like 'ats-optimized') or map it
+                // 2️⃣ Define Mappings
+                const CONFIG_ID_TO_KEY = {
+                    "ats-optimized": "ats",
+                    "modern-ats-two-column": "modern",
+                    "two-column-professional": "twoColumn",
+                    "ats-edgy": "newAts",
+                    "tech-innovator": "template5"
+                };
+
+                console.log("DEBUG: Loading Template ID:", tId);
+                setSelectedTemplate(tId);
+
+                // 3️⃣ Load Base Defaults
+                // 3️⃣ Load Base Defaults (Sync with b3.jsx logic)
+                const TEMPLATE_ID_MAP = {
+                    1: 'ats',           // Classic Template -> ATS
+                    2: 'modern',        // Modern Template
+                    3: 'ats',           // ATS-Friendly Template
+                    4: 'twoColumn',     // Executive Elite -> Two Column
+                    5: 'template5',     // Tech Innovator
+                    6: 'newAts',        // Academic Scholar -> New ATS
+                    7: 'modern',        // Creative Bold -> Modern
+                    10: 'ats',          // Template Coutom ats
+                    11: 'modern'        // Template Coutom modern
+                };
+
+                const TEMPLATES_MAP = {
+                    ats: ATS_TEMPLATE_CONFIG,
+                    modern: MODERN_TEMPLATE_CONFIG,
+                    twoColumn: TWO_COLUMN_TEMPLATE_CONFIG,
+                    template5: TEMPLATE5_CONFIG, // Ensure this import exists
+                    newAts: NEW_ATS_CONFIG      // Ensure this import exists
+                };
+
+                // Resolve key from ID (handle numeric vs string)
+                let resolvedKey = 'ats'; // Default
+                if (TEMPLATE_ID_MAP[tId]) {
+                    resolvedKey = TEMPLATE_ID_MAP[tId];
+                } else if (TEMPLATES_MAP[tId]) {
+                    resolvedKey = tId; // It was already a key like 'ats'
+                } else if (CONFIG_ID_TO_KEY[tId]) {
+                    resolvedKey = CONFIG_ID_TO_KEY[tId]; // Handle aliases like 'ats-optimized'
                 }
+
+                console.log("DEBUG: Resolved Template Key:", resolvedKey);
+
+                const baseConfig = TEMPLATES_MAP[resolvedKey] || ATS_TEMPLATE_CONFIG;
+
+                // 4️⃣ Create Initial Style Config from Base
+                const newStyle = JSON.parse(JSON.stringify(baseConfig)); // Deep copy to avoid mutation issues
+
+                // 5️⃣ OVERLAY Saved Style Config (The "Custom" Part)
+                if (data.styleConfig) {
+                    console.log("✨ Applying Saved Style Config Overlay");
+                    // We merge top-level keys. For nested style objects, we might want deeper merge, 
+                    // but usually replacing the section config object is safer to ensure consistency.
+                    Object.keys(data.styleConfig).forEach(key => {
+                        if (data.styleConfig[key]) {
+                            newStyle[key] = data.styleConfig[key];
+                        }
+                    });
+                }
+
+                setStyleConfig(newStyle);
+
+                // 6️⃣ Set Positions/Lines/Shapes (Priority: Saved > Base)
+                // If saved config has them, use them. Else use base.
+                setSectionPositions((data.styleConfig && data.styleConfig.positions) || baseConfig.positions || {});
+                setLines((data.styleConfig && data.styleConfig.lines) || baseConfig.lines || []);
+                setBackgroundShapes((data.styleConfig && data.styleConfig.shapes) || baseConfig.shapes || []);
+
 
                 setResumeDetails({
                     name: data.details?.name || "",
@@ -1026,7 +1080,7 @@ export default function ResumeEditor({ resume: propsResume }) {
                         github: data.contact?.github || "",
                         location: data.contact?.location || ""
                     },
-                    styleConfig: config
+                    styleConfig: newStyle
                 });
 
                 if (data.skills) {
@@ -1293,12 +1347,11 @@ export default function ResumeEditor({ resume: propsResume }) {
         if (isTemplateLoading) return null;
         console.log("️ [RENDER] Creating React Document for template:", selectedTemplate);
         switch (selectedTemplate) {
-            case "1": return <ResumeDocument {...debouncedData} />;
-            case "2": return <ModernResumeDocument {...debouncedData} />;
-            case "3": return <ATSFriendlyResumeDocument {...debouncedData} />;
-            case "4": return <ExecutiveEliteDocument {...debouncedData} />;
-            case "5": return <TechInnovatorDocument {...debouncedData} />;
-            case "6": return <AcademicScholarDocument {...debouncedData} />;
+            case "ats": return <ResumeDocument {...debouncedData} />;
+            case "modern": return <ModernResumeDocument {...debouncedData} />;
+            case "twoColumn": return <ExecutiveEliteDocument {...debouncedData} />;
+            case "template5": return <TechInnovatorDocument {...debouncedData} />;
+            case "newAts": return <AcademicScholarDocument {...debouncedData} />;
             case "7": return <CreativeBold {...debouncedData} />;
             case "8": return <NewTemplate {...debouncedData} />;
             case "custom":
@@ -1495,22 +1548,19 @@ export default function ResumeEditor({ resume: propsResume }) {
             console.log("DEBUG: Rendering Template:", selectedTemplate);
             console.log("DEBUG: Resume Details StyleConfig:", resumeDetails.styleConfig);
             switch (selectedTemplate) {
-                case "1":
+                case "ats":
                     doc = React.createElement(ResumeDocument, downloadData);
                     break;
-                case "2":
+                case "modern":
                     doc = React.createElement(ModernResumeDocument, downloadData);
                     break;
-                case "3":
-                    doc = React.createElement(ATSFriendlyResumeDocument, downloadData);
-                    break;
-                case "4":
+                case "twoColumn":
                     doc = React.createElement(ExecutiveEliteDocument, downloadData);
                     break;
-                case "5":
+                case "template5":
                     doc = React.createElement(TechInnovatorDocument, downloadData);
                     break;
-                case "6":
+                case "newAts":
                     doc = React.createElement(AcademicScholarDocument, downloadData);
                     break;
                 case "7":
@@ -1553,7 +1603,22 @@ export default function ResumeEditor({ resume: propsResume }) {
     const uiEditor = () => {
         const payload = buildResumePayload();
         dispatch(setCurrentResume(payload));
-        navigate("/ui-editor/webgl");
+
+        // Pass resumeId if available to enable UPDATE mode in b3.jsx
+        // AND pass selectedTemplate to ensure visual consistency
+        const targetId = resumeId || currentResumeId || localResumeId;
+
+        // 🛡️ Ensure we pass a valid template identifier that b3.jsx understands
+        // If selectedTemplate is "1", "2" etc, b3 maps them.
+        // If it's a key like "ats", b3 uses it directly.
+        let targetTemplateId = selectedTemplate || "1";
+
+        if (targetId) {
+            navigate(`/ui-editor/webgl/${targetId}/${targetTemplateId}`);
+        } else {
+            // Even for new resumes, passing a template ID is helpful if we selected one
+            navigate(`/ui-editor/webgl/new/${targetTemplateId}`);
+        }
     };
 
 

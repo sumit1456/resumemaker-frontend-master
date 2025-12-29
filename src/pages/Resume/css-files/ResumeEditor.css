@@ -41,7 +41,7 @@ body,
 
 .sec-inputs {
   background-color: transparent;
-  color: var(--black);
+  color: #ffffff;
   border: none;
   outline: none;
   font-size: 14px;
@@ -55,9 +55,10 @@ body,
 }
 
 .sec-inputs:focus {
-  background-color: var(--gray-50);
+  background-color: rgba(255, 255, 255, 0.05);
   border-radius: 4px;
   padding: 4px;
+  color: #ffffff;
 }
 
 * {

@@ -33,6 +33,7 @@ const resumeSlice = createSlice({
     currentResume: null,      // mapped + structured resume being edited
     enhancedResume: null,     // payload returned from ATS-enhancement
     globalCurrentPdf: null,   // 🆕 PDF Blob or URL stored globally
+    currentTemplateName: 'modern', // 🆕 Current template key (ats, modern, twoColumn, etc.)
   },
   reducers: {
     setImportedResume: (state, action) => {
@@ -47,11 +48,15 @@ const resumeSlice = createSlice({
     setGlobalCurrentPdf: (state, action) => {
       state.globalCurrentPdf = action.payload;
     },
+    setCurrentTemplate: (state, action) => {
+      state.currentTemplateName = action.payload;
+    },
     clearResume: (state) => {
       state.importedResume = null;
       state.currentResume = null;
       state.enhancedResume = null;
       state.globalCurrentPdf = null;
+      state.currentTemplateName = 'modern';
     },
   },
 });
@@ -68,6 +73,7 @@ export const {
   setCurrentResume,
   setEnhancedResume,
   setGlobalCurrentPdf,
+  setCurrentTemplate,
   clearResume,
 } = resumeSlice.actions;
 
