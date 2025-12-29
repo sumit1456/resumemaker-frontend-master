@@ -240,6 +240,10 @@ const UIEditor = () => {
   const [headerAnimating, setHeaderAnimating] = useState(false);
   const [skillsAnimating, setSkillsAnimating] = useState(false); // New state for skills
   const [activeSectionAccordion, setActiveSectionAccordion] = useState(null); // 🗂 Sub-section accordion state
+
+  // ✨ UI Animation State
+  const [isAnimationsEnabled, setIsAnimationsEnabled] = useState(true);
+
   const headerContainerRef = useRef(null);
   const skillsContainerRef = useRef(null); // New ref for skills container
 
@@ -1654,6 +1658,57 @@ const UIEditor = () => {
     }
   }, [sectionSnapshots, resumeData, isAutoFlowEnabled, styleConfig.type, styleConfig.id]);
 
+  // 🎨 BOUNCE ANIMATION: Animate sections when isAnimating is true
+  useEffect(() => {
+    if (!isAnimating) return;
+
+    const sectionNames = Object.keys(sectionPositions);
+    const originalPositions = { ...sectionPositions };
+    const startTime = Date.now();
+    const duration = 2500; // 2.5 seconds
+
+    // Physics props per section
+    const physicsProps = {};
+    Object.keys(sectionPositions).forEach(k => {
+      physicsProps[k] = {
+        s: 0.5 + Math.random() * 1.0,   // speed: SLOWER (0.5x to 1.5x)
+        a: 15 + Math.random() * 25,     // amplitude: GENTLER (15px to 40px)
+        p: Math.random() * Math.PI * 2  // phase: Random start
+      };
+    });
+
+    let animationFrame;
+
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+
+      setSectionPositions(prev => {
+        const updated = {};
+        sectionNames.forEach(name => {
+          const P = physicsProps[name] || { s: 4, a: 50, p: 0 };
+          // Infinite loop (no decay)
+          const timeSec = elapsed / 1000;
+          const yOffset = Math.sin((timeSec * Math.PI * P.s) + P.p) * P.a;
+
+          updated[name] = {
+            x: originalPositions[name].x,
+            y: originalPositions[name].y + yOffset
+          };
+        });
+        return updated;
+      });
+
+      animationFrame = requestAnimationFrame(animate);
+    };
+
+    animationFrame = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationFrame) cancelAnimationFrame(animationFrame);
+      setSectionPositions(originalPositions);
+    };
+  }, [isAnimating]);
+
   // Initialize layout on mount
   useEffect(() => {
     console.log('Initial layout reset');
@@ -1894,7 +1949,7 @@ const UIEditor = () => {
                                   titleStyle: { ...prev.header?.titleStyle, ...layout.config.titleStyle }
                                 }
                               }))}
-                              className="btn-secondary"
+                              className={`btn-secondary ${isAnimationsEnabled ? 'animate-btn-spring' : ''}`}
                               style={{
                                 fontSize: '10px',
                                 padding: '6px',
@@ -2365,7 +2420,7 @@ const UIEditor = () => {
                         [selectedSection]: { ...p[selectedSection], x: parseInt(e.target.value) || 0 }
                       }));
                     }}
-                    className="control-input"
+                    className={`control-input ${isAnimationsEnabled ? 'animate-input-spring' : ''}`}
                     style={{ width: '100%', padding: '8px', border: '1px solid #e5e7eb', borderRadius: '4px' }}
                   />
                 </div>
@@ -2444,7 +2499,7 @@ const UIEditor = () => {
                       const current = parseInt(styleConfig[selectedSection]?.[type]?.fontSize) || 10;
                       handleStyleChange(selectedSection, 'bodyStyle', `${Math.max(6, current - 1)}px`, 'fontSize');
                     }}
-                    className="btn-secondary"
+                    className={`btn-secondary ${isAnimationsEnabled ? 'animate-btn-spring' : ''}`}
                     style={{ padding: '8px 14px', fontSize: '16px', flex: 1 }}
                   >
                     −

@@ -1,0 +1,108 @@
+/* ===================================================================================== */
+/* PREMIUM EDITOR ANIMATIONS */
+/* ===================================================================================== */
+
+/* --- Keyframes --- */
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translate3d(0, 20px, 0);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes inputFocusGlow {
+    0% {
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+    }
+
+    50% {
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+
+    100% {
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+}
+
+@keyframes buttonPress {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(0.97);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* --- Utility Classes (Conditioned by Toggle) --- */
+
+/* 1. Section Entry Animation */
+.animate-section-entry {
+    animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    /* Optimized will-change for performance */
+    will-change: transform, opacity;
+}
+
+/* Stagger animations for list items if needed via nth-child in JS, 
+   but for now we keep it simple for sections */
+
+/* 2. Interactive Inputs */
+.animate-input-focus:focus {
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    transform: scale(1.01);
+    border-color: #60a5fa !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    /* Custom glow keyframe or just shadow transition */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+}
+
+.animate-input-focus {
+    transition: all 0.2s ease-out;
+}
+
+/* 3. Button Interactions */
+.animate-btn-interactive:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.animate-btn-interactive:active {
+    animation: buttonPress 0.2s ease-out;
+}
+
+/* 4. Smooth Toggle Switch */
+.toggle-switch-enter {
+    animation: scaleIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* --- Mobile Optimization --- */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

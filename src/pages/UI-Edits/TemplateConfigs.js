@@ -21,7 +21,7 @@ export const TWO_COLUMN_TEMPLATE_CONFIG = {
     {
       id: 1,
       x1: 260,
-      y1: 210,
+      y1: 250,
       x2: 260,
       y2: 842,
       color: '#000000',
@@ -29,28 +29,7 @@ export const TWO_COLUMN_TEMPLATE_CONFIG = {
       orientation: 'vertical',
       label: 'Column Divider'
     },
-    {
-      id: 2,
-      x1: 20,
-      y1: 180,
-      x2: 240,
-      y2: 180,
-      color: '#000000',
-      thickness: 1,
-      orientation: 'horizontal',
-      label: 'Left Header Divider'
-    },
-    {
-      id: 3,
-      x1: 273,
-      y1: 100,
-      x2: 560,
-      y2: 100,
-      color: '#000000',
-      thickness: 1,
-      orientation: 'horizontal',
-      label: 'Right Header Divider'
-    }
+
   ],
 
   // No shapes for TWO_COLUMN template

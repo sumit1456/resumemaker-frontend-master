@@ -5,7 +5,6 @@ import "./css-files/ResumeEditor.css";
 import ErrorBoundary from "../../ErrorBoundry.jsx";
 import ResumeAnalyzer from "./ResumeAnalyzer.jsx";
 import { AlignRight } from "lucide-react";
-import "./css-files/analyze.css"
 import LoadingAnimation from "../../components/PopUp/LoadingAnimation.jsx";
 
 // Import Template Configurations
@@ -2244,7 +2243,7 @@ export default function ResumeEditor({ resume: propsResume }) {
                                 {showExperience && (
                                     <section className="section" id="editor-section-experience">
                                         <div className="section-title">
-                                            <input type="text" value={sectionTitles.experience} className={`sec-inputs ${!isTitleEditable ? 'readonly-input' : ''}`} readOnly={!isTitleEditable}
+                                            <input type="text" value={sectionTitles.experience} className={`sec-inputs ${!isTitleEditable ? 'readonly-input' : ''} `} readOnly={!isTitleEditable}
                                                 onChange={(e) => {
                                                     setSectionTitles({ ...sectionTitles, experience: e.target.value })
                                                 }} />
@@ -2252,30 +2251,30 @@ export default function ResumeEditor({ resume: propsResume }) {
                                         {Array.isArray(experiences) && experiences.map((exp, i) => (
                                             <div className="experience" key={`exp-${i}`}>
                                                 <div className="exp-header">
-                                                    <input className="position" value={exp?.position || ""} onChange={(e) => handleExperienceChange(i, "position", e.target.value)} placeholder="Position" />
-                                                    <input className="company" value={exp?.company || ""} onChange={(e) => handleExperienceChange(i, "company", e.target.value)} placeholder="Company" />
-                                                    <input className="duration" value={exp?.duration || ""} onChange={(e) => handleExperienceChange(i, "duration", e.target.value)} placeholder="Duration" />
+                                                    <input className={`position `} value={exp?.position || ""} onChange={(e) => handleExperienceChange(i, "position", e.target.value)} placeholder="Position" />
+                                                    <input className={`company `} value={exp?.company || ""} onChange={(e) => handleExperienceChange(i, "company", e.target.value)} placeholder="Company" />
+                                                    <input className={`duration `} value={exp?.duration || ""} onChange={(e) => handleExperienceChange(i, "duration", e.target.value)} placeholder="Duration" />
                                                     <button type="button" className="remove-small-btn" onClick={(e) => { e.preventDefault(); removeExperience(i); }}>Remove</button>
                                                 </div>
-                                                <input className="location" value={exp?.location || ""} onChange={(e) => handleExperienceChange(i, "location", e.target.value)} placeholder="Location" />
+                                                <input className={`location `} value={exp?.location || ""} onChange={(e) => handleExperienceChange(i, "location", e.target.value)} placeholder="Location" />
                                                 {Array.isArray(exp?.achievements) && exp.achievements.map((ach, j) => (
                                                     <div className="achievement" key={`ach-${i}-${j}`}>
                                                         <span className="bullet">•</span>
-                                                        <input className="achievement-text" value={ach || ""} onChange={(e) => handleExperienceChange(i, "achievements", e.target.value, j)} placeholder="Achievement description" />
+                                                        <input className={`achievement-text `} value={ach || ""} onChange={(e) => handleExperienceChange(i, "achievements", e.target.value, j)} placeholder="Achievement description" />
                                                         <button type="button" className="remove-small-btn" onClick={(e) => { e.preventDefault(); removeAchievement(i, j); }}>×</button>
                                                     </div>
                                                 ))}
-                                                <button type="button" className="add-small-btn" onClick={(e) => { e.preventDefault(); addAchievement(i); }}>Add Achievement</button>
+                                                <button type="button" className={`add-small-btn `} onClick={(e) => { e.preventDefault(); addAchievement(i); }}>Add Achievement</button>
                                             </div>
                                         ))}
-                                        <button type="button" className="add-btn" onClick={addExperience}>Add Experience</button>
+                                        <button type="button" className={`add-btn `} onClick={addExperience}>Add Experience</button>
                                     </section>
                                 )}
 
                                 {showProjects && (
                                     <section className="section" id="editor-section-projects">
                                         <div className="section-title">
-                                            <input className={`sec-inputs ${!isTitleEditable ? 'readonly-input' : ''}`} type="text" readOnly={!isTitleEditable} value={sectionTitles.projects} onChange={(e) => {
+                                            <input className={`sec-inputs ${!isTitleEditable ? 'readonly-input' : ''} `} type="text" readOnly={!isTitleEditable} value={sectionTitles.projects} onChange={(e) => {
                                                 setSectionTitles({ ...sectionTitles, projects: e.target.value })
                                             }
                                             } />
@@ -2283,30 +2282,30 @@ export default function ResumeEditor({ resume: propsResume }) {
                                         {Array.isArray(projects) && projects.map((proj, i) => (
                                             <div className="project" key={`proj-${i}`}>
                                                 <div className="project-header">
-                                                    <input className="project-name" value={proj?.name || ""} onChange={(e) => handleProjectChange(i, "name", e.target.value)} placeholder="Project Name" />
-                                                    <input className="project-duration" value={proj?.duration || ""} onChange={(e) => handleProjectChange(i, "duration", e.target.value)} placeholder="Duration" />
+                                                    <input className={`project-name `} value={proj?.name || ""} onChange={(e) => handleProjectChange(i, "name", e.target.value)} placeholder="Project Name" />
+                                                    <input className={`project-duration `} value={proj?.duration || ""} onChange={(e) => handleProjectChange(i, "duration", e.target.value)} placeholder="Duration" />
                                                     <button type="button" className="remove-small-btn" onClick={(e) => { e.preventDefault(); removeProject(i); }}>Remove</button>
                                                 </div>
-                                                <input className="technologies" value={proj?.technologies || ""} onChange={(e) => handleProjectChange(i, "technologies", e.target.value)} placeholder="Technologies used" />
-                                                <input className="project-link" value={proj?.link || ""} onChange={(e) => handleProjectChange(i, "link", e.target.value)} placeholder="Project Link (optional)" />
+                                                <input className={`technologies `} value={proj?.technologies || ""} onChange={(e) => handleProjectChange(i, "technologies", e.target.value)} placeholder="Technologies used" />
+                                                <input className={`project-link `} value={proj?.link || ""} onChange={(e) => handleProjectChange(i, "link", e.target.value)} placeholder="Project Link (optional)" />
                                                 {Array.isArray(proj?.description) && proj.description.map((desc, j) => (
                                                     <div className="description" key={`desc-${i}-${j}`}>
                                                         <span className="bullet">•</span>
-                                                        <input className="description-text" value={desc || ""} onChange={(e) => handleProjectChange(i, "description", e.target.value, j)} placeholder="Project description point" />
+                                                        <input className={`description-text `} value={desc || ""} onChange={(e) => handleProjectChange(i, "description", e.target.value, j)} placeholder="Project description point" />
                                                         <button type="button" className="remove-small-btn" onClick={(e) => { e.preventDefault(); removeProjectPoint(i, j); }}>×</button>
                                                     </div>
                                                 ))}
-                                                <button type="button" className="add-small-btn" onClick={(e) => { e.preventDefault(); addProjectPoint(i); }}>Add Description Point</button>
+                                                <button type="button" className={`add-small-btn `} onClick={(e) => { e.preventDefault(); addProjectPoint(i); }}>Add Description Point</button>
                                             </div>
                                         ))}
-                                        <button type="button" className="add-btn" onClick={addProject}>Add Project</button>
+                                        <button type="button" className={`add-btn `} onClick={addProject}>Add Project</button>
                                     </section>
                                 )}
 
                                 {showEducation && (
                                     <section className="section" id="editor-section-education">
                                         <div className="section-title">
-                                            <input type="text" className={`sec-inputs ${!isTitleEditable ? 'readonly-input' : ''}`} readOnly={!isTitleEditable} value={sectionTitles.education} onChange={(e) => {
+                                            <input type="text" className={`sec-inputs ${!isTitleEditable ? 'readonly-input' : ''} `} readOnly={!isTitleEditable} value={sectionTitles.education} onChange={(e) => {
                                                 setSectionTitles({ ...sectionTitles, education: e.target.value })
                                             }} />
                                         </div>
@@ -2315,35 +2314,35 @@ export default function ResumeEditor({ resume: propsResume }) {
                                                 <div className="edu-header">
                                                     <div className="edu-fields-wrapper">
                                                         <div className="edu-fields-row">
-                                                            <input className="degree" value={edu?.degree || ""} onChange={(e) => handleEducationChange(i, "degree", e.target.value)} placeholder="Degree" />
-                                                            <input className="year" value={edu?.year || ""} onChange={(e) => handleEducationChange(i, "year", e.target.value)} placeholder="Year" />
+                                                            <input className={`degree `} value={edu?.degree || ""} onChange={(e) => handleEducationChange(i, "degree", e.target.value)} placeholder="Degree" />
+                                                            <input className={`year `} value={edu?.year || ""} onChange={(e) => handleEducationChange(i, "year", e.target.value)} placeholder="Year" />
                                                         </div>
-                                                        <input className="institution" value={edu?.institution || ""} onChange={(e) => handleEducationChange(i, "institution", e.target.value)} placeholder="Institution" />
-                                                        <input className="edu-location" value={edu?.location || ""} onChange={(e) => handleEducationChange(i, "location", e.target.value)} placeholder="Location" />
-                                                        <input className="gpa" value={edu?.gpa || ""} onChange={(e) => handleEducationChange(i, "gpa", e.target.value)} placeholder="GPA/Score (optional)" />
+                                                        <input className={`institution `} value={edu?.institution || ""} onChange={(e) => handleEducationChange(i, "institution", e.target.value)} placeholder="Institution" />
+                                                        <input className={`edu-location `} value={edu?.location || ""} onChange={(e) => handleEducationChange(i, "location", e.target.value)} placeholder="Location" />
+                                                        <input className={`gpa `} value={edu?.gpa || ""} onChange={(e) => handleEducationChange(i, "gpa", e.target.value)} placeholder="GPA/Score (optional)" />
                                                     </div>
                                                     <button type="button" className="remove-btn" onClick={(e) => { e.preventDefault(); removeEducation(i); }}>Remove</button>
                                                 </div>
                                             </div>
                                         ))}
-                                        <button type="button" className="add-btn" onClick={addEducation}>Add Education</button>
+                                        <button type="button" className={`add-btn `} onClick={addEducation}>Add Education</button>
                                     </section>
                                 )}
 
                                 {showCertifications && (
                                     <section className="section" id="editor-section-certifications">
                                         <div className="section-title">
-                                            <input type="text" className={`sec-inputs ${!isTitleEditable ? 'readonly-input' : ''}`} readOnly={!isTitleEditable} value={sectionTitles.certifications} onChange={(e) => {
+                                            <input type="text" className={`sec-inputs ${!isTitleEditable ? 'readonly-input' : ''} `} readOnly={!isTitleEditable} value={sectionTitles.certifications} onChange={(e) => {
                                                 setSectionTitles({ ...sectionTitles, certifications: e.target.value })
                                             }} />
                                         </div>
                                         {Array.isArray(certifications) && certifications.map((cert, i) => (
                                             <div className="certification" key={`cert-${i}`}>
-                                                <input className="cert-text" value={cert || ""} onChange={(e) => handleCertificationChange(i, e.target.value)} placeholder="Certification Name" />
+                                                <input className={`cert-text `} value={cert || ""} onChange={(e) => handleCertificationChange(i, e.target.value)} placeholder="Certification Name" />
                                                 <button type="button" className="remove-small-btn" onClick={(e) => { e.preventDefault(); removeCertification(i); }}>Remove</button>
                                             </div>
                                         ))}
-                                        <button type="button" className="add-btn" onClick={addCertification}>Add Certification</button>
+                                        <button type="button" className={`add-btn `} onClick={addCertification}>Add Certification</button>
                                     </section>
                                 )}
 
@@ -2355,17 +2354,17 @@ export default function ResumeEditor({ resume: propsResume }) {
                                         ref={el => sectionRefs.current[`custom-${section.id}`] = el}
                                     >
                                         <div className="custom-section-header">
-                                            <input type="text" className="custom-section-title-input" value={section.title} onChange={(e) => updateCustomSectionTitle(section.id, e.target.value)} placeholder="Section Title" />
+                                            <input type="text" className={`custom-section-title-input `} value={section.title} onChange={(e) => updateCustomSectionTitle(section.id, e.target.value)} placeholder="Section Title" />
                                             <button type="button" className="remove-small-btn" onClick={() => removeCustomSection(section.id)}>Remove Section</button>
                                         </div>
                                         {section.items?.map((item, idx) => (
                                             <div key={idx} className="skill" style={{ marginBottom: '0.5rem' }}>
                                                 <span className="bullet">•</span>
-                                                <input className="skill-text" value={item} onChange={(e) => updateCustomSectionItem(section.id, idx, e.target.value)} placeholder="Item content" />
+                                                <input className={`skill-text `} value={item} onChange={(e) => updateCustomSectionItem(section.id, idx, e.target.value)} placeholder="Item content" />
                                                 <button type="button" className="remove-small-btn" onClick={() => removeCustomSectionItem(section.id, idx)}>×</button>
                                             </div>
                                         ))}
-                                        <button type="button" className="add-small-btn" onClick={() => addCustomSectionItem(section.id)}>Add Item</button>
+                                        <button type="button" className={`add-small-btn `} onClick={() => addCustomSectionItem(section.id)}>Add Item</button>
                                     </div>
                                 ))}
 
