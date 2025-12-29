@@ -498,6 +498,7 @@ export default function ResumeEditor({ resume: propsResume }) {
     const importedResume = useSelector(state => state.resume.importedResume);
     const currentResume = useSelector(state => state.resume.currentResume);
     const [localResumeId, setLocalResuneId] = useState(null);
+    const [isTitleEditable, setIsTitleEditable] = useState(false); // Default: Titles are locked
 
 
     useEffect(() => {
@@ -834,7 +835,18 @@ export default function ResumeEditor({ resume: propsResume }) {
 
         const renderSectionData = async (sectionName) => {
             const ref = sectionRefs.current[sectionName];
-            if (!ref?.current) return;
+            if (!ref?.current) {
+                // 🛡️ If ref is missing (hidden/empty), explicitly clear the snapshot
+                setSectionSnapshots(prev => {
+                    if (prev[sectionName]) {
+                        const next = { ...prev };
+                        delete next[sectionName];
+                        return next;
+                    }
+                    return prev;
+                });
+                return;
+            }
 
             const element = ref.current;
             const currentStyle = styleConfig[sectionName] || {};
@@ -1654,6 +1666,13 @@ export default function ResumeEditor({ resume: propsResume }) {
             educationList,
             certifications,
             sectionTitles,
+            showSummary,
+            showSkills,
+            showExperience,
+            showProjects,
+            showEducation,
+            showCertifications,
+            customSections
         };
     };
 
@@ -1828,6 +1847,25 @@ export default function ResumeEditor({ resume: propsResume }) {
         return {
             sections: Object.entries(sectionPositions || {}).filter(([name, pos]) => {
                 if (!pos) return false;
+
+                // 🛡️ Filter Logic: Check Visibility & Data Emptiness (Sync with Hidden Render)
+                if (name === 'summary' && !showSummary) return false;
+                if (name === 'skills' && !showSkills) return false;
+                if (name === 'experience' && !showExperience) return false;
+                if (name === 'projects' && !showProjects) return false;
+                if (name === 'education' && !showEducation) return false;
+                if (name === 'certifications' && !showCertifications) return false;
+
+                let isEmpty = false;
+                if (name === 'summary') isEmpty = !resumeDetails.summary || resumeDetails.summary.trim() === '';
+                else if (name === 'skills') isEmpty = !skills || (!Array.isArray(skills) || skills.length === 0);
+                else if (name === 'experience') isEmpty = !experiences || (!Array.isArray(experiences) || experiences.length === 0);
+                else if (name === 'projects') isEmpty = !projects || (!Array.isArray(projects) || projects.length === 0);
+                else if (name === 'education') isEmpty = !educationList || (!Array.isArray(educationList) || educationList.length === 0);
+                else if (name === 'certifications') isEmpty = !certifications || (!Array.isArray(certifications) || certifications.length === 0);
+
+                if (isEmpty) return false;
+
                 const height = sectionHeights[name] || (sectionSnapshots[name]?.height) || 200;
                 // Intersection check: top is in page OR bottom is in page
                 return (pos.y < pageEnd && pos.y + height > pageStart);
@@ -1889,8 +1927,8 @@ export default function ResumeEditor({ resume: propsResume }) {
     };
 
     // Calculate page elements - Optimized with Memo (from b3.jsx line 1290)
-    const page1Elements = useMemo(() => getElementsForPage(1), [sectionPositions, lines, backgroundShapes, sectionHeights, sectionSnapshots]);
-    const page2Elements = useMemo(() => showPage2 ? getElementsForPage(2) : { sections: [], lines: [], shapes: [] }, [showPage2, sectionPositions, lines, backgroundShapes, sectionHeights, sectionSnapshots]);
+    const page1Elements = useMemo(() => getElementsForPage(1), [sectionPositions, lines, backgroundShapes, sectionHeights, sectionSnapshots, resumeDetails, skills, experiences, projects, educationList, certifications, showSummary, showSkills, showExperience, showProjects, showEducation, showCertifications]);
+    const page2Elements = useMemo(() => showPage2 ? getElementsForPage(2) : { sections: [], lines: [], shapes: [] }, [showPage2, sectionPositions, lines, backgroundShapes, sectionHeights, sectionSnapshots, resumeDetails, skills, experiences, projects, educationList, certifications, showSummary, showSkills, showExperience, showProjects, showEducation, showCertifications]);
 
     // Custom Smooth Scroll Helper
     const smoothScrollTo = (container, targetElement, duration = 800) => {
@@ -2086,7 +2124,19 @@ export default function ResumeEditor({ resume: propsResume }) {
 
 
                     <div className="sec-manager">
-                        <h3>Manage Sectionssss</h3>
+                        <h3>Manage Sections</h3>
+                        <div className="title-edit-control" style={{ marginBottom: '10px', padding: '8px', background: '#f3f4f6', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <input
+                                type="checkbox"
+                                id="toggle-title-edit"
+                                checked={isTitleEditable}
+                                onChange={(e) => setIsTitleEditable(e.target.checked)}
+                                style={{ width: '16px', height: '16px', accentColor: '#e11d48' }}
+                            />
+                            <label htmlFor="toggle-title-edit" style={{ fontSize: '14px', fontWeight: '500', color: '#374151', cursor: 'pointer', userSelect: 'none' }}>
+                                {isTitleEditable ? "🔓 Edit Section Titles" : "🔒 Lock Section Titles"}
+                            </label>
+                        </div>
                         <div className="section-toggle-grid">
                             <div className="section-toggle-item">
                                 <input type="checkbox" id="toggle-summary" checked={showSummary} onChange={(e) => setShowSummary(e.target.checked)} />
@@ -2165,7 +2215,7 @@ export default function ResumeEditor({ resume: propsResume }) {
                                 {showSummary && (
                                     <section className="section" id="editor-section-summary">
                                         <div className="section-title">
-                                            <input className="sec-inputs" type="text" value={sectionTitles.summary} onChange={(e) => {
+                                            <input className={`sec-inputs ${!isTitleEditable ? 'readonly-input' : ''}`} type="text" readOnly={!isTitleEditable} value={sectionTitles.summary} onChange={(e) => {
                                                 setSectionTitles({ ...sectionTitles, summary: e.target.value })
                                             }} />
                                         </div>
@@ -2176,7 +2226,7 @@ export default function ResumeEditor({ resume: propsResume }) {
                                 {showSkills && (
                                     <section className="section" id="editor-section-skills">
                                         <div className="section-title">
-                                            <input type="text" className="sec-inputs" value={sectionTitles.skills} onChange={(e) => {
+                                            <input type="text" className={`sec-inputs ${!isTitleEditable ? 'readonly-input' : ''}`} readOnly={!isTitleEditable} value={sectionTitles.skills} onChange={(e) => {
                                                 setSectionTitles({ ...sectionTitles, skills: e.target.value })
                                             }} />
                                         </div>
@@ -2194,7 +2244,7 @@ export default function ResumeEditor({ resume: propsResume }) {
                                 {showExperience && (
                                     <section className="section" id="editor-section-experience">
                                         <div className="section-title">
-                                            <input type="text" value={sectionTitles.experience} className="sec-inputs"
+                                            <input type="text" value={sectionTitles.experience} className={`sec-inputs ${!isTitleEditable ? 'readonly-input' : ''}`} readOnly={!isTitleEditable}
                                                 onChange={(e) => {
                                                     setSectionTitles({ ...sectionTitles, experience: e.target.value })
                                                 }} />
@@ -2225,7 +2275,7 @@ export default function ResumeEditor({ resume: propsResume }) {
                                 {showProjects && (
                                     <section className="section" id="editor-section-projects">
                                         <div className="section-title">
-                                            <input className="sec-inputs" type="text" value={sectionTitles.projects} onChange={(e) => {
+                                            <input className={`sec-inputs ${!isTitleEditable ? 'readonly-input' : ''}`} type="text" readOnly={!isTitleEditable} value={sectionTitles.projects} onChange={(e) => {
                                                 setSectionTitles({ ...sectionTitles, projects: e.target.value })
                                             }
                                             } />
@@ -2256,7 +2306,7 @@ export default function ResumeEditor({ resume: propsResume }) {
                                 {showEducation && (
                                     <section className="section" id="editor-section-education">
                                         <div className="section-title">
-                                            <input type="text" className="sec-inputs" value={sectionTitles.education} onChange={(e) => {
+                                            <input type="text" className={`sec-inputs ${!isTitleEditable ? 'readonly-input' : ''}`} readOnly={!isTitleEditable} value={sectionTitles.education} onChange={(e) => {
                                                 setSectionTitles({ ...sectionTitles, education: e.target.value })
                                             }} />
                                         </div>
@@ -2283,7 +2333,7 @@ export default function ResumeEditor({ resume: propsResume }) {
                                 {showCertifications && (
                                     <section className="section" id="editor-section-certifications">
                                         <div className="section-title">
-                                            <input type="text" className="sec-inputs" value={sectionTitles.certifications} onChange={(e) => {
+                                            <input type="text" className={`sec-inputs ${!isTitleEditable ? 'readonly-input' : ''}`} readOnly={!isTitleEditable} value={sectionTitles.certifications} onChange={(e) => {
                                                 setSectionTitles({ ...sectionTitles, certifications: e.target.value })
                                             }} />
                                         </div>
@@ -2561,6 +2611,18 @@ export default function ResumeEditor({ resume: propsResume }) {
                         const standardComponents = Object.entries(TemplateComponents)
                             .filter(([key]) => key !== 'custom')
                             .map(([key, Component]) => {
+
+                                // 🛡️ Hide empty sections to prevent title rendering
+                                let isEmpty = false;
+                                if (key === 'summary') isEmpty = !resumeDetails.summary || resumeDetails.summary.trim() === '';
+                                else if (key === 'skills') isEmpty = !skills || skills.length === 0;
+                                else if (key === 'experience') isEmpty = !experiences || experiences.length === 0;
+                                else if (key === 'projects') isEmpty = !projects || projects.length === 0;
+                                else if (key === 'education') isEmpty = !educationList || educationList.length === 0;
+                                else if (key === 'certifications') isEmpty = !certifications || certifications.length === 0;
+
+                                if (isEmpty) return null;
+
                                 if (!sectionRefs.current[key]) sectionRefs.current[key] = React.createRef();
                                 return (
                                     <div

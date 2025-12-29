@@ -205,6 +205,34 @@ const UIEditor = () => {
   const globalResumeDetails = useSelector((state => state.resume.currentResume));
   const [resumeDetails, setResumeDetails] = useState(currentResume ? currentResume : defaultResumeData);
 
+  // 🛡️ Section Visibility State (New Feature)
+  const [sectionVisibility, setSectionVisibility] = useState({
+    summary: true,
+    skills: true,
+    experience: true,
+    projects: true,
+    education: true,
+    certifications: true,
+    contact: true,
+    header: true
+  });
+
+  // 🔄 Sync visibility from prop/redux on mount
+  useEffect(() => {
+    if (resumeData) {
+      setSectionVisibility({
+        summary: resumeData.showSummary ?? true,
+        skills: resumeData.showSkills ?? true,
+        experience: resumeData.showExperience ?? true,
+        projects: resumeData.showProjects ?? true,
+        education: resumeData.showEducation ?? true,
+        certifications: resumeData.showCertifications ?? true,
+        contact: true, // Always true unless specifically hidden
+        header: true
+      });
+    }
+  }, [resumeData]);
+
   const API_BASE_URL = 'http://localhost:8080';
   const API_BASE_URL2 = 'https://resumemaker-1.onrender.com';
 
@@ -808,53 +836,82 @@ const UIEditor = () => {
   // Download as image
   const downloadResume = async () => {
     const app1 = webGLStageRef1.current?.app;
-    if (!app1) {
-      console.error("❌ WebGL App not found for Page 1");
-      return;
-    }
+    if (!app1) return;
+
+    const selectedId = selectedSection || selectedShape || selectedLine;
 
     // 🛡️ Helper: Capture stage with Scaling Fix & No Borders
     const getPageCanvas = async (app) => {
-      if (!app) return null;
-      // 1. Hide selection borders
-      app.stage.children.forEach(layer => {
-        if (layer.children) {
-          layer.children.forEach(container => {
-            const border = container.children?.find(c => c.name === 'selectionBorder');
-            if (border) border.visible = false;
-          });
+      if (!app) {
+        console.error("❌ getPageCanvas: App is null");
+        return null;
+      }
+      try {
+        // 1. Hide selection borders
+        app.stage.children.forEach(layer => {
+          if (layer.children) {
+            layer.children.forEach(container => {
+              const border = container.children?.find(c => c.name === 'selectionBorder');
+              if (border) border.visible = false;
+            });
+          }
+        });
+
+        // 2. Temporarily reset scale for full-quality capture (Fixes Mobile Clipping)
+        const originalScale = app.stage.scale.x;
+        const originalMask = app.stage.mask;
+        app.stage.scale.set(1);
+        app.stage.mask = null;
+        if (originalMask) originalMask.visible = false;
+
+        // 🚀 Ensure scene is updated before capture
+        if (app.renderer) {
+          app.renderer.render(app.stage);
         }
-      });
 
-      // 2. Temporarily reset scale for full-quality capture (Fixes Mobile Clipping)
-      const originalScale = app.stage.scale.x;
-      const originalMask = app.stage.mask;
-      app.stage.scale.set(1);
-      app.stage.mask = null;
+        // 🔍 DIAGNOSTIC LOGS
+        console.log("🔍 [getPageCanvas] Stage Diagnostics:", {
+          children: app.stage.children.length,
+          bounds: app.stage.getBounds(),
+          scale: { x: app.stage.scale.x, y: app.stage.scale.y },
+          position: { x: app.stage.position.x, y: app.stage.position.y },
+          renderer: { width: app.renderer.width, height: app.renderer.height }
+        });
 
-      // 3. Extract
-      const canvas = await app.renderer.extract.canvas({
-        target: app.stage,
-        frame: new PIXI.Rectangle(0, 0, 595, 842)
-      });
-
-      // 4. Restore original state
-      app.stage.scale.set(originalScale);
-      app.stage.mask = originalMask;
-
-      // 5. Restore active selection border
-      app.stage.children.forEach(layer => {
-        if (layer.children) {
-          layer.children.forEach(container => {
-            if (container._id === selectedId) {
-              const border = container.children?.find(ch => ch.name === 'selectionBorder');
-              if (border) border.visible = true;
-            }
-          });
+        const contentBounds = app.stage.getBounds();
+        if (contentBounds.width === 0 || contentBounds.height === 0) {
+          console.error("❌ CRITICAL: Stage content bounds are ZERO! Nothing to capture.");
         }
-      });
 
-      return canvas;
+        // 3. Extract
+        console.log("📸 [getPageCanvas] Triggering PIXI extract...");
+        const canvas = await app.renderer.extract.canvas({
+          target: app.stage,
+          frame: new PIXI.Rectangle(0, 0, 595, 842)
+        });
+
+        // 4. Restore original state
+        app.stage.scale.set(originalScale);
+        app.stage.mask = originalMask;
+        if (originalMask) originalMask.visible = true;
+
+        // 5. Restore active selection border
+        app.stage.children.forEach(layer => {
+          if (layer.children) {
+            layer.children.forEach(container => {
+              if (container._id === selectedId) {
+                const border = container.children?.find(ch => ch.name === 'selectionBorder');
+                if (border) border.visible = true;
+              }
+            });
+          }
+        });
+
+        return canvas;
+      } catch (err) {
+        console.error("❌ getPageCanvas Error:", err);
+        return null;
+      }
     };
 
     try {
@@ -897,25 +954,64 @@ const UIEditor = () => {
       return;
     }
 
+    const selectedId = selectedSection || selectedShape || selectedLine;
+
     // 🛡️ Reuse capture logic from downloadResume (duplicated here for scope safety)
     const getPageCanvas = async (app) => {
       if (!app) return null;
-      app.stage.children.forEach(l => l.children?.forEach(c => {
-        const b = c.children?.find(ch => ch.name === 'selectionBorder');
-        if (b) b.visible = false;
-      }));
-      const originalScale = app.stage.scale.x;
-      const originalMask = app.stage.mask;
-      app.stage.scale.set(1);
-      app.stage.mask = null;
-      const canvas = await app.renderer.extract.canvas({ target: app.stage, frame: new PIXI.Rectangle(0, 0, 595, 842) });
-      app.stage.scale.set(originalScale);
-      app.stage.mask = originalMask;
-      app.stage.children.forEach(l => l.children?.forEach(c => {
-        const b = c.children?.find(ch => ch.name === 'selectionBorder');
-        if (b && c._id === selectedId) b.visible = true;
-      }));
-      return canvas;
+      try {
+        app.stage.children.forEach(l => l.children?.forEach(c => {
+          const b = c.children?.find(ch => ch.name === 'selectionBorder');
+          if (b) b.visible = false;
+        }));
+        const initialBounds = app.stage.getBounds();
+        const originalScale = app.stage.scale.x;
+        const originalMask = app.stage.mask;
+        app.stage.scale.set(1);
+        app.stage.mask = null;
+        if (originalMask) originalMask.visible = false;
+
+        if (app.renderer) {
+          app.renderer.render(app.stage);
+        }
+
+        const stageBounds = app.stage.getBounds();
+        console.log("🔍 [PDF getPageCanvas] Stage Diagnostics:", {
+          childrenCount: app.stage.children.length,
+          bounds: { x: stageBounds.x, y: stageBounds.y, width: stageBounds.width, height: stageBounds.height },
+          scale: { x: app.stage.scale.x, y: app.stage.scale.y },
+          renderer: { width: app.renderer.width, height: app.renderer.height },
+          firstChildVisible: app.stage.children[0]?.visible,
+          firstChildAlpha: app.stage.children[0]?.alpha
+        });
+
+        const canvas = await app.renderer.extract.canvas({
+          target: app.stage,
+          frame: new PIXI.Rectangle(0, 0, 595, 842)
+        });
+
+        console.log("📸 [PDF getPageCanvas] Extracted Canvas:", {
+          width: canvas.width,
+          height: canvas.height,
+          dataUrlLength: canvas.toDataURL().length
+        });
+
+        if (canvas.toDataURL().length < 1000) {
+          console.error("❌ CRITICAL: Extracted canvas seems empty (data URL too short)!");
+        }
+
+        app.stage.scale.set(originalScale);
+        app.stage.mask = originalMask;
+        if (originalMask) originalMask.visible = true;
+        app.stage.children.forEach(l => l.children?.forEach(c => {
+          const b = c.children?.find(ch => ch.name === 'selectionBorder');
+          if (b && c._id === selectedId) b.visible = true;
+        }));
+        return canvas;
+      } catch (err) {
+        console.error("❌ PDF getPageCanvas Error:", err);
+        return null;
+      }
     };
 
     try {
@@ -947,6 +1043,40 @@ const UIEditor = () => {
         }
       }
 
+      // 4. ADD INTERACTIVE LINKS (Post-process snapshots)
+      console.log('🔗 Injecting Interactive Links...');
+
+      const addLinksToPage = (targetPageNum) => {
+        pdf.setPage(targetPageNum);
+        const yOffset = (targetPageNum - 1) * 842;
+
+        Object.entries(sectionPositions).forEach(([sectionId, pos]) => {
+          // Determine which page this section starts on
+          const sectionY = pos.y;
+          const sectionPage = sectionY >= 842 ? 2 : 1;
+
+          if (sectionPage !== targetPageNum) return;
+
+          const snapshot = sectionSnapshots[sectionId];
+          if (!snapshot || !snapshot.nodes) return;
+
+          snapshot.nodes.forEach(node => {
+            if (node.href && node.width > 0 && node.height > 0) {
+              // Calculate absolute coordinates on the PDF page
+              // sectionY is global, we need relative to current PDF page
+              const relativeY = sectionY - yOffset;
+              const linkX = pos.x + node.x;
+              const linkY = relativeY + node.y;
+
+              pdf.link(linkX, linkY, node.width, node.height, { url: node.href });
+            }
+          });
+        });
+      };
+
+      addLinksToPage(1);
+      if (showPage2) addLinksToPage(2);
+
       pdf.save('resume.pdf');
       console.log('✅ PDF Generation Complete');
     } catch (err) {
@@ -965,6 +1095,7 @@ const UIEditor = () => {
     return {
       sections: Object.entries(sectionPositions || {}).filter(([name, pos]) => {
         if (!pos) return false;
+        if (!sectionVisibility[name]) return false; // 🛡️ Hide from WebGL if toggled off
         const height = sectionHeights[name] || (sectionSnapshots[name]?.height) || 200;
         // Intersection check: top is in page OR bottom is in page
         return (pos.y < pageEnd && pos.y + height > pageStart);
@@ -1578,6 +1709,19 @@ const UIEditor = () => {
             certifications: { certifications: resumeData?.certifications, styleConfig: renderConfig }
           };
 
+          // 🛡️ Hide empty sections to prevent title rendering
+          if (!sectionVisibility[key]) return null; // 🆕 Check manual visibility toggle
+
+          let isEmpty = false;
+          if (key === 'summary') isEmpty = !resumeData?.resumeDetails?.summary || resumeData.resumeDetails.summary.trim() === '';
+          else if (key === 'skills') isEmpty = !resumeData?.skills || resumeData.skills.length === 0;
+          else if (key === 'experience') isEmpty = !resumeData?.experiences || resumeData.experiences.length === 0;
+          else if (key === 'projects') isEmpty = !resumeData?.projects || resumeData.projects.length === 0;
+          else if (key === 'education') isEmpty = !resumeData?.educationList || resumeData.educationList.length === 0;
+          else if (key === 'certifications') isEmpty = !resumeData?.certifications || resumeData.certifications.length === 0;
+
+          if (isEmpty) return null;
+
           return (
             <div
               key={key}
@@ -1701,6 +1845,29 @@ const UIEditor = () => {
                 >
                   <span className="section-name">{sectionName}</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+
+                    {/* 👁️ VISIBILITY TOGGLE */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSectionVisibility(prev => ({
+                          ...prev,
+                          [sectionName]: !prev[sectionName]
+                        }));
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        padding: '2px',
+                        opacity: sectionVisibility[sectionName] ? 1 : 0.4
+                      }}
+                      title={sectionVisibility[sectionName] ? "Hide Section" : "Show Section"}
+                    >
+                      {sectionVisibility[sectionName] ? '👁️' : '🚫'}
+                    </button>
+
                     {isTransparent && <span className="badge-mini">T</span>}
                     {isOnPage2 && <span className="badge-mini blue">P2</span>}
                     <span className="arrow">{isOpen ? '▼' : '▶'}</span>
@@ -2567,6 +2734,54 @@ const UIEditor = () => {
                     <span style={{ fontSize: '11px', color: '#6b7280', fontFamily: 'monospace' }}>
                       {styleConfig[selectedSection]?.sectionTitle?.color || '#000000'}
                     </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Project Link Styles */}
+              {selectedSection === 'projects' && (
+                <div style={{ marginTop: '24px', borderTop: '1px solid #e5e7eb', paddingTop: '16px', marginBottom: '16px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 'bold', display: 'block', marginBottom: '12px', color: '#111827', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    🔗 Project Link Styling
+                  </label>
+
+                  {/* Link Color */}
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                      Link Color
+                    </label>
+                    <input
+                      type="color"
+                      value={normalizeColorForInput(styleConfig.projects?.linkStyle?.color)}
+                      onChange={(e) => handleStyleChange('projects', 'linkStyle', e.target.value, 'color')}
+                      style={{
+                        width: '100%',
+                        height: '36px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                    />
+                  </div>
+
+                  {/* Link Spacing (Margin Top) */}
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                      Link Spacing (Top)
+                    </label>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <input
+                        type="range"
+                        min="0"
+                        max="30"
+                        value={parseInt(styleConfig.projects?.linkStyle?.marginTop) || 0}
+                        onChange={(e) => handleStyleChange('projects', 'linkStyle', `${e.target.value}px`, 'marginTop')}
+                        style={{ flex: 1 }}
+                      />
+                      <span style={{ fontSize: '12px', fontWeight: '600', minWidth: '30px' }}>
+                        {parseInt(styleConfig.projects?.linkStyle?.marginTop) || 0}px
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}

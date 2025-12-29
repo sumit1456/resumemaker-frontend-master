@@ -180,7 +180,8 @@ class GeometrySnapshot {
             type,
             x, y, width, height,
             styles: {}, // Will be populated by extractStyles
-            zIndex: parseInt(computed.zIndex) || 0
+            zIndex: parseInt(computed.zIndex) || 0,
+            href: (element.tagName === 'A') ? element.getAttribute('href') : null
         };
 
         // Populate styles (Directly or via Worker)
@@ -1195,6 +1196,16 @@ class PixiRendererEngine {
             if (textSprite) wrap.addChild(textSprite);
         }
 
+        // 6. INTERACTIVITY
+        if (node.href) {
+            wrap.eventMode = 'static';
+            wrap.cursor = 'pointer';
+            wrap.on('pointerdown', (e) => {
+                e.stopPropagation();
+                window.open(node.href, '_blank');
+            });
+        }
+
         return wrap;
     }
 
@@ -1464,6 +1475,16 @@ class PixiRendererEngine {
 
         const colorData = this.parseColor(styles.color || '#000000');
         pixiText.alpha = (styles.opacity !== undefined ? styles.opacity : 1) * (colorData.alpha !== undefined ? colorData.alpha : 1);
+
+        // --- INTERACTIVITY ---
+        if (node.href) {
+            pixiText.eventMode = 'static';
+            pixiText.cursor = 'pointer';
+            pixiText.on('pointerdown', (e) => {
+                e.stopPropagation();
+                window.open(node.href, '_blank');
+            });
+        }
 
         return pixiText;
     }

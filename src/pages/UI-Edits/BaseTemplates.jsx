@@ -133,18 +133,24 @@ const FlexibleContainer = ({ children, config = {} }) => {
  */
 const FlexibleText = ({ children, config = {}, as = "div" }) => {
     const Element = as; // Can be div, span, p, h1, etc.
+    const { href, target, rel, ...styleProps } = config;
 
     return (
-        <Element style={applyStyles({
-            fontSize: "10px",
-            fontWeight: "normal",
-            fontStyle: "normal",
-            color: "#000000",
-            lineHeight: "1.4",
-            textAlign: "left",
-            margin: "0",
-            padding: "0",
-        }, config)}>
+        <Element
+            href={href}
+            target={target}
+            rel={rel}
+            style={applyStyles({
+                fontSize: "10px",
+                fontWeight: "normal",
+                fontStyle: "normal",
+                color: "#000000",
+                lineHeight: "1.4",
+                textAlign: "left",
+                margin: "0",
+                padding: "0",
+            }, styleProps)}
+        >
             {children}
         </Element>
     );

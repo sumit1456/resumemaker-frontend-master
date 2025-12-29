@@ -61,6 +61,31 @@ body,
   color: #ffffff;
 }
 
+.readonly-input {
+  cursor: default;
+  pointer-events: none;
+}
+
+.readonly-input:focus {
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.title-edit-toggle {
+  margin-top: 5px;
+  padding: 5px;
+  border-radius: 4px;
+  background: rgba(59, 130, 246, 0.05);
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+}
+
+.title-edit-toggle label {
+  cursor: pointer;
+  user-select: none;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -105,7 +130,7 @@ body {
 
 .template-selector-header {
   position: fixed;
-  top: var(--navbar-height);
+  /* top: var(--navbar-height - 30); */
   left: 0;
   right: 0;
   z-index: 999;
