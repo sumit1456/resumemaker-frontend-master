@@ -2541,15 +2541,27 @@ const WebGLStage = forwardRef(({
                 const pixelRatio = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
                 const mobileResolution = Math.max(pixelRatio, 2); // Ensure at least 2x on mobile for sharpness
 
-                await app.init({
-                    width,
-                    height,
+                const initOptions = {
+                    width: Math.max(1, width),
+                    height: Math.max(1, height),
                     background,
-                    resolution: isMobile ? mobileResolution : resolution,
+                    resolution: isMobile ? Math.min(mobileResolution, 2) : resolution,
                     antialias: true,
                     preference: 'webgl',
                     autoDensity: true
-                });
+                };
+
+                try {
+                    await app.init(initOptions);
+                } catch (firstTryErr) {
+                    console.warn("[WebGLStage] Primary init failed, retrying with safe settings...", firstTryErr);
+                    // Fallback to minimal settings for old/low-power mobile devices
+                    await app.init({
+                        ...initOptions,
+                        resolution: 1,
+                        antialias: false
+                    });
+                }
 
                 if (!isMounted) {
                     app.destroy(true, { children: true, texture: true });

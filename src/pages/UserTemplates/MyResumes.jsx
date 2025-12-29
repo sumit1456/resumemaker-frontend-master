@@ -74,7 +74,11 @@ const MyResumes = ({ userId }) => {
       setDeleteConfirm(null);
     } catch (err) {
       console.error('Error deleting resume:', err);
-      alert('Failed to delete resume. Please try again.');
+      if (window.showMessage) {
+        window.showMessage('Error', 'Failed to delete resume. Please try again.', 'error', 2000);
+      } else {
+        alert('Failed to delete resume. Please try again.');
+      }
     } finally {
       setDeleting(null);
     }

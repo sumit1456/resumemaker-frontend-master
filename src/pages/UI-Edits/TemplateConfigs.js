@@ -269,6 +269,14 @@ export const TWO_COLUMN_TEMPLATE_CONFIG = {
     showDuration: true,
     showTechnologies: true,
     showDescription: true,
+    showLink: true,
+    linkStyle: {
+      fontSize: "9px",
+      color: "#3b82f6",
+      textDecoration: "none",
+      marginTop: "2px",
+      display: "block"
+    },
     bulletConfig: {
       bulletStyle: "•",
       bulletWidth: "12px",
@@ -534,6 +542,14 @@ export const ATS_TEMPLATE_CONFIG = {
     showDuration: true,
     showTechnologies: true,
     showDescription: true,
+    showLink: true,
+    linkStyle: {
+      fontSize: "9px",
+      color: "#3b82f6",
+      textDecoration: "none",
+      marginTop: "2px",
+      display: "block"
+    },
     bulletConfig: {
       bulletStyle: "•",
       bulletWidth: "10px",
@@ -1140,6 +1156,14 @@ export const MODERN_TEMPLATE_CONFIG = {
     showDuration: true,
     showTechnologies: true,
     showDescription: true,
+    showLink: true,
+    linkStyle: {
+      fontSize: "9px",
+      color: "#3b82f6",
+      textDecoration: "none",
+      marginTop: "2px",
+      display: "block"
+    },
     bulletConfig: {
       bulletStyle: "•",
       bulletWidth: "15px",
@@ -1840,9 +1864,11 @@ export const TEMPLATE5_CONFIG = {
       marginBottom: "6px"
     },
     linkStyle: {
-      fontSize: "8px",
-      color: "#3498DB",
-      marginBottom: "6px"
+      fontSize: "8.5px",
+      color: "#3b82f6",
+      textDecoration: "none",
+      marginTop: "2px",
+      display: "block"
     },
     showDuration: true,
     showTechnologies: true,
@@ -2487,6 +2513,15 @@ export const NEW_ATS_CONFIG = {
     showDuration: true,
     showTechnologies: true,
     showDescription: true,
+    showLink: true,
+    linkStyle: {
+      fontSize: "8.5px",
+      color: "#3b82f6",
+      textDecoration: "none",
+      marginTop: "2px",
+      display: "block",
+      fontFamily: "Helvetica"
+    },
     bulletConfig: {
       bulletStyle: "-",
       bulletWidth: "10px",

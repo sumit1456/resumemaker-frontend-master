@@ -194,6 +194,8 @@ const UIEditor = () => {
     return heights;
   });
   const [styleConfig, setStyleConfig] = useState(initialConfig);
+  const [backupConfig, setBackupConfig] = useState(null); // 🆕 Store previous layout for restore
+  const [isLayoutDirty, setIsLayoutDirty] = useState(false); // 🆕 Track manual layout changes
   const [sectionSnapshots, setSectionSnapshots] = useState({});
   const [TemplateComponents, setTemplateComponents] = useState(null);
   const [resumeData, setResumeData] = useState(defaultResumeData);
@@ -229,14 +231,32 @@ const UIEditor = () => {
   const prevStyleConfigRef = useRef({});
 
   const handleTemplateSwitch = (templateName, overrideConfig = null) => {
-    console.log(`🔄 Switching to template: ${templateName}`);
-
-
-
-    // 2️⃣ STANDARD MODE: Load Default Template Config
-    // 🔄 Normalize template identifier (handles both numeric IDs and string keys)
     const normalizedKey = normalizeTemplateKey(templateName);
+
+    // 1️⃣ Ignore if same template (unless overriding with fresh config)
+    if (normalizedKey === currentTemplateName && !overrideConfig) return;
+
+    // 2️⃣ Safeguard: Warn if layout is dirty and switching to a DIFFERENT template
+    // Only warn if editing an existing resume (resumeId is present)
+    if (isLayoutDirty && !overrideConfig && resumeId) {
+      const confirmSwitch = window.confirm("Are you sure you want to change the template? Your current custom layout will be backed up.");
+      if (!confirmSwitch) return;
+    }
+
+    console.log(`🔄 Switching to template: ${normalizedKey}`);
+
+    // 3️⃣ Backup current state before overwrite
+    setBackupConfig({
+      styleConfig: JSON.parse(JSON.stringify(styleConfig)),
+      positions: { ...sectionPositions },
+      lines: [...lines],
+      shapes: [...backgroundShapes],
+      templateName: currentTemplateName
+    });
+
+    // 4️⃣ Load New Template Config
     setLocalTemplateName(normalizedKey);
+    dispatch(setCurrentTemplate(normalizedKey)); // 🔄 Sync to Redux to avoid fight/revert
 
     // 🛡️ Robust Lookup from TEMPLATES map
     let template = overrideConfig || TEMPLATES[normalizedKey] || ATS_TEMPLATE_CONFIG;
@@ -265,20 +285,34 @@ const UIEditor = () => {
     setSelectedLine(null);
     setSelectedShape(null);
     setSelectedSection(null);
+    setIsLayoutDirty(false); // Reset dirty flag after switch
 
     // Reset counters
     if (template.lines && template.lines.length > 0) {
-      setNextLineId(Math.max(...template.lines.map(l => l.id)) + 1);
+      setNextLineId(Math.max(...template.lines.map(l => l.id || 0)) + 1);
     } else {
       setNextLineId(1);
     }
 
     const shapes = template.shapes || template.backgroundShapes || [];
     if (shapes && shapes.length > 0) {
-      setNextShapeId(Math.max(...shapes.map(s => s.id)) + 1);
+      setNextShapeId(Math.max(...shapes.map(s => s.id || 0)) + 1);
     } else {
       setNextShapeId(1);
     }
+  };
+
+  const handleRestoreBackup = () => {
+    if (!backupConfig) return;
+
+    console.log("💾 Restoring layout from backup...");
+    setStyleConfig(backupConfig.styleConfig);
+    setSectionPositions(backupConfig.positions);
+    setLines(backupConfig.lines);
+    setBackgroundShapes(backupConfig.shapes);
+    setLocalTemplateName(backupConfig.templateName);
+    dispatch(setCurrentTemplate(backupConfig.templateName));
+    setIsLayoutDirty(true);
   };
 
 
@@ -388,6 +422,7 @@ const UIEditor = () => {
 
       const msg = "Resume configuration saved successfully!";
       setSuccessMessage(msg);
+      setIsLayoutDirty(false); // 🆕 Reset dirty flag after save
       if (window.showMessage) window.showMessage('Success', msg, 'success', 1500);
 
     } catch (err) {
@@ -439,11 +474,13 @@ const UIEditor = () => {
 
   // 🔄 Sync local template state when Redux template changes (e.g., from ResumeEditorv3)
   useEffect(() => {
+    // Only trigger if Redux value actually differs from local state
+    // AND is not null (avoids reset on mount if Redux is empty)
     if (globalCurrentTemplate && globalCurrentTemplate !== currentTemplateName) {
-      console.log(`📤 Syncing template and styles from Redux: ${globalCurrentTemplate}`);
+      console.log(`📤 Redux Sync: Template changed to ${globalCurrentTemplate}`);
       handleTemplateSwitch(globalCurrentTemplate, savedStyleConfig);
     }
-  }, [globalCurrentTemplate, currentTemplateName, savedStyleConfig]);
+  }, [globalCurrentTemplate, currentTemplateName]); // 🛡️ Reduced dependencies to avoid jitter
 
 
 
@@ -583,9 +620,15 @@ const UIEditor = () => {
 
   // Handle width change
   const handleWidthChange = (sectionName, value) => {
+    let clampedValue = value;
+    const numericValue = parseInt(value);
+    if (!isNaN(numericValue) && numericValue > 575) {
+      clampedValue = value.toString().includes('px') ? '575px' : '575';
+    }
+
     setSectionWidths(prev => ({
       ...prev,
-      [sectionName]: value
+      [sectionName]: clampedValue
     }));
   };
 
@@ -770,6 +813,50 @@ const UIEditor = () => {
       return;
     }
 
+    // 🛡️ Helper: Capture stage with Scaling Fix & No Borders
+    const getPageCanvas = async (app) => {
+      if (!app) return null;
+      // 1. Hide selection borders
+      app.stage.children.forEach(layer => {
+        if (layer.children) {
+          layer.children.forEach(container => {
+            const border = container.children?.find(c => c.name === 'selectionBorder');
+            if (border) border.visible = false;
+          });
+        }
+      });
+
+      // 2. Temporarily reset scale for full-quality capture (Fixes Mobile Clipping)
+      const originalScale = app.stage.scale.x;
+      const originalMask = app.stage.mask;
+      app.stage.scale.set(1);
+      app.stage.mask = null;
+
+      // 3. Extract
+      const canvas = await app.renderer.extract.canvas({
+        target: app.stage,
+        frame: new PIXI.Rectangle(0, 0, 595, 842)
+      });
+
+      // 4. Restore original state
+      app.stage.scale.set(originalScale);
+      app.stage.mask = originalMask;
+
+      // 5. Restore active selection border
+      app.stage.children.forEach(layer => {
+        if (layer.children) {
+          layer.children.forEach(container => {
+            if (container._id === selectedId) {
+              const border = container.children?.find(ch => ch.name === 'selectionBorder');
+              if (border) border.visible = true;
+            }
+          });
+        }
+      });
+
+      return canvas;
+    };
+
     try {
       const downloadCanvas = (canvas, filename) => {
         const uri = canvas.toDataURL('image/png', 1.0);
@@ -780,24 +867,19 @@ const UIEditor = () => {
       };
 
       // 1. Capture and Download Page 1
-      const canvas1 = await app1.renderer.extract.canvas({
-        target: app1.stage,
-        frame: new PIXI.Rectangle(0, 0, 595, 842)
-      });
-      downloadCanvas(canvas1, 'resume-page1.png');
+      const canvas1 = await getPageCanvas(app1);
+      if (canvas1) downloadCanvas(canvas1, 'resume-page1.png');
 
       // 2. Capture and Download Page 2 if active
       if (showPage2) {
         const app2 = webGLStageRef2.current?.app;
         if (app2) {
-          const canvas2 = await app2.renderer.extract.canvas({
-            target: app2.stage,
-            frame: new PIXI.Rectangle(0, 0, 595, 842)
-          });
-          // Small timeout to ensure browser handles multiple clicks
-          setTimeout(() => {
-            downloadCanvas(canvas2, 'resume-page2.png');
-          }, 300);
+          const canvas2 = await getPageCanvas(app2);
+          if (canvas2) {
+            setTimeout(() => {
+              downloadCanvas(canvas2, 'resume-page2.png');
+            }, 300);
+          }
         }
       }
 
@@ -815,6 +897,27 @@ const UIEditor = () => {
       return;
     }
 
+    // 🛡️ Reuse capture logic from downloadResume (duplicated here for scope safety)
+    const getPageCanvas = async (app) => {
+      if (!app) return null;
+      app.stage.children.forEach(l => l.children?.forEach(c => {
+        const b = c.children?.find(ch => ch.name === 'selectionBorder');
+        if (b) b.visible = false;
+      }));
+      const originalScale = app.stage.scale.x;
+      const originalMask = app.stage.mask;
+      app.stage.scale.set(1);
+      app.stage.mask = null;
+      const canvas = await app.renderer.extract.canvas({ target: app.stage, frame: new PIXI.Rectangle(0, 0, 595, 842) });
+      app.stage.scale.set(originalScale);
+      app.stage.mask = originalMask;
+      app.stage.children.forEach(l => l.children?.forEach(c => {
+        const b = c.children?.find(ch => ch.name === 'selectionBorder');
+        if (b && c._id === selectedId) b.visible = true;
+      }));
+      return canvas;
+    };
+
     try {
       console.log('📄 Starting PDF Generation...');
 
@@ -824,10 +927,8 @@ const UIEditor = () => {
       const height = pdf.internal.pageSize.getHeight();
 
       // 2. Extract Page 1
-      const canvas1 = await app1.renderer.extract.canvas({
-        target: app1.stage,
-        frame: new PIXI.Rectangle(0, 0, 595, 842)
-      });
+      const canvas1 = await getPageCanvas(app1);
+      if (!canvas1) throw new Error("Failed to capture Page 1");
       const imgData1 = canvas1.toDataURL('image/png', 1.0);
 
       pdf.addImage(imgData1, 'PNG', 0, 0, width, height);
@@ -837,23 +938,19 @@ const UIEditor = () => {
         const app2 = webGLStageRef2.current?.app;
         if (app2) {
           console.log('📄 Adding Page 2...');
-          const canvas2 = await app2.renderer.extract.canvas({
-            target: app2.stage,
-            frame: new PIXI.Rectangle(0, 0, 595, 842)
-          });
-          const imgData2 = canvas2.toDataURL('image/png', 1.0);
-
-          pdf.addPage();
-          pdf.addImage(imgData2, 'PNG', 0, 0, width, height);
+          const canvas2 = await getPageCanvas(app2);
+          if (canvas2) {
+            const imgData2 = canvas2.toDataURL('image/png', 1.0);
+            pdf.addPage();
+            pdf.addImage(imgData2, 'PNG', 0, 0, width, height);
+          }
         }
       }
 
-      // 4. Save
-      pdf.save('resume-design.pdf');
-      console.log('✅ PDF downloaded successfully');
-
+      pdf.save('resume.pdf');
+      console.log('✅ PDF Generation Complete');
     } catch (err) {
-      console.error('Failed to download PDF:', err);
+      console.error('Failed to generate PDF:', err);
     }
   };
 
@@ -947,12 +1044,14 @@ const UIEditor = () => {
     setLines([...lines, newLine]);
     setNextLineId(nextLineId + 1);
     setSelectedLine(newLine.id);
+    setIsLayoutDirty(true); // 🆕 Layout change
   };
 
   // Delete line
   const deleteLine = (id) => {
     setLines(lines.filter(line => line.id !== id));
     if (selectedLine === id) setSelectedLine(null);
+    setIsLayoutDirty(true); // 🆕 Layout change
   };
 
   // Update line property
@@ -981,6 +1080,7 @@ const UIEditor = () => {
           return line;
       }
     }));
+    setIsLayoutDirty(true);
   };
 
   // Resize line
@@ -1001,6 +1101,7 @@ const UIEditor = () => {
         };
       }
     }));
+    setIsLayoutDirty(true);
   };
 
   // Handle line drag end
@@ -1008,6 +1109,7 @@ const UIEditor = () => {
     setLines(lines.map(line =>
       line.id === id ? { ...line, ...newPos } : line
     ));
+    setIsLayoutDirty(true); // 🆕 Layout change
     // 🛡️ Selection persists (User Request)
   };
 
@@ -1016,6 +1118,7 @@ const UIEditor = () => {
     setLines(lines.map(line =>
       line.id === id ? { ...line, ...updates } : line
     ));
+    setIsLayoutDirty(true); // 🆕 Layout change
   };
 
 
@@ -1037,12 +1140,14 @@ const UIEditor = () => {
     setBackgroundShapes([...backgroundShapes, newShape]);
     setNextShapeId(nextShapeId + 1);
     setSelectedShape(newShape.id);
+    setIsLayoutDirty(true); // 🆕 Layout change
   };
 
   // Delete background shape
   const deleteBackgroundShape = (id) => {
     setBackgroundShapes(backgroundShapes.filter(shape => shape.id !== id));
     if (selectedShape === id) setSelectedShape(null);
+    setIsLayoutDirty(true); // 🆕 Layout change
   };
 
   // Update background shape property
@@ -1050,6 +1155,7 @@ const UIEditor = () => {
     setBackgroundShapes(backgroundShapes.map(shape =>
       shape.id === id ? { ...shape, [property]: value } : shape
     ));
+    setIsLayoutDirty(true); // 🆕 Layout change
   };
 
   // Handle shape drag end
@@ -1057,6 +1163,7 @@ const UIEditor = () => {
     setBackgroundShapes(backgroundShapes.map(shape =>
       shape.id === id ? { ...shape, x: newPos.x, y: newPos.y } : shape
     ));
+    setIsLayoutDirty(true); // 🆕 Layout change
     // 🛡️ Selection persists (User Request)
   };
 
@@ -1065,6 +1172,7 @@ const UIEditor = () => {
     setBackgroundShapes(backgroundShapes.map(shape =>
       shape.id === id ? { ...shape, ...updates } : shape
     ));
+    setIsLayoutDirty(true); // 🆕 Layout change
   };
 
   // Move background shape
@@ -1106,6 +1214,7 @@ const UIEditor = () => {
       }));
       updateLinkedLines(sectionName, newPos);
     }
+    setIsLayoutDirty(true); // 🆕 Layout change
     // 🛡️ Selection persists (User Request)
   };
 
@@ -1128,7 +1237,7 @@ const UIEditor = () => {
   const updateLinkedLines = (sectionName, newPos, newWidth) => {
     setLines(prevLines => prevLines.map(line => {
       if (line.isSectionDivider === sectionName) {
-        const width = newWidth ? (parseInt(newWidth) || 560) : Math.abs(line.x2 - line.x1);
+        const width = newWidth ? Math.min(parseInt(newWidth) || 575, 575) : Math.abs(line.x2 - line.x1);
         const offsetY = line.offsetY || 22;
         return {
           ...line,
@@ -1227,7 +1336,8 @@ const UIEditor = () => {
 
     // Update WIDTH
     if (newAttrs.width) {
-      const widthPx = `${Math.round(newAttrs.width)}px`;
+      const clampedWidth = Math.min(Math.round(newAttrs.width), 575);
+      const widthPx = `${clampedWidth}px`;
 
       setSectionWidths(prev => ({
         ...prev,
@@ -1266,6 +1376,7 @@ const UIEditor = () => {
         }
       }));
     }
+    setIsLayoutDirty(true); // 🆕 Layout change
   };
 
   // Auto-flow sections - Header Aligned & Height Managed
@@ -1509,6 +1620,22 @@ const UIEditor = () => {
                 </option>
               ))}
             </select>
+            {backupConfig && (
+              <button
+                onClick={handleRestoreBackup}
+                className="btn-secondary full-width"
+                style={{
+                  marginTop: '10px',
+                  backgroundColor: '#fef3c7',
+                  color: '#92400e',
+                  border: '1px solid #fcd34d',
+                  fontSize: '12px',
+                  fontWeight: '600'
+                }}
+              >
+                ⏪ RESTORE PREVIOUS CONFIG
+              </button>
+            )}
             {resumeId && (
               <div style={{
                 marginTop: '8px',
@@ -2092,20 +2219,32 @@ const UIEditor = () => {
                 </div>
               </div>
 
-              {/* Height Control (Moved to Quick Style for convenience) */}
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
-                  Height (px)
-                </label>
-                <input
-                  type="text"
-                  value={sectionHeights[selectedSection] || 'auto'}
-                  onChange={(e) => handleHeightChange(selectedSection, e.target.value)}
-                  onBlur={() => handleHeightBlur(selectedSection)}
-                  className="control-input"
-                  style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #e5e7eb' }}
-                  placeholder="auto or 200px"
-                />
+              {/* Dimensions Control - Moved to Quick Style for convenience */}
+              <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+                <div className="control-item" style={{ flex: 1 }}>
+                  <label className="control-label-small" style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>Width (px)</label>
+                  <input
+                    type="text"
+                    value={sectionWidths[selectedSection] || '575px'}
+                    onChange={(e) => handleWidthChange(selectedSection, e.target.value)}
+                    onBlur={() => handleWidthBlur(selectedSection)}
+                    className="control-input"
+                    style={{ width: '100%', padding: '8px', border: '1px solid #e5e7eb', borderRadius: '4px' }}
+                    placeholder="575px"
+                  />
+                </div>
+                <div className="control-item" style={{ flex: 1 }}>
+                  <label className="control-label-small" style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>Height (px)</label>
+                  <input
+                    type="text"
+                    value={sectionHeights[selectedSection] || 'auto'}
+                    onChange={(e) => handleHeightChange(selectedSection, e.target.value)}
+                    onBlur={() => handleHeightBlur(selectedSection)}
+                    className="control-input"
+                    style={{ width: '100%', padding: '8px', border: '1px solid #e5e7eb', borderRadius: '4px' }}
+                    placeholder="auto or 200px"
+                  />
+                </div>
               </div>
 
               {/* Nudge Controls for Section - RIGHT PANEL */}
