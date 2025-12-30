@@ -196,6 +196,7 @@ const UIEditor = () => {
     return heights;
   });
   const [styleConfig, setStyleConfig] = useState(initialConfig);
+  const [styleKey, setStyleKey] = useState(0); // 🚀 Force rerender key
   const [backupConfig, setBackupConfig] = useState(null); // 🆕 Store previous layout for restore
   const [isLayoutDirty, setIsLayoutDirty] = useState(false); // 🆕 Track manual layout changes
   const [sectionSnapshots, setSectionSnapshots] = useState({});
@@ -830,6 +831,20 @@ const UIEditor = () => {
   //   }
   // };
 
+
+  const handleGlobalStyleChange = (key, value) => {
+    setStyleConfig(prev => ({
+      ...prev,
+      [key]: value
+    }));
+
+    // 🚀 Force engine rerender for these critical changes
+    if (key === 'globalFontFamily' || key.includes('Color')) {
+      setStyleKey(prev => prev + 1);
+    }
+
+    setIsLayoutDirty(true);
+  };
 
   // Reset Layout - UPDATED
   const resetLayout = () => {
@@ -1638,11 +1653,21 @@ const UIEditor = () => {
       const currentStyle = styleConfig[sectionName] || {};
       const prevStyle = prevStyleConfigRef.current[sectionName] || {};
 
+      // 🎯 FORCE RE-CAPTURE ON GLOBAL STYLE CHANGES
+      // Global changes affect the rendering even if the section style object itself is unchanged
+      const globalStylesChanged =
+        prevStyleConfigRef.current.globalFontFamily !== styleConfig.globalFontFamily ||
+        prevStyleConfigRef.current.globalTitleColor !== styleConfig.globalTitleColor ||
+        prevStyleConfigRef.current.globalSubtitleColor !== styleConfig.globalSubtitleColor ||
+        prevStyleConfigRef.current.globalTextColor !== styleConfig.globalTextColor ||
+        prevStyleConfigRef.current.globalBulletColor !== styleConfig.globalBulletColor ||
+        prevStyleConfigRef.current.globalPrimaryColor !== styleConfig.globalPrimaryColor;
+
       // Always capture if no snapshot exists
       const hasSnapshot = !!sectionSnapshots[sectionName];
 
       // Use the static method from Engine 4
-      const needsCapture = !hasSnapshot || GeometrySnapshot.shouldReCapture(prevStyle, currentStyle);
+      const needsCapture = !hasSnapshot || globalStylesChanged || GeometrySnapshot.shouldReCapture(prevStyle, currentStyle);
 
       if (!needsCapture) {
         // Styles are identical or only layout changed (x/y), which Pixi handles directly via props
@@ -1650,14 +1675,16 @@ const UIEditor = () => {
       }
 
       try {
-        // Wait for fonts to load
+        // 🚀 DELAY CAPTURE: Wait for font rendering & DOM layout to settle
+        // This ensures the capture doesn't happen before the browser finishes the font switch
+        await new Promise(resolve => setTimeout(resolve, 200));
         await document.fonts.ready;
 
         // Force layout recalculation
         element.offsetHeight; // Trigger reflow
 
         // 1. CAPTURE FOR WEBGL (Geometry Snapshot)
-        console.log(`📸 [SMART-CAPTURE] Capturing ${sectionName} (Visual Update Required)`);
+        console.log(`📸 [SMART-CAPTURE] Capturing ${sectionName} (${globalStylesChanged ? 'Global Style Change' : 'Visual Update'})`);
         const scanner = new GeometrySnapshot();
         const snapshot = await scanner.capture(element);
 
@@ -1790,6 +1817,8 @@ const UIEditor = () => {
         transformOrigin: 'top right',
         overflow: 'hidden',
         maxWidth: 'none',
+        fontFamily: styleConfig.globalFontFamily || 'Helvetica',
+        color: styleConfig.globalTextColor || '#000000',
       }}>
         {TemplateComponents && Object.entries(sectionRefs.current).map(([key, ref]) => {
           const Component = TemplateComponents[key];
@@ -1870,6 +1899,85 @@ const UIEditor = () => {
           >
             {isAnimationsEnabled ? '✨ EFFECTS: ON' : '✨ EFFECTS: OFF'}
           </button>
+        </div>
+
+        {/* --- GLOBAL STYLES --- */}
+        <h3 className="panel-title">GLOBAL STYLES</h3>
+        <div className="control-group" style={{ marginBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.1)', pb: '15px' }}>
+
+          {/* FONT SELECTOR */}
+          <div style={{ marginBottom: '15px' }}>
+            <label className="control-label">Resume Font (ATS Friendly)</label>
+            <select
+              value={styleConfig.globalFontFamily || 'Helvetica'}
+              onChange={(e) => handleGlobalStyleChange('globalFontFamily', e.target.value)}
+              className="control-select"
+              style={{
+                fontFamily: styleConfig.globalFontFamily || 'inherit',
+                fontWeight: '600',
+                fontSize: '14px',
+                height: '40px'
+              }}
+            >
+              <option value="Arial">Arial (Standard)</option>
+              <option value="Helvetica">Helvetica (Classic)</option>
+              <option value="Times New Roman">Times New Roman (Serif)</option>
+              <option value="Georgia">Georgia (Professional Serif)</option>
+              <option value="Calibri">Calibri (Modern)</option>
+              <option value="Verdana">Verdana (Clear Sans)</option>
+              <option value="Tahoma">Tahoma (Compact)</option>
+              <option value="Roboto">Roboto (Clean)</option>
+              <option value="Inter">Inter (Premium)</option>
+            </select>
+          </div>
+
+          {/* COLOR PICKERS - GRANULAR */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <div>
+              <label className="control-label" style={{ fontSize: '10px' }}>Title Color</label>
+              <input
+                type="color"
+                value={normalizeColorForInput(styleConfig.globalTitleColor || styleConfig.globalPrimaryColor || '#000000')}
+                onChange={(e) => handleGlobalStyleChange('globalTitleColor', e.target.value)}
+                className="control-color"
+                style={{ width: '100%', height: '30px', padding: '2px' }}
+              />
+            </div>
+            <div>
+              <label className="control-label" style={{ fontSize: '10px' }}>Subtitle Color</label>
+              <input
+                type="color"
+                value={normalizeColorForInput(styleConfig.globalSubtitleColor || styleConfig.globalPrimaryColor || '#000000')}
+                onChange={(e) => handleGlobalStyleChange('globalSubtitleColor', e.target.value)}
+                className="control-color"
+                style={{ width: '100%', height: '30px', padding: '2px' }}
+              />
+            </div>
+            <div>
+              <label className="control-label" style={{ fontSize: '10px' }}>Text Color</label>
+              <input
+                type="color"
+                value={normalizeColorForInput(styleConfig.globalTextColor || '#000000')}
+                onChange={(e) => handleGlobalStyleChange('globalTextColor', e.target.value)}
+                className="control-color"
+                style={{ width: '100%', height: '30px', padding: '2px' }}
+              />
+            </div>
+            <div>
+              <label className="control-label" style={{ fontSize: '10px' }}>Bullet Color</label>
+              <input
+                type="color"
+                value={normalizeColorForInput(styleConfig.globalBulletColor || styleConfig.globalPrimaryColor || '#000000')}
+                onChange={(e) => handleGlobalStyleChange('globalBulletColor', e.target.value)}
+                className="control-color"
+                style={{ width: '100%', height: '30px', padding: '2px' }}
+              />
+            </div>
+          </div>
+
+          <p style={{ fontSize: '10px', color: '#6b7280', marginTop: '10px', fontStyle: 'italic', lineHeight: '1.4' }}>
+            ℹ️ These global settings override template defaults for a consistent look.
+          </p>
         </div>
 
         {!isMobile && <h3 className="panel-title">TEMPLATE SELECT</h3>}
@@ -2336,6 +2444,7 @@ const UIEditor = () => {
             {/* Page 1 */}
             <div className="canvas-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
               <WebGLStage
+                key={`page1-${styleKey}`}
                 width={canvasTargetWidth}
                 height={canvasTargetHeight}
                 stageScale={canvasScale}
@@ -2388,6 +2497,7 @@ const UIEditor = () => {
               }}
             >
               <WebGLStage
+                key={`page2-${styleKey}`}
                 width={canvasTargetWidth}
                 height={canvasTargetHeight}
                 stageScale={canvasScale}

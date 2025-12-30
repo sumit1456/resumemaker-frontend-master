@@ -108,15 +108,15 @@ const applyStyles = (baseStyle, configStyle) => {
 /**
  * Enhanced Flexible Container
  */
-const FlexibleContainer = ({ children, config = {} }) => {
+const FlexibleContainer = ({ children, config = {}, styleConfig = {} }) => {
     const finalStyles = applyStyles({
         width: "fit-content",
         maxWidth: "100%",
         padding: "10px",
         margin: "0",
-        backgroundColor: "transparent",  // Changed from #FFFFFF to transparent
-        fontFamily: "Helvetica",
-        color: "#000000",
+        backgroundColor: "transparent",
+        fontFamily: styleConfig.globalFontFamily || "inherit",
+        color: styleConfig.globalTextColor || "#000000",
         boxSizing: "border-box",
         overflow: "hidden",
     }, config);
@@ -131,9 +131,23 @@ const FlexibleContainer = ({ children, config = {} }) => {
 /**
  * Enhanced Flexible Text - Any text element
  */
-const FlexibleText = ({ children, config = {}, as = "div" }) => {
+const FlexibleText = ({ children, config = {}, styleConfig = {}, as = "div" }) => {
     const Element = as; // Can be div, span, p, h1, etc.
     const { href, target, rel, ...styleProps } = config;
+
+    // Smart color resolution: Prioritize local config, then global granular colors, then primary/text fallbacks
+    let resolvedColor = styleProps.color;
+    if (!resolvedColor) {
+        if ((styleProps.isTitle || styleProps.as === 'h1') && styleConfig.globalTitleColor) {
+            resolvedColor = styleConfig.globalTitleColor;
+        } else if (styleProps.variant === 'subtitle' && styleConfig.globalSubtitleColor) {
+            resolvedColor = styleConfig.globalSubtitleColor;
+        } else if (styleProps.isPrimary && styleConfig.globalPrimaryColor) {
+            resolvedColor = styleConfig.globalPrimaryColor;
+        } else {
+            resolvedColor = styleConfig.globalTextColor || "#000000";
+        }
+    }
 
     return (
         <Element
@@ -144,11 +158,12 @@ const FlexibleText = ({ children, config = {}, as = "div" }) => {
                 fontSize: "10px",
                 fontWeight: "normal",
                 fontStyle: "normal",
-                color: "#000000",
+                color: resolvedColor,
                 lineHeight: "1.4",
                 textAlign: "left",
                 margin: "0",
                 padding: "0",
+                fontFamily: styleConfig.globalFontFamily || "inherit",
             }, styleProps)}
         >
             {children}
@@ -159,27 +174,38 @@ const FlexibleText = ({ children, config = {}, as = "div" }) => {
 /**
  * Flexible Section Header
  */
-const FlexibleSectionHeader = ({ title, config }) => {
+const FlexibleSectionHeader = ({ title, config, styleConfig = {} }) => {
+    // Determine header color: Prioritize config, then global primary color
+    let headerColor = config.color;
+    if (!headerColor && styleConfig.globalPrimaryColor) {
+        headerColor = styleConfig.globalPrimaryColor;
+    }
+
     return (
-        <div style={applyStyles({
-            fontSize: "14px",
-            fontWeight: "bold",
-            color: "#000000",
-            marginBottom: "8px",
-            marginTop: "0",
-            paddingBottom: "3px",
-            paddingTop: "0",
-            borderBottom: "none",
-            borderTop: "none",
-            textTransform: "none",
-            letterSpacing: "0",
-            textAlign: "left",
-            display: "block",
-            background: "transparent",
-        }, config)}>
+        <FlexibleText
+            config={{
+                fontSize: "14px",
+                fontWeight: "bold",
+                isTitle: true, // 🚀 Mark as title for color resolution
+                marginBottom: "8px",
+                marginTop: "0",
+                paddingBottom: "3px",
+                paddingTop: "0",
+                borderBottom: "none",
+                borderTop: "none",
+                textTransform: "none",
+                letterSpacing: "0",
+                textAlign: "left",
+                display: "block",
+                background: "transparent",
+                ...config,
+                color: config.color || undefined, // Allow FlexibleText to resolve from styleConfig
+            }}
+            styleConfig={styleConfig}
+        >
             {config.icon && <span style={{ marginRight: "8px" }}>{config.icon}</span>}
             {title}
-        </div>
+        </FlexibleText>
     );
 };
 
@@ -209,7 +235,7 @@ const FlexibleLayout = ({ children, config = {} }) => {
 
 // ========== ENHANCED BULLET LIST ==========
 
-const FlexibleBulletList = ({ items = [], styleConfig = {} }) => {
+const FlexibleBulletList = ({ items = [], styleConfig = {}, globalStyleConfig = {} }) => {
     const config = styleConfig;
 
     return (
@@ -238,17 +264,19 @@ const FlexibleBulletList = ({ items = [], styleConfig = {} }) => {
                             width: "10px",
                             minWidth: "10px",
                             fontSize: config.bulletSize || "12px",
-                            color: config.bulletColor || config.textColor || "#000000",
+                            color: globalStyleConfig.globalBulletColor || globalStyleConfig.globalPrimaryColor || config.bulletColor || config.textColor || "#000000",
                             lineHeight: config.lineHeight || "1.4",
                             userSelect: "none",
+                            fontFamily: globalStyleConfig.globalFontFamily || "inherit"
                         }, config.bulletStyle)}
                     >
                         {config.bulletChar || config.bulletStyle?.bulletChar || "•"}
                     </div>
 
                     {/* Text */}
-                    <div
-                        style={applyStyles({
+                    <FlexibleText
+                        styleConfig={globalStyleConfig}
+                        config={{
                             flex: 1,
                             minWidth: 0,
                             fontSize: config.textSize || "10px",
@@ -257,10 +285,11 @@ const FlexibleBulletList = ({ items = [], styleConfig = {} }) => {
                             whiteSpace: "normal",
                             wordBreak: "normal",
                             overflowWrap: "anywhere",
-                        }, config.textStyle)}
+                            ...config.textStyle
+                        }}
                     >
                         {item}
-                    </div>
+                    </FlexibleText>
                 </div>
             ))}
         </div>
@@ -268,12 +297,11 @@ const FlexibleBulletList = ({ items = [], styleConfig = {} }) => {
 };
 
 
-export const FlexibleHeaderSection = ({ resumeDetails, styleConfig }) => {
-    const config = styleConfig.header;
+export const FlexibleHeaderSection = ({ resumeDetails, styleConfig = {} }) => {
+    const sectionConfig = styleConfig.header || {};
 
     // Helper function to render sections based on order
     const renderSection = (sectionType) => {
-
 
         switch (sectionType) {
             case 'nameRow':
@@ -286,14 +314,14 @@ export const FlexibleHeaderSection = ({ resumeDetails, styleConfig }) => {
                             justifyContent: "space-between",
                             alignItems: "baseline",
                             width: "100%",
-                            marginBottom: config.nameRowMarginBottom || "10px",
-                            ...config.nameRowZone
+                            marginBottom: sectionConfig.nameRowMarginBottom || "10px",
+                            ...sectionConfig.nameRowZone
                         }}
                     >
-                        <FlexibleText config={config.nameStyle || { fontSize: "24px", fontWeight: "bold" }}>
+                        <FlexibleText config={{ ...(sectionConfig.nameStyle || { fontSize: "24px", fontWeight: "bold" }), isTitle: true }} styleConfig={styleConfig}>
                             {resumeDetails.name || "Your Name"}
                         </FlexibleText>
-                        <FlexibleText config={config.titleStyle || { fontSize: "14px" }}>
+                        <FlexibleText config={{ ...(sectionConfig.titleStyle || { fontSize: "14px" }), variant: "subtitle" }} styleConfig={styleConfig}>
                             {resumeDetails.title || "Your Title"}
                         </FlexibleText>
                     </FlexibleLayout>
@@ -306,22 +334,23 @@ export const FlexibleHeaderSection = ({ resumeDetails, styleConfig }) => {
                         config={{
                             display: "flex",
                             flexDirection: "column",
-                            alignItems: config.nameAlign || "flex-start",
-                            justifyContent: config.nameJustify || "flex-start",
-                            marginBottom: config.nameMarginBottom || "0px",
-                            marginTop: config.nameMarginTop || "0px",
-                            marginLeft: config.nameMarginLeft || "0px",
-                            marginRight: config.nameMarginRight || "0px",
-                            padding: config.namePadding || "0px",
-                            width: config.nameWidth || "auto",
-                            flex: config.nameFlex || "initial",
-                            order: config.nameOrder ?? 1,
-                            ...config.nameZone,
+                            alignItems: sectionConfig.nameAlign || "flex-start",
+                            justifyContent: sectionConfig.nameJustify || "flex-start",
+                            marginBottom: sectionConfig.nameMarginBottom || "0px",
+                            marginTop: sectionConfig.nameMarginTop || "0px",
+                            marginLeft: sectionConfig.nameMarginLeft || "0px",
+                            marginRight: sectionConfig.nameMarginRight || "0px",
+                            padding: sectionConfig.namePadding || "0px",
+                            width: sectionConfig.nameWidth || "auto",
+                            flex: sectionConfig.nameFlex || "initial",
+                            order: sectionConfig.nameOrder ?? 1,
+                            ...sectionConfig.nameZone,
                         }}
                     >
                         <FlexibleText
-                            config={config.nameStyle}
-                            as={config.nameElement || "h1"}
+                            config={sectionConfig.nameStyle}
+                            styleConfig={styleConfig}
+                            as={sectionConfig.nameElement || "h1"}
                         >
                             {resumeDetails.name || "Your Name"}
                         </FlexibleText>
@@ -329,28 +358,29 @@ export const FlexibleHeaderSection = ({ resumeDetails, styleConfig }) => {
                 );
 
             case 'title':
-                return config.showTitle ? (
+                return sectionConfig.showTitle ? (
                     <FlexibleLayout
                         key="title"
                         config={{
                             display: "flex",
                             flexDirection: "column",
-                            alignItems: config.titleAlign || "flex-start",
-                            justifyContent: config.titleJustify || "flex-start",
-                            marginBottom: config.titleMarginBottom || "0px",
-                            marginTop: config.titleMarginTop || "0px",
-                            marginLeft: config.titleMarginLeft || "0px",
-                            marginRight: config.titleMarginRight || "0px",
-                            padding: config.titlePadding || "0px",
-                            width: config.titleWidth || "auto",
-                            flex: config.titleFlex || "initial",
-                            order: config.titleOrder ?? 2,
-                            ...config.titleZone,
+                            alignItems: sectionConfig.titleAlign || "flex-start",
+                            justifyContent: sectionConfig.titleJustify || "flex-start",
+                            marginBottom: sectionConfig.titleMarginBottom || "0px",
+                            marginTop: sectionConfig.titleMarginTop || "0px",
+                            marginLeft: sectionConfig.titleMarginLeft || "0px",
+                            marginRight: sectionConfig.titleMarginRight || "0px",
+                            padding: sectionConfig.titlePadding || "0px",
+                            width: sectionConfig.titleWidth || "auto",
+                            flex: sectionConfig.titleFlex || "initial",
+                            order: sectionConfig.titleOrder ?? 2,
+                            ...sectionConfig.titleZone,
                         }}
                     >
                         <FlexibleText
-                            config={config.titleStyle}
-                            as={config.titleElement || "div"}
+                            config={{ ...sectionConfig.titleStyle, variant: "subtitle" }}
+                            styleConfig={styleConfig}
+                            as={sectionConfig.titleElement || "div"}
                         >
                             {resumeDetails.title || "Your Title"}
                         </FlexibleText>
@@ -358,21 +388,21 @@ export const FlexibleHeaderSection = ({ resumeDetails, styleConfig }) => {
                 ) : null;
 
             case 'contact':
-                return config.showContact ? (
+                return sectionConfig.showContact ? (
                     <FlexibleLayout
                         key="contact"
                         config={{
-                            ...config.contactLayout,
-                            order: typeof config.contactOrder === 'number' ? config.contactOrder : 3,
-                            ...config.contactZone,
+                            ...sectionConfig.contactLayout,
+                            order: typeof sectionConfig.contactOrder === 'number' ? sectionConfig.contactOrder : 3,
+                            ...sectionConfig.contactZone,
                         }}
                     >
                         {/* Check if we have split groups */}
-                        {config.contactLeftGroup && config.contactRightGroup ? (
+                        {sectionConfig.contactLeftGroup && sectionConfig.contactRightGroup ? (
                             <>
                                 {/* Left Group */}
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
-                                    {config.contactLeftGroup.map((type, idx) => {
+                                    {sectionConfig.contactLeftGroup.map((type, idx) => {
                                         const value = resumeDetails.contact?.[type];
                                         if (!value) return null;
 
@@ -382,38 +412,38 @@ export const FlexibleHeaderSection = ({ resumeDetails, styleConfig }) => {
                                                 config={{
                                                     display: "flex",
                                                     alignItems: "center",
-                                                    justifyContent: config.contactItemJustify || "flex-start",
-                                                    padding: config.contactItemPadding || "0px",
-                                                    margin: config.contactItemMargin || "0px",
-                                                    ...config.contactItemContainer,
+                                                    justifyContent: sectionConfig.contactItemJustify || "flex-start",
+                                                    padding: sectionConfig.contactItemPadding || "0px",
+                                                    margin: sectionConfig.contactItemMargin || "0px",
+                                                    ...sectionConfig.contactItemContainer,
                                                 }}
                                             >
-                                                {config.showContactIcons && (
+                                                {sectionConfig.showContactIcons && (
                                                     <div
                                                         style={{
-                                                            marginRight: config.contactIconMarginRight || "8px",
-                                                            marginLeft: config.contactIconMarginLeft || "0px",
+                                                            marginRight: sectionConfig.contactIconMarginRight || "8px",
+                                                            marginLeft: sectionConfig.contactIconMarginLeft || "0px",
                                                             display: "flex",
                                                             alignItems: "center"
                                                         }}
                                                     >
                                                         {(() => {
                                                             const IconComponent = contactIconMap[type] || Globe;
-                                                            const rawSize = config.contactIconSize;
+                                                            const rawSize = sectionConfig.contactIconSize;
                                                             const sizeNum = parseInt(rawSize) || 0;
                                                             const iconSize = (sizeNum > 6) ? rawSize : 14;
 
                                                             return (
                                                                 <IconComponent
                                                                     size={iconSize}
-                                                                    color={config.contactIconColor || "#000000"}
+                                                                    color={sectionConfig.contactIconColor || "#000000"}
                                                                 />
                                                             );
                                                         })()}
                                                     </div>
                                                 )}
 
-                                                <FlexibleText config={config.contactItemStyle}>
+                                                <FlexibleText config={sectionConfig.contactItemStyle} styleConfig={styleConfig}>
                                                     {value}
                                                 </FlexibleText>
                                             </FlexibleLayout>
@@ -423,7 +453,7 @@ export const FlexibleHeaderSection = ({ resumeDetails, styleConfig }) => {
 
                                 {/* Right Group */}
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
-                                    {config.contactRightGroup.map((type, idx) => {
+                                    {sectionConfig.contactRightGroup.map((type, idx) => {
                                         const value = resumeDetails.contact?.[type];
                                         if (!value) return null;
 
@@ -433,38 +463,38 @@ export const FlexibleHeaderSection = ({ resumeDetails, styleConfig }) => {
                                                 config={{
                                                     display: "flex",
                                                     alignItems: "center",
-                                                    justifyContent: config.contactItemJustify || "flex-start",
-                                                    padding: config.contactItemPadding || "0px",
-                                                    margin: config.contactItemMargin || "0px",
-                                                    ...config.contactItemContainer,
+                                                    justifyContent: sectionConfig.contactItemJustify || "flex-start",
+                                                    padding: sectionConfig.contactItemPadding || "0px",
+                                                    margin: sectionConfig.contactItemMargin || "0px",
+                                                    ...sectionConfig.contactItemContainer,
                                                 }}
                                             >
-                                                {config.showContactIcons && (
+                                                {sectionConfig.showContactIcons && (
                                                     <div
                                                         style={{
-                                                            marginRight: config.contactIconMarginRight || "8px",
-                                                            marginLeft: config.contactIconMarginLeft || "0px",
+                                                            marginRight: sectionConfig.contactIconMarginRight || "8px",
+                                                            marginLeft: sectionConfig.contactIconMarginLeft || "0px",
                                                             display: "flex",
                                                             alignItems: "center"
                                                         }}
                                                     >
                                                         {(() => {
                                                             const IconComponent = contactIconMap[type] || Globe;
-                                                            const rawSize = config.contactIconSize;
+                                                            const rawSize = sectionConfig.contactIconSize;
                                                             const sizeNum = parseInt(rawSize) || 0;
                                                             const iconSize = (sizeNum > 6) ? rawSize : 14;
 
                                                             return (
                                                                 <IconComponent
                                                                     size={iconSize}
-                                                                    color={config.contactIconColor || "#000000"}
+                                                                    color={sectionConfig.contactIconColor || "#000000"}
                                                                 />
                                                             );
                                                         })()}
                                                     </div>
                                                 )}
 
-                                                <FlexibleText config={config.contactItemStyle}>
+                                                <FlexibleText config={sectionConfig.contactItemStyle} styleConfig={styleConfig}>
                                                     {value}
                                                 </FlexibleText>
                                             </FlexibleLayout>
@@ -474,7 +504,7 @@ export const FlexibleHeaderSection = ({ resumeDetails, styleConfig }) => {
                             </>
                         ) : (
                             /* Original single-group layout */
-                            (config.contactItems || config.contactOrder)?.map((type, idx) => {
+                            (sectionConfig.contactItems || sectionConfig.contactOrder)?.map((type, idx) => {
                                 const value = resumeDetails.contact?.[type];
                                 if (!value) return null;
 
@@ -484,38 +514,38 @@ export const FlexibleHeaderSection = ({ resumeDetails, styleConfig }) => {
                                         config={{
                                             display: "flex",
                                             alignItems: "center",
-                                            justifyContent: config.contactItemJustify || "flex-start",
-                                            padding: config.contactItemPadding || "0px",
-                                            margin: config.contactItemMargin || "0px",
-                                            ...config.contactItemContainer,
+                                            justifyContent: sectionConfig.contactItemJustify || "flex-start",
+                                            padding: sectionConfig.contactItemPadding || "0px",
+                                            margin: sectionConfig.contactItemMargin || "0px",
+                                            ...sectionConfig.contactItemContainer,
                                         }}
                                     >
-                                        {config.showContactIcons && (
+                                        {sectionConfig.showContactIcons && (
                                             <div
                                                 style={{
-                                                    marginRight: config.contactIconMarginRight || "8px",
-                                                    marginLeft: config.contactIconMarginLeft || "0px",
+                                                    marginRight: sectionConfig.contactIconMarginRight || "8px",
+                                                    marginLeft: sectionConfig.contactIconMarginLeft || "0px",
                                                     display: "flex",
                                                     alignItems: "center"
                                                 }}
                                             >
                                                 {(() => {
                                                     const IconComponent = contactIconMap[type] || Globe;
-                                                    const rawSize = config.contactIconSize;
+                                                    const rawSize = sectionConfig.contactIconSize;
                                                     const sizeNum = parseInt(rawSize) || 0;
                                                     const iconSize = (sizeNum > 6) ? rawSize : 14;
 
                                                     return (
                                                         <IconComponent
                                                             size={iconSize}
-                                                            color={config.contactIconColor || "#000000"}
+                                                            color={sectionConfig.contactIconColor || "#000000"}
                                                         />
                                                     );
                                                 })()}
                                             </div>
                                         )}
 
-                                        <FlexibleText config={config.contactItemStyle}>
+                                        <FlexibleText config={sectionConfig.contactItemStyle} styleConfig={styleConfig}>
                                             {value}
                                         </FlexibleText>
                                     </FlexibleLayout>
@@ -531,21 +561,21 @@ export const FlexibleHeaderSection = ({ resumeDetails, styleConfig }) => {
     };
 
     return (
-        <FlexibleContainer config={config.container}>
+        <FlexibleContainer config={sectionConfig.container} styleConfig={styleConfig}>
             <FlexibleLayout
                 config={{
-                    display: config.layoutDisplay || "flex",
-                    flexDirection: config.layoutDirection || "column",
-                    alignItems: config.layoutAlign || "stretch",
-                    justifyContent: config.layoutJustify || "flex-start",
-                    gap: config.layoutGap || "0px",
-                    rowGap: config.layoutRowGap,
-                    columnGap: config.layoutColumnGap,
-                    padding: config.layoutPadding || "0px",
-                    ...config.layout,
+                    display: sectionConfig.layoutDisplay || "flex",
+                    flexDirection: sectionConfig.layoutDirection || "column",
+                    alignItems: sectionConfig.layoutAlign || "stretch",
+                    justifyContent: sectionConfig.layoutJustify || "flex-start",
+                    gap: sectionConfig.layoutGap || "0px",
+                    rowGap: sectionConfig.layoutRowGap,
+                    columnGap: sectionConfig.layoutColumnGap,
+                    padding: sectionConfig.layoutPadding || "0px",
+                    ...sectionConfig.layout,
                 }}
             >
-                {(config.sectionOrder || ['name', 'title', 'contact']).map(renderSection)}
+                {(sectionConfig.sectionOrder || ['name', 'title', 'contact']).map(renderSection)}
             </FlexibleLayout>
         </FlexibleContainer>
     );
@@ -554,30 +584,31 @@ export const FlexibleHeaderSection = ({ resumeDetails, styleConfig }) => {
 /**
  * SUMMARY SECTION - Enhanced
  */
-export const FlexibleSummarySection = ({ summary, styleConfig }) => {
-    const config = styleConfig.summary;
+export const FlexibleSummarySection = ({ summary, styleConfig = {} }) => {
+    const sectionConfig = styleConfig.summary || {};
 
     return (
-        <FlexibleContainer config={config.container}>
-            {config.showTitle && (
+        <FlexibleContainer config={sectionConfig.container} styleConfig={styleConfig}>
+            {sectionConfig.showTitle && (
                 <FlexibleSectionHeader
-                    title={config.titleText || "SUMMARY"}
-                    config={config.titleStyle}
+                    title={sectionConfig.titleText || "SUMMARY"}
+                    config={sectionConfig.titleStyle}
+                    styleConfig={styleConfig}
                 />
             )}
 
             {Array.isArray(summary) ? (
-                config.displayType === "bullets" ? (
-                    <FlexibleBulletList items={summary} styleConfig={config.bulletConfig} />
+                sectionConfig.displayType === "bullets" ? (
+                    <FlexibleBulletList items={summary} styleConfig={sectionConfig.bulletConfig} globalStyleConfig={styleConfig} />
                 ) : (
                     summary.map((para, idx) => (
-                        <FlexibleText key={idx} config={config.bodyStyle || config.valueStyle}>
+                        <FlexibleText key={idx} config={sectionConfig.bodyStyle || sectionConfig.valueStyle} styleConfig={styleConfig}>
                             {para}
                         </FlexibleText>
                     ))
                 )
             ) : (
-                <FlexibleText config={config.bodyStyle || config.valueStyle}>
+                <FlexibleText config={sectionConfig.bodyStyle || sectionConfig.valueStyle} styleConfig={styleConfig}>
                     {summary}
                 </FlexibleText>
             )}
@@ -588,8 +619,8 @@ export const FlexibleSummarySection = ({ summary, styleConfig }) => {
 /**
  * SKILLS SECTION - Enhanced with multiple display modes
  */
-export const FlexibleSkillsSection = ({ skills, styleConfig }) => {
-    const config = styleConfig.skills;
+export const FlexibleSkillsSection = ({ skills, styleConfig = {} }) => {
+    const sectionConfig = styleConfig.skills || {};
 
     // Parse skills based on display mode
     const groupedSkills = {};
@@ -597,7 +628,7 @@ export const FlexibleSkillsSection = ({ skills, styleConfig }) => {
 
     if (skills && Array.isArray(skills)) {
         skills.forEach(skill => {
-            const separator = config.categorySeparator || " - ";
+            const separator = sectionConfig.categorySeparator || " - ";
             if (skill && skill.includes(separator)) {
                 const [cat, val] = skill.split(separator);
                 groupedSkills[cat.trim()] = val.trim();
@@ -608,40 +639,42 @@ export const FlexibleSkillsSection = ({ skills, styleConfig }) => {
     }
 
     return (
-        <FlexibleContainer config={config.container}>
-            {config.showTitle && (
+        <FlexibleContainer config={sectionConfig.container} styleConfig={styleConfig}>
+            {sectionConfig.showTitle && (
                 <FlexibleSectionHeader
-                    title={config.titleText || "SKILLS"}
-                    config={config.titleStyle}
+                    title={sectionConfig.titleText || "SKILLS"}
+                    config={sectionConfig.titleStyle}
+                    styleConfig={styleConfig}
                 />
             )}
 
-            <FlexibleLayout config={config.contentLayout}>
+            <FlexibleLayout config={sectionConfig.contentLayout}>
                 {/* Display Mode: Categories (DEFAULT) */}
-                {(!config.displayMode || config.displayMode === "categories" || config.displayMode === "text") &&
+                {(!sectionConfig.displayMode || sectionConfig.displayMode === "categories" || sectionConfig.displayMode === "text") &&
                     Object.entries(groupedSkills).map(([category, value], idx) => (
-                        <div key={idx} style={applyStyles({ display: "flex", flexDirection: "column", marginBottom: config.itemMarginBottom || "8px" }, config.categoryLayout)}>
-                            {config.showCategories && (
-                                <FlexibleText config={config.categoryStyle}>
+                        <div key={idx} style={applyStyles({ display: "flex", flexDirection: "column", marginBottom: sectionConfig.itemMarginBottom || "8px" }, sectionConfig.categoryLayout)}>
+                            {sectionConfig.showCategories && (
+                                <FlexibleText config={sectionConfig.categoryStyle} styleConfig={styleConfig}>
                                     {category}
-                                    {config.categoryValueSeparator && (
-                                        <span style={applyStyles({}, config.separatorStyle || {})}>{config.categoryValueSeparator}</span>
+                                    {sectionConfig.categoryValueSeparator && (
+                                        <span style={applyStyles({}, sectionConfig.separatorStyle || {})}>{sectionConfig.categoryValueSeparator}</span>
                                     )}
                                 </FlexibleText>
                             )}
-                            <FlexibleText config={config.valueStyle}>
+                            <FlexibleText config={sectionConfig.valueStyle} styleConfig={styleConfig}>
                                 {value}
                             </FlexibleText>
                         </div>
                     ))}
 
                 {/* Display Mode: Tags */}
-                {config.displayMode === "tags" && (
-                    <FlexibleLayout config={config.tagsContainer || { flexWrap: "wrap", gap: "6px" }}>
+                {sectionConfig.displayMode === "tags" && (
+                    <FlexibleLayout config={sectionConfig.tagsContainer || { flexWrap: "wrap", gap: "6px" }}>
                         {[...Object.keys(groupedSkills), ...flatSkills].map((skill, idx) => (
                             <FlexibleText
                                 key={idx}
-                                config={config.tagStyle || {
+                                styleConfig={styleConfig}
+                                config={sectionConfig.tagStyle || {
                                     padding: "4px 10px",
                                     backgroundColor: "#E74C3C",
                                     color: "#FFFFFF",
@@ -657,30 +690,31 @@ export const FlexibleSkillsSection = ({ skills, styleConfig }) => {
                 )}
 
                 {/* Display Mode: List */}
-                {config.displayMode === "list" && (
+                {sectionConfig.displayMode === "list" && (
                     <FlexibleBulletList
                         items={[...Object.entries(groupedSkills).map(([k, v]) => `${k}: ${v}`), ...flatSkills]}
-                        styleConfig={config.bulletConfig}
+                        styleConfig={sectionConfig.bulletConfig}
+                        globalStyleConfig={styleConfig}
                     />
                 )}
 
                 {/* Display Mode: Inline */}
-                {config.displayMode === "inline" && (
-                    <FlexibleText config={config.inlineStyle || config.valueStyle}>
-                        {[...Object.values(groupedSkills), ...flatSkills].join(config.inlineSeparator || ", ")}
+                {sectionConfig.displayMode === "inline" && (
+                    <FlexibleText config={sectionConfig.inlineStyle || sectionConfig.valueStyle} styleConfig={styleConfig}>
+                        {[...Object.values(groupedSkills), ...flatSkills].join(sectionConfig.inlineSeparator || ", ")}
                     </FlexibleText>
                 )}
 
                 {/* Ungrouped Skills (for backward compatibility) */}
-                {flatSkills.length > 0 && (!config.displayMode || config.displayMode === "categories" || config.displayMode === "text") && (
-                    <div style={{ marginBottom: config.itemMarginBottom || "8px" }}>
-                        {config.showCategories && (
-                            <FlexibleText config={config.categoryStyle}>
+                {flatSkills.length > 0 && (!sectionConfig.displayMode || sectionConfig.displayMode === "categories" || sectionConfig.displayMode === "text") && (
+                    <div style={{ marginBottom: sectionConfig.itemMarginBottom || "8px" }}>
+                        {sectionConfig.showCategories && (
+                            <FlexibleText config={sectionConfig.categoryStyle} styleConfig={styleConfig}>
                                 Other
                             </FlexibleText>
                         )}
-                        <FlexibleText config={config.valueStyle}>
-                            {flatSkills.join(config.separator || ", ")}
+                        <FlexibleText config={sectionConfig.valueStyle} styleConfig={styleConfig}>
+                            {flatSkills.join(sectionConfig.separator || ", ")}
                         </FlexibleText>
                     </div>
                 )}
@@ -692,37 +726,39 @@ export const FlexibleSkillsSection = ({ skills, styleConfig }) => {
 /**
  * EXPERIENCE SECTION - Enhanced with custom structure support
  */
-export const FlexibleExperienceSection = ({ experiences, styleConfig }) => {
-    const config = styleConfig.experience;
+export const FlexibleExperienceSection = ({ experiences, styleConfig = {} }) => {
+    const sectionConfig = styleConfig.experience || {};
 
     return (
-        <FlexibleContainer config={config.container}>
-            {config.showTitle && (
+        <FlexibleContainer config={sectionConfig.container} styleConfig={styleConfig}>
+            {sectionConfig.showTitle && (
                 <FlexibleSectionHeader
-                    title={config.titleText || "EXPERIENCE"}
-                    config={config.titleStyle}
+                    title={sectionConfig.titleText || "EXPERIENCE"}
+                    config={sectionConfig.titleStyle}
+                    styleConfig={styleConfig}
                 />
             )}
 
             {experiences.map((exp, idx) => (
                 <FlexibleContainer
                     key={idx}
-                    config={{ marginBottom: config.itemMarginBottom || "12px", ...config.itemContainer, ...config.itemStyle }}
+                    config={{ marginBottom: sectionConfig.itemMarginBottom || "12px", ...sectionConfig.itemContainer, ...sectionConfig.itemStyle }}
+                    styleConfig={styleConfig}
                 >
                     {/* Custom Header Structure (NEW FEATURE) */}
-                    {config.headerStructure ? (
-                        config.headerStructure.map((structure, structIdx) => (
+                    {sectionConfig.headerStructure ? (
+                        sectionConfig.headerStructure.map((structure, structIdx) => (
                             <FlexibleLayout key={structIdx} config={structure.layout}>
                                 {structure.fields?.map((fieldName, fieldIdx) => {
                                     const value = exp[fieldName];
                                     if (!value && !structure.showEmpty) return null;
 
-                                    const fieldStyle = structure.styles?.[fieldName] || {};
+                                    const fieldStyle = { ...structure.styles?.[fieldName], variant: fieldName === 'position' || fieldName === 'company' ? 'subtitle' : undefined };
                                     const prefix = structure.prefix?.[fieldName] || "";
                                     const suffix = structure.suffix?.[fieldName] || "";
 
                                     return (
-                                        <FlexibleText key={fieldIdx} config={fieldStyle}>
+                                        <FlexibleText key={fieldIdx} config={fieldStyle} styleConfig={styleConfig}>
                                             {prefix}{value}{suffix}
                                         </FlexibleText>
                                     );
@@ -732,40 +768,40 @@ export const FlexibleExperienceSection = ({ experiences, styleConfig }) => {
                     ) : (
                         // Fallback to original layout (BACKWARD COMPATIBLE)
                         <>
-                            <FlexibleLayout config={config.headerLayout}>
-                                {config.positionFirst ? (
+                            <FlexibleLayout config={sectionConfig.headerLayout}>
+                                {sectionConfig.positionFirst ? (
                                     <>
-                                        <FlexibleText config={config.positionStyle}>
+                                        <FlexibleText config={{ ...sectionConfig.positionStyle, variant: "subtitle" }} styleConfig={styleConfig}>
                                             {exp.position}
                                         </FlexibleText>
-                                        <FlexibleText config={config.durationStyle}>
+                                        <FlexibleText config={sectionConfig.durationStyle} styleConfig={styleConfig}>
                                             {exp.duration}
                                         </FlexibleText>
                                     </>
                                 ) : (
                                     <>
-                                        <FlexibleText config={config.companyStyle}>
+                                        <FlexibleText config={{ ...sectionConfig.companyStyle, variant: "subtitle" }} styleConfig={styleConfig}>
                                             {exp.company}
                                         </FlexibleText>
-                                        <FlexibleText config={config.durationStyle}>
+                                        <FlexibleText config={sectionConfig.durationStyle} styleConfig={styleConfig}>
                                             {exp.duration}
                                         </FlexibleText>
                                     </>
                                 )}
                             </FlexibleLayout>
 
-                            <FlexibleLayout config={config.subHeaderLayout}>
-                                <FlexibleText config={config.companyStyle}>
-                                    {config.positionFirst ? exp.company : exp.position}
-                                    {exp.location && config.showLocation ? `, ${exp.location}` : ""}
+                            <FlexibleLayout config={sectionConfig.subHeaderLayout}>
+                                <FlexibleText config={sectionConfig.companyStyle} styleConfig={styleConfig}>
+                                    {sectionConfig.positionFirst ? exp.company : exp.position}
+                                    {exp.location && sectionConfig.showLocation ? `, ${exp.location}` : ""}
                                 </FlexibleText>
                             </FlexibleLayout>
                         </>
                     )}
 
                     {/* Achievements */}
-                    {config.showAchievements && exp.achievements && (
-                        <FlexibleBulletList items={exp.achievements} styleConfig={config.bulletConfig} />
+                    {sectionConfig.showAchievements && exp.achievements && (
+                        <FlexibleBulletList items={exp.achievements} styleConfig={sectionConfig.bulletConfig} globalStyleConfig={styleConfig} />
                     )}
                 </FlexibleContainer>
             ))}
@@ -776,58 +812,61 @@ export const FlexibleExperienceSection = ({ experiences, styleConfig }) => {
 /**
  * PROJECTS SECTION - Enhanced
  */
-export const FlexibleProjectsSection = ({ projects, styleConfig }) => {
-    const config = styleConfig.projects;
+export const FlexibleProjectsSection = ({ projects, styleConfig = {} }) => {
+    const sectionConfig = styleConfig.projects || {};
 
     return (
-        <FlexibleContainer config={config.container}>
-            {config.showTitle && (
+        <FlexibleContainer config={sectionConfig.container} styleConfig={styleConfig}>
+            {sectionConfig.showTitle && (
                 <FlexibleSectionHeader
-                    title={config.titleText || "PROJECTS"}
-                    config={config.titleStyle}
+                    title={sectionConfig.titleText || "PROJECTS"}
+                    config={sectionConfig.titleStyle}
+                    styleConfig={styleConfig}
                 />
             )}
 
             {projects.map((proj, idx) => (
                 <FlexibleContainer
                     key={idx}
-                    config={{ marginBottom: config.itemMarginBottom || "12px", ...config.itemStyle }}
+                    config={{ marginBottom: sectionConfig.itemMarginBottom || "12px", ...sectionConfig.itemStyle }}
+                    styleConfig={styleConfig}
                 >
                     {/* Project Header */}
-                    <FlexibleLayout config={config.headerLayout}>
-                        <FlexibleText config={config.nameStyle}>
+                    <FlexibleLayout config={sectionConfig.headerLayout}>
+                        <FlexibleText config={{ ...sectionConfig.nameStyle, variant: "subtitle" }} styleConfig={styleConfig}>
                             {proj.name}
                         </FlexibleText>
-                        {proj.duration && config.showDuration && (
-                            <FlexibleText config={config.durationStyle}>
+                        {proj.duration && sectionConfig.showDuration && (
+                            <FlexibleText config={sectionConfig.durationStyle} styleConfig={styleConfig}>
                                 {proj.duration}
                             </FlexibleText>
                         )}
                     </FlexibleLayout>
 
                     {/* Technologies */}
-                    {proj.technologies && config.showTechnologies && (
-                        <FlexibleText config={config.techStyle}>
-                            {config.techPrefix || ""}{proj.technologies}
+                    {proj.technologies && sectionConfig.showTechnologies && (
+                        <FlexibleText config={sectionConfig.techStyle} styleConfig={styleConfig}>
+                            {sectionConfig.techPrefix || ""}{proj.technologies}
                         </FlexibleText>
                     )}
 
                     {/* Link */}
-                    {proj.link && config.showLink && (
+                    {proj.link && sectionConfig.showLink && (
                         <FlexibleText
                             as="a"
-                            config={{ ...config.linkStyle, href: proj.link, target: "_blank" }}
+                            config={{ ...sectionConfig.linkStyle, href: proj.link, target: "_blank" }}
+                            styleConfig={styleConfig}
                         >
                             {proj.link}
                         </FlexibleText>
                     )}
 
                     {/* Description */}
-                    {config.showDescription && proj.description && (
+                    {sectionConfig.showDescription && proj.description && (
                         Array.isArray(proj.description) ? (
-                            <FlexibleBulletList items={proj.description} styleConfig={config.bulletConfig} />
+                            <FlexibleBulletList items={proj.description} styleConfig={sectionConfig.bulletConfig} globalStyleConfig={styleConfig} />
                         ) : (
-                            <FlexibleText config={config.descriptionStyle || config.bodyStyle}>
+                            <FlexibleText config={sectionConfig.descriptionStyle || sectionConfig.bodyStyle} styleConfig={styleConfig}>
                                 {proj.description}
                             </FlexibleText>
                         )
@@ -841,34 +880,36 @@ export const FlexibleProjectsSection = ({ projects, styleConfig }) => {
 /**
  * EDUCATION SECTION - Enhanced with field order control
  */
-export const FlexibleEducationSection = ({ educationList, styleConfig }) => {
-    const config = styleConfig.education;
+export const FlexibleEducationSection = ({ educationList, styleConfig = {} }) => {
+    const sectionConfig = styleConfig.education || {};
 
     return (
-        <FlexibleContainer config={config.container}>
-            {config.showTitle && (
+        <FlexibleContainer config={sectionConfig.container} styleConfig={styleConfig}>
+            {sectionConfig.showTitle && (
                 <FlexibleSectionHeader
-                    title={config.titleText || "EDUCATION"}
-                    config={config.titleStyle}
+                    title={sectionConfig.titleText || "EDUCATION"}
+                    config={sectionConfig.titleStyle}
+                    styleConfig={styleConfig}
                 />
             )}
 
             {educationList && Array.isArray(educationList) && educationList.map((edu, idx) => (
                 <FlexibleContainer
                     key={idx}
-                    config={{ marginBottom: config.itemMarginBottom || "10px", ...config.itemStyle }}
+                    config={{ marginBottom: sectionConfig.itemMarginBottom || "10px", ...sectionConfig.itemStyle }}
+                    styleConfig={styleConfig}
                 >
                     {/* Custom Field Order (NEW FEATURE) */}
-                    {config.fieldOrder ? (
-                        config.fieldOrder.map((field, fieldIdx) => {
+                    {sectionConfig.fieldOrder ? (
+                        sectionConfig.fieldOrder.map((field, fieldIdx) => {
                             const value = edu[field];
-                            if (!value && !config.showEmptyFields) return null;
+                            if (!value && !sectionConfig.showEmptyFields) return null;
 
-                            const fieldConfig = config.fieldStyles?.[field] || {};
-                            const prefix = config.fieldPrefixes?.[field] || "";
+                            const fieldConfig = { ...sectionConfig.fieldStyles?.[field], variant: field === 'degree' ? 'subtitle' : undefined };
+                            const prefix = sectionConfig.fieldPrefixes?.[field] || "";
 
                             return (
-                                <FlexibleText key={fieldIdx} config={fieldConfig}>
+                                <FlexibleText key={fieldIdx} config={fieldConfig} styleConfig={styleConfig}>
                                     {prefix}{value}
                                 </FlexibleText>
                             );
@@ -876,33 +917,33 @@ export const FlexibleEducationSection = ({ educationList, styleConfig }) => {
                     ) : (
                         // Fallback to original layout (BACKWARD COMPATIBLE)
                         <>
-                            <FlexibleText config={config.degreeStyle}>
+                            <FlexibleText config={{ ...sectionConfig.degreeStyle, variant: "subtitle" }} styleConfig={styleConfig}>
                                 {edu.degree}
                             </FlexibleText>
 
-                            {edu.institution && config.showInstitution && (
-                                <FlexibleText config={config.institutionStyle}>
+                            {edu.institution && sectionConfig.showInstitution && (
+                                <FlexibleText config={sectionConfig.institutionStyle} styleConfig={styleConfig}>
                                     {edu.institution}
                                 </FlexibleText>
                             )}
 
-                            <FlexibleLayout config={config.detailsLayout}>
+                            <FlexibleLayout config={sectionConfig.detailsLayout}>
                                 {edu.year && (
-                                    <FlexibleText config={config.detailsStyle}>
+                                    <FlexibleText config={sectionConfig.detailsStyle} styleConfig={styleConfig}>
                                         {edu.year}
                                     </FlexibleText>
                                 )}
-                                {edu.gpa && config.showGpa && (
-                                    <FlexibleText config={config.detailsStyle}>
+                                {edu.gpa && sectionConfig.showGpa && (
+                                    <FlexibleText config={sectionConfig.detailsStyle} styleConfig={styleConfig}>
                                         {/* Smart prefix: Don't show "GPA: " if value is a percentage or already has a label */}
                                         {(edu.gpa.includes('%') || edu.gpa.toUpperCase().includes('CGPA') || edu.gpa.toUpperCase().includes('GPA'))
                                             ? ""
-                                            : (config.gpaPrefix || "GPA: ")
+                                            : (sectionConfig.gpaPrefix || "GPA: ")
                                         }{edu.gpa}
                                     </FlexibleText>
                                 )}
-                                {edu.location && config.showLocation && (
-                                    <FlexibleText config={config.detailsStyle}>
+                                {edu.location && sectionConfig.showLocation && (
+                                    <FlexibleText config={sectionConfig.detailsStyle} styleConfig={styleConfig}>
                                         {edu.location}
                                     </FlexibleText>
                                 )}
@@ -918,31 +959,32 @@ export const FlexibleEducationSection = ({ educationList, styleConfig }) => {
 /**
  * CERTIFICATIONS SECTION - Enhanced with display types
  */
-export const FlexibleCertificationsSection = ({ certifications, styleConfig }) => {
-    const config = styleConfig.certifications;
+export const FlexibleCertificationsSection = ({ certifications, styleConfig = {} }) => {
+    const sectionConfig = styleConfig.certifications || {};
 
     return (
-        <FlexibleContainer config={config.container}>
-            {config.showTitle && (
+        <FlexibleContainer config={sectionConfig.container} styleConfig={styleConfig}>
+            {sectionConfig.showTitle && (
                 <FlexibleSectionHeader
-                    title={config.titleText || "CERTIFICATIONS"}
-                    config={config.titleStyle}
+                    title={sectionConfig.titleText || "CERTIFICATIONS"}
+                    config={sectionConfig.titleStyle}
+                    styleConfig={styleConfig}
                 />
             )}
 
-            {config.displayType === "list" ? (
-                <FlexibleBulletList items={certifications} styleConfig={config.bulletConfig} />
-            ) : config.displayType === "grid" ? (
-                <FlexibleLayout config={config.gridLayout || { flexWrap: "wrap", gap: "8px" }}>
+            {sectionConfig.displayType === "list" ? (
+                <FlexibleBulletList items={certifications} styleConfig={sectionConfig.bulletConfig} globalStyleConfig={styleConfig} />
+            ) : sectionConfig.displayType === "grid" ? (
+                <FlexibleLayout config={sectionConfig.gridLayout || { flexWrap: "wrap", gap: "8px" }}>
                     {certifications.filter(cert => cert?.trim()).map((cert, idx) => (
-                        <FlexibleText key={idx} config={config.itemStyle}>
+                        <FlexibleText key={idx} config={sectionConfig.itemStyle} styleConfig={styleConfig}>
                             {cert}
                         </FlexibleText>
                     ))}
                 </FlexibleLayout>
             ) : (
                 certifications.filter(cert => cert?.trim()).map((cert, idx) => (
-                    <FlexibleText key={idx} config={config.itemStyle}>
+                    <FlexibleText key={idx} config={sectionConfig.itemStyle} styleConfig={styleConfig}>
                         {cert}
                     </FlexibleText>
                 ))
@@ -957,19 +999,19 @@ export const FlexibleCertificationsSection = ({ certifications, styleConfig }) =
 /**
  * CONTACT SECTION - Fully Flexible
  */
-export const FlexibleContactSection = ({ resumeDetails, styleConfig }) => {
-    const config = styleConfig.contact;
+export const FlexibleContactSection = ({ resumeDetails, styleConfig = {} }) => {
+    const sectionConfig = styleConfig.contact || {};
 
-    if (!config) return null;
+    if (!sectionConfig) return null;
 
     return (
-        <FlexibleContainer config={config.container}>
-            {config.showTitle && (
-                <FlexibleSectionHeader title="CONTACT" config={config.titleStyle} />
+        <FlexibleContainer config={sectionConfig.container} styleConfig={styleConfig}>
+            {sectionConfig.showTitle && (
+                <FlexibleSectionHeader title="CONTACT" config={sectionConfig.titleStyle} styleConfig={styleConfig} />
             )}
 
-            <FlexibleLayout config={config.contactLayout}>
-                {(config.contactOrder || []).map((contactType, idx) => {
+            <FlexibleLayout config={sectionConfig.contactLayout}>
+                {(sectionConfig.contactOrder || []).map((contactType, idx) => {
                     const value = resumeDetails.contact?.[contactType];
                     if (!value) return null;
 
@@ -977,19 +1019,19 @@ export const FlexibleContactSection = ({ resumeDetails, styleConfig }) => {
                         <div key={idx} style={{
                             display: 'flex',
                             alignItems: 'center',
-                            marginBottom: config.itemMarginBottom || '0'
+                            marginBottom: sectionConfig.itemMarginBottom || '0'
                         }}>
-                            {config.showContactIcons && contactIconMap[contactType] && (
+                            {sectionConfig.showContactIcons && contactIconMap[contactType] && (
                                 <span style={{
                                     marginRight: "6px",
-                                    color: config.contactItemStyle?.color || "#000",
+                                    color: sectionConfig.contactItemStyle?.color || "#000",
                                     display: "flex",
                                     alignItems: "center"
                                 }}>
                                     {React.createElement(contactIconMap[contactType], { size: 12 })}
                                 </span>
                             )}
-                            <FlexibleText config={config.contactItemStyle}>
+                            <FlexibleText config={sectionConfig.contactItemStyle} styleConfig={styleConfig}>
                                 {value}
                             </FlexibleText>
                         </div>
@@ -1003,32 +1045,34 @@ export const FlexibleContactSection = ({ resumeDetails, styleConfig }) => {
 /**
  * CUSTOM SECTION - Flexible template for dynamic sections
  */
-export const FlexibleCustomSection = ({ customSections, styleConfig }) => {
+export const FlexibleCustomSection = ({ customSections, styleConfig = {} }) => {
     // Use custom config if available, otherwise fallback to experience styles for consistency
-    const config = styleConfig?.custom || styleConfig?.experience || {};
+    const sectionConfig = styleConfig?.custom || styleConfig?.experience || {};
 
     if (!customSections || customSections.length === 0) return null;
 
     return (
         <>
             {customSections.map((section, idx) => (
-                <FlexibleContainer key={section.id || idx} config={config.container}>
+                <FlexibleContainer key={section.id || idx} config={sectionConfig.container} styleConfig={styleConfig}>
                     {section.title && (
                         <FlexibleSectionHeader
                             title={section.title}
-                            config={config.titleStyle}
+                            config={sectionConfig.titleStyle}
+                            styleConfig={styleConfig}
                         />
                     )}
 
                     {section.items && (
                         <FlexibleBulletList
                             items={section.items}
-                            styleConfig={config.bulletConfig || {
+                            globalStyleConfig={styleConfig}
+                            styleConfig={sectionConfig.bulletConfig || {
                                 // Fallback bullet config constructed from general config if specific bulletConfig missing
-                                containerStyle: config.listContainer,
-                                itemStyle: config.listItem,
-                                bulletStyle: config.bulletStyle,
-                                textStyle: config.itemStyle || config.valueStyle
+                                containerStyle: sectionConfig.listContainer,
+                                itemStyle: sectionConfig.listItem,
+                                bulletStyle: sectionConfig.bulletStyle,
+                                textStyle: sectionConfig.itemStyle || sectionConfig.valueStyle
                             }}
                         />
                     )}
