@@ -238,9 +238,227 @@
     color: #64748b;
 }
 
-.stats-details span {
-    background: #f1f5f9;
-    padding: 4px 10px;
-    border-radius: 4px;
+/* --- COMPLEX STRESS TEST --- */
+.stress-test-container {
+    padding: 30px;
+    background: #1e293b;
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+    color: white;
+    font-family: 'Courier New', Courier, monospace;
+    min-height: 200px;
+}
+
+.stress-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 20px;
+    border-radius: 12px;
+    position: relative;
+    z-index: 2;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+}
+
+.stress-title {
+    font-size: 24px;
+    font-weight: 800;
+    background: linear-gradient(to right, #fbbf24, #f87171);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.stress-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+}
+
+.stress-item {
+    background: linear-gradient(135deg, #3b82f6 0%, #2dd4bf 100%);
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: bold;
+    transform: rotate(5deg);
+    border: 2px dashed rgba(255, 255, 255, 0.5);
+    box-shadow: 5px 5px 0px rgba(0, 0, 0, 0.2);
+}
+
+.stress-item:nth-child(2) {
+    background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
+    transform: rotate(-10deg) scale(1.1);
+    z-index: 5;
+}
+
+.stress-item:nth-child(3) {
+    background: radial-gradient(circle, #facc15 0%, #f97316 100%);
+    transform: rotate(15deg);
+}
+
+.overlay-circle {
+    position: absolute;
+    top: -50px;
+    right: -50px;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(99, 102, 241, 0.5) 0%, rgba(0, 0, 0, 0) 70%);
+    border-radius: 50%;
+    z-index: 1;
+    pointer-events: none;
+}
+
+.floating-text {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.5);
+    transform: rotate(-45deg);
+}
+
+/* --- COMPLEX RESUME TEST --- */
+.complex-resume-container {
+    background: white;
     border: 1px solid #e2e8f0;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    color: #334155;
+    overflow: hidden;
+    /* Ensure rounded corners clip content */
+}
+
+.resume-header {
+    background: linear-gradient(to right, #1e293b, #334155);
+    color: white;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.resume-avatar {
+    width: 60px;
+    height: 60px;
+    background: #f59e0b;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 24px;
+    border: 3px solid white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.resume-title-block h1 {
+    margin: 0;
+    font-size: 24px;
+    letter-spacing: 1px;
+}
+
+.resume-title-block h2 {
+    margin: 5px 0 0 0;
+    font-size: 14px;
+    background: #f59e0b;
+    color: #1e293b;
+    padding: 2px 8px;
+    display: inline-block;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+.resume-body {
+    display: flex;
+    min-height: 300px;
+}
+
+.resume-sidebar {
+    width: 30%;
+    background: #f1f5f9;
+    padding: 20px;
+    border-right: 1px solid #e2e8f0;
+    font-size: 13px;
+}
+
+.resume-sidebar h4 {
+    color: #0f172a;
+    border-bottom: 2px solid #cbd5e1;
+    padding-bottom: 5px;
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+.resume-sidebar ul {
+    padding-left: 20px;
+    margin-bottom: 20px;
+    line-height: 1.6;
+}
+
+.resume-main {
+    flex: 1;
+    padding: 20px;
+}
+
+.experience-item {
+    margin-bottom: 20px;
+    position: relative;
+    padding-left: 15px;
+    border-left: 2px solid #e2e8f0;
+}
+
+.experience-item::before {
+    content: '';
+    position: absolute;
+    left: -6px;
+    top: 0;
+    width: 10px;
+    height: 10px;
+    background: #3b82f6;
+    border-radius: 50%;
+}
+
+.exp-date {
+    font-size: 11px;
+    color: #64748b;
+    margin-bottom: 2px;
+}
+
+.experience-item h3 {
+    margin: 0 0 5px 0;
+    color: #0f172a;
+    font-size: 16px;
+}
+
+.experience-item p {
+    margin: 0;
+    line-height: 1.5;
+    font-size: 14px;
+}
+
+.visual-skill-bar {
+    margin-top: 20px;
+}
+
+.visual-skill-bar span {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.skill-track {
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.skill-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #06b6d4);
+    border-radius: 4px;
 }

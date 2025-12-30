@@ -12,14 +12,18 @@ const Demo = () => {
     const [mode, setMode] = useState('performance');
 
     const styleWorkerRef = useRef(null);
-    const gradientWorkerRef = useRef(null);
+    const gradientWorkerRef = useRef(null); // WebGL uses this (original)
+    const canvasGradientWorkerRef = useRef(null); // Canvas uses this (new/fixed)
 
     useEffect(() => {
         styleWorkerRef.current = new Worker('/workers/styleWorker.js');
         gradientWorkerRef.current = new Worker('/workers/gradientWorker.js');
+        canvasGradientWorkerRef.current = new Worker('/workers/canvasGradientWorker.js');
+
         return () => {
             styleWorkerRef.current?.terminate();
             gradientWorkerRef.current?.terminate();
+            canvasGradientWorkerRef.current?.terminate();
         };
     }, []);
 
@@ -34,7 +38,7 @@ const Demo = () => {
             scale: 2,
             mode: mode,
             styleWorker: styleWorkerRef.current,
-            gradientWorker: gradientWorkerRef.current
+            gradientWorker: canvasGradientWorkerRef.current // Use the new worker
         });
         const total = performance.now() - start;
         setCanvasTime(total);
@@ -112,6 +116,52 @@ const Demo = () => {
                                         <div style={{ background: '#ddd', padding: '5px' }}>Flex Item 1</div>
                                         <div style={{ background: '#ccc', padding: '5px' }}>Flex Item 2</div>
                                         <div style={{ background: '#bbb', padding: '5px' }}>Flex Item 3</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* TEST CASE 4: COMPLEX RESUME LAYOUT */}
+                            <div className="test-category">
+                                <h3>Test 4: Complex Resume Layout</h3>
+                                <div className="complex-resume-container">
+                                    <div className="resume-header">
+                                        <div className="resume-avatar">JD</div>
+                                        <div className="resume-title-block">
+                                            <h1>John Doe</h1>
+                                            <h2>Senior Senior Developer</h2>
+                                        </div>
+                                    </div>
+                                    <div className="resume-body">
+                                        <div className="resume-sidebar">
+                                            <h4>Skills</h4>
+                                            <ul>
+                                                <li>JavaScript (ES6+)</li>
+                                                <li>React / Redux</li>
+                                                <li>WebGL / Canvas</li>
+                                                <li>Node.js</li>
+                                            </ul>
+                                            <h4>Contact</h4>
+                                            <p>john.doe@example.com</p>
+                                            <p>+1 234 567 890</p>
+                                        </div>
+                                        <div className="resume-main">
+                                            <div className="experience-item">
+                                                <div className="exp-date">2020 - Present</div>
+                                                <h3>Tech Corp Inc.</h3>
+                                                <p>Lead the development of a complex rendering engine using Canvas API. Optimized performance by 300%.</p>
+                                            </div>
+                                            <div className="experience-item">
+                                                <div className="exp-date">2018 - 2020</div>
+                                                <h3>Startup Studio</h3>
+                                                <p>Built scalable frontend architectures for high-traffic e-commerce platforms.</p>
+                                            </div>
+                                            <div className="visual-skill-bar">
+                                                <span>Performance Optimization</span>
+                                                <div className="skill-track">
+                                                    <div className="skill-fill" style={{ width: '90%' }}></div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

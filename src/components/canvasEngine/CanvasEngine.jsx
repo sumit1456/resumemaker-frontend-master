@@ -155,7 +155,7 @@ class GeometrySnapshot {
     styles.zIndex = computed.zIndex !== 'auto' ? parseInt(computed.zIndex) : 0;
     styles.display = computed.display;
 
-    if (this.currentMode === 'deep' && (computed.backgroundImage && computed.backgroundImage !== 'none')) {
+    if (computed.backgroundImage && computed.backgroundImage !== 'none') {
       if (this.gradientWorker && this.options.useWorkers) {
         this.gradientPromises.push(this.dispatchGradientTask(nodeData, computed.backgroundImage));
       } else {
@@ -290,8 +290,8 @@ class GeometrySnapshot {
       wordBreak: raw.wordBreak
     });
 
-    // Also handle gradient if present
-    if (raw.backgroundImage && raw.backgroundImage !== 'none') {
+    // Only parse locally if NOT handled by worker (worker sets styles.gradient directly)
+    if (!nodeData.styles.gradient && raw.backgroundImage && raw.backgroundImage !== 'none') {
       const gradient = this.parseGradient(raw.backgroundImage);
       if (gradient) nodeData.styles.gradient = gradient;
     }
@@ -1399,6 +1399,59 @@ class CanvasLayoutEngine {
 
     ctx.save();
 
+    // Handle transform (matrix from computed style)
+    if (styles.transform && styles.transform !== 'none') {
+      const matrixMatch = styles.transform.match(/matrix\(([^)]+)\)/);
+      if (matrixMatch) {
+        // CSS matrix: matrix(a, b, c, d, tx, ty)
+        const [a, b, c, d, tx, ty] = matrixMatch[1].split(',').map(v => parseFloat(v));
+
+        // Canvas transform: context.transform(a, b, c, d, e, f)
+        // Note: CSS transform origin is usually center, but here we might need adjustment.
+        // However, since we capture absolute positions (x,y) from getBoundingClientRect, 
+        // the transform might already be "baked in" to the rect for position, 
+        // BUT rotation needs to be applied locally.
+        // Actually, GeometrySnapshot removes transform from element to get untransformed rect, 
+        // then restores it. So 'x, y' are UNTRANSFORMED positions relative to root.
+        // We need to translate to center, rotate, translate back? 
+        // Standard CSS matrix applies to the element origin (50% 50% usually).
+
+        // Simplified approach: Apply matrix at the element's position
+        // We need to move origin to x,y, apply matrix, move back?
+        // No, CSS matrix includes translation (tx, ty). 
+        // But our X/Y are already derived relative to root.
+
+        // Let's rely on the raw styles.transform which is what we captured.
+        // For a robust implementation we ideally need transform-origin.
+        // For now, let's just apply it relative to the element's top-left or try to mimic standard flow.
+
+        // If we apply transform, we affect x/y. 
+        // Let's assume the matrix applies to local coordinate system at 0,0 
+        // but we are drawing at x,y.
+
+        // Safe bet for now: Translate to x,y, apply rotation components of matrix, Draw at 0,0.
+        // But matrix has translation too.
+
+        // Let's just try standard matrix application.
+        // The previous working code was:
+        // ctx.transform(a, b, c, d, tx, ty); 
+        // But that applies to the whole context.
+
+        // Correct way for isolated element:
+        // 1. Translate to center of element
+        // 2. Apply transform
+        // 3. Translate back
+
+        // Wait, the 'matrix' from computed style is the *accumulated* matrix if we aren't careful, 
+        // but we captured it from the specific element.
+
+        // Re-adding the previous simple logic:
+        ctx.translate(x + width / 2, y + height / 2);
+        ctx.transform(a, b, c, d, 0, 0); // Ignore tx/ty for now as we have absolute x/y
+        ctx.translate(-(x + width / 2), -(y + height / 2));
+      }
+    }
+
     // 0. GLOBAL OPACITY
     if (styles.opacity !== undefined) {
       ctx.globalAlpha = styles.opacity;
@@ -1464,7 +1517,13 @@ class CanvasLayoutEngine {
       }
 
       styles.gradient.stops.forEach(stop => {
-        gradient.addColorStop(stop.position, stop.color);
+        try {
+          if (stop.color && stop.color !== 'circle' && stop.color !== 'ellipse' && !stop.color.includes(' at ')) {
+            gradient.addColorStop(stop.position, stop.color);
+          }
+        } catch (e) {
+          console.warn('[CanvasLayoutEngine] Invalid gradient stop:', stop, e);
+        }
       });
 
       ctx.fillStyle = gradient;
