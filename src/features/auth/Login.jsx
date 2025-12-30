@@ -33,105 +33,91 @@ export default function Login({ setUserId }) {
     }
 
     setLoading(true);
+    const MAX_RETRIES = 3;
+    let attempt = 0;
 
-    try {
-      const response = await axios.post(`${API_BASE_URL}/login`, {
-        email,
-        password
-      }, { timeout: 30000 }); // 30s timeout
+    while (attempt < MAX_RETRIES) {
+      try {
+        const response = await axios.post(`${API_BASE_URL}/login`, {
+          email,
+          password
+        }, { timeout: 30000 }); // 30s timeout
 
-      console.log("User ID from response:", response.data.userId);
+        console.log("User ID from response:", response.data.userId);
+        window.showMessage("Success", response.data.message, "success", 1500);
+        setUserId(response.data.userId);
+        dispatch(logInUser(response.data.userId));
+        navigate("/");
+        return; // Success, exit function
 
-      // SUCCESS MESSAGE
-      window.showMessage("Success", response.data.message, "success", 1500);
+      } catch (error) {
+        console.error(`Login attempt ${attempt + 1} failed:`, error);
 
-      // SAVE USER ID
-      setUserId(response.data.userId);
-      dispatch(logInUser(response.data.userId));
+        const isRetryable = !error.response || (error.code === 'ECONNABORTED');
 
-      // REDIRECT
-      navigate("/");
+        if (isRetryable && attempt < MAX_RETRIES - 1) {
+          attempt++;
+          const delay = Math.pow(2, attempt - 1) * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
 
-    } catch (error) {
-
-      // OFFLINE
-      if (!navigator.onLine) {
-        window.showMessage(
-          "Login Failed",
-          "You are offline. Please check your internet connection.",
-          "error"
-        );
+        // Final failure handling
+        if (!navigator.onLine) {
+          window.showMessage("Login Failed", "You are offline. Please check your internet connection.", "error");
+        } else if (error.response) {
+          window.showMessage("Login Failed", error.response.data?.message || "Invalid credentials", "error", 1500);
+        } else if (error.code === 'ECONNABORTED' || error.request) {
+          window.showMessage("Login Failed", "Server is not up", "error");
+        } else {
+          window.showMessage("Error", "Something went wrong.", "error");
+        }
+        break;
       }
-
-      // SERVER RETURNED ERROR (403)
-      else if (error.response) {
-        window.showMessage(
-          "Login Failed",
-          error.response.data?.message || "Invalid credentials",
-          "error", 1500
-        );
-      }
-
-      // TIMEOUT OR NO RESPONSE FROM SERVER (backend unreachable)
-      else if (error.code === 'ECONNABORTED' || error.request) {
-        window.showMessage(
-          "Login Failed",
-          "Server is not up",
-          "error"
-        );
-      }
-
-      // ANY OTHER ERROR
-      else {
-        window.showMessage(
-          "Error",
-          "Something went wrong.",
-          "error"
-        );
-      }
-
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   };
-
-
 
   // Google login
   const handleGoogleLoginSuccess = async (credentialResponse) => {
-    try {
-      setLoading(true);
+    setLoading(true);
+    const MAX_RETRIES = 3;
+    let attempt = 0;
 
-      const response = await axios.post(`${API_BASE_URL}/google-login`, {
-        token: credentialResponse.credential
-      });
+    while (attempt < MAX_RETRIES) {
+      try {
+        const response = await axios.post(`${API_BASE_URL}/google-login`, {
+          token: credentialResponse.credential
+        }, { timeout: 30000 });
 
+        dispatch(logInUser(response.data));
+        window.showMessage("Success", 'Login Successful', "success", 1500);
+        navigate("/");
+        return;
 
-      console.log(`${response.data} this is the responce `);
+      } catch (error) {
+        console.error(`Google Login attempt ${attempt + 1} failed:`, error);
 
+        const isRetryable = !error.response || (error.code === 'ECONNABORTED');
 
+        if (isRetryable && attempt < MAX_RETRIES - 1) {
+          attempt++;
+          const delay = Math.pow(2, attempt - 1) * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
 
-      dispatch(logInUser(response.data));
-      window.showMessage("Success", 'Login Successfull', "success", 1500);
-      navigate("/");
-    } catch (error) {
-      let msg;
-
-      if (error.response) {
-        msg = error.response.data?.message || "Server error";
+        let msg = "Network Failure, Please check your connection";
+        if (error.response) {
+          msg = error.response.data?.message || "Server error";
+        } else if (error.code === 'ECONNABORTED' || error.request) {
+          msg = "Server is not up. Check your internet connection.";
+        }
+        window.showMessage('Login Failed', msg, 'error');
+        break;
       }
-      else if (error.request) {
-        msg = "Cannot connect to server. Check your internet connection.";
-      }
-      else {
-        msg = "Network Failure, Please check your connection";
-      }
-
-      window.showMessage('Login Failed', msg, 'error');
     }
-    finally {
-      setLoading(false);
-    }
+    setLoading(false);
   };
 
   const handleGoogleLoginError = () => {

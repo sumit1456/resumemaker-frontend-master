@@ -894,7 +894,11 @@ export const FlexibleEducationSection = ({ educationList, styleConfig }) => {
                                 )}
                                 {edu.gpa && config.showGpa && (
                                     <FlexibleText config={config.detailsStyle}>
-                                        {config.gpaPrefix || "GPA: "}{edu.gpa}
+                                        {/* Smart prefix: Don't show "GPA: " if value is a percentage or already has a label */}
+                                        {(edu.gpa.includes('%') || edu.gpa.toUpperCase().includes('CGPA') || edu.gpa.toUpperCase().includes('GPA'))
+                                            ? ""
+                                            : (config.gpaPrefix || "GPA: ")
+                                        }{edu.gpa}
                                     </FlexibleText>
                                 )}
                                 {edu.location && config.showLocation && (

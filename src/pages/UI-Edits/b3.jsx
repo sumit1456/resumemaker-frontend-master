@@ -246,7 +246,6 @@ const UIEditor = () => {
   // ✨ UI Animation State
   const [isAnimationsEnabled, setIsAnimationsEnabled] = useState(true);
   const [isPhysicsEnabled, setIsPhysicsEnabled] = useState(true); // 🚀 Added
-  const [isPhysicsAnimating, setIsPhysicsAnimating] = useState(false); // 🚀 Added
 
   const headerContainerRef = useRef(null);
   const skillsContainerRef = useRef(null); // New ref for skills container
@@ -367,108 +366,120 @@ const UIEditor = () => {
     setSaveError("");
     setSuccessMessage("");
 
-    try {
-      // 1. Merge layout state into styleConfig
-      const updatedConfig = {
-        ...styleConfig,
-        positions: sectionPositions,
-        lines: lines,
-        shapes: backgroundShapes,
-        // You might want to store widths/heights if not already in styleConfig
-      };
+    const MAX_RETRIES = 3;
+    let attempt = 0;
+    const timeout = 30000;
 
-
-      // 2. Build Payload
-      const transformedSkills = (resumeDetails.skills || []).map(skill =>
-        typeof skill === 'string' ? { name: skill.trim() } : skill
-      ).filter(skill => skill.name !== "");
-
-      const transformedCertifications = (resumeDetails.certifications || []).map(cert =>
-        typeof cert === 'string' ? { name: cert.trim() } : cert
-      ).filter(cert => cert.name !== "");
-
-      const transformedCustomSections = (resumeDetails.customSections || []).map(section => ({
-        title: section.title,
-        sectionData: {
-          items: section.items
-        }
-      }));
-
-      const payload = {
-        title: resumeDetails.resumeDetails?.title || "My Resume",
-        templateId: String(currentTemplateName || "custom"),
-        userId: userId,
-        details: {
-          name: resumeDetails.resumeDetails?.name,
-          title: resumeDetails.resumeDetails?.title,
-          summary: resumeDetails.resumeDetails?.summary,
-        },
-        contact: resumeDetails.resumeDetails?.contact,
-        skills: transformedSkills,
-        experiences: resumeDetails.experiences,
-        projects: resumeDetails.projects,
-        educationList: resumeDetails.educationList,
-        certifications: transformedCertifications,
-        customSections: transformedCustomSections,
-        styleConfig: updatedConfig,
-        sectionTitles: resumeDetails.sectionTitles || {}
-      };
-
-      const targetResumeId = resumeId || currentResumeId;
-      const endpoint = targetResumeId
-        ? `${API_BASE_URL}/update/${targetResumeId}`
-        : `${API_BASE_URL}/saveall`;
-
-      const method = targetResumeId ? "PUT" : "POST";
-
-      console.log("the endpoint was ========================");
-
-      console.log(endpoint);
-      console.log(payload);
-
-
-      const res = await fetch(endpoint, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => null);
-        throw new Error(errorData?.message || `Save failed: ${res.status}`);
-      }
-
-      const text = await res.text();
-      let data = {};
+    while (attempt < MAX_RETRIES) {
+      let controller;
       try {
-        data = JSON.parse(text);
-      } catch (e) {
-        console.log("Server returned non-JSON response:", text);
-        data = { message: text };
+        const updatedConfig = {
+          ...styleConfig,
+          positions: sectionPositions,
+          lines: lines,
+          shapes: backgroundShapes,
+        };
+
+        const transformedSkills = (resumeDetails.skills || []).map(skill =>
+          typeof skill === 'string' ? { name: skill.trim() } : skill
+        ).filter(skill => skill.name !== "");
+
+        const transformedCertifications = (resumeDetails.certifications || []).map(cert =>
+          typeof cert === 'string' ? { name: cert.trim() } : cert
+        ).filter(cert => cert.name !== "");
+
+        const transformedCustomSections = (resumeDetails.customSections || []).map(section => ({
+          title: section.title,
+          sectionData: {
+            items: section.items
+          }
+        }));
+
+        const payload = {
+          title: resumeDetails.resumeDetails?.title || "My Resume",
+          templateId: String(currentTemplateName || "custom"),
+          userId: userId,
+          details: {
+            name: resumeDetails.resumeDetails?.name,
+            title: resumeDetails.resumeDetails?.title,
+            summary: resumeDetails.resumeDetails?.summary,
+          },
+          contact: resumeDetails.resumeDetails?.contact,
+          skills: transformedSkills,
+          experiences: resumeDetails.experiences,
+          projects: resumeDetails.projects,
+          educationList: resumeDetails.educationList,
+          certifications: transformedCertifications,
+          customSections: transformedCustomSections,
+          styleConfig: updatedConfig,
+          sectionTitles: resumeDetails.sectionTitles || {}
+        };
+
+        const targetResumeId = resumeId || currentResumeId;
+        const endpoint = targetResumeId
+          ? `${API_BASE_URL}/update/${targetResumeId}`
+          : `${API_BASE_URL}/saveall`;
+
+        const method = targetResumeId ? "PUT" : "POST";
+
+        controller = new AbortController();
+        const tid = setTimeout(() => controller.abort(), timeout);
+
+        const res = await fetch(endpoint, {
+          method,
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal
+        });
+
+        clearTimeout(tid);
+
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => null);
+          throw new Error(errorData?.message || `Save failed: ${res.status}`);
+        }
+
+        const text = await res.text();
+        let data = {};
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          data = { message: text };
+        }
+
+        if (!targetResumeId && data.resumeId) {
+          dispatch(setCurrentResumeId(data.resumeId));
+        }
+        dispatch(setSavedStyleConfig(updatedConfig));
+        dispatch(setCurrentTemplate(currentTemplateName));
+
+        const msg = "Resume configuration saved successfully!";
+        setSuccessMessage(msg);
+        setIsLayoutDirty(false);
+        if (window.showMessage) window.showMessage('Success', msg, 'success', 1500);
+        break; // Success!
+
+      } catch (err) {
+        console.error(`Save attempt ${attempt + 1} failed:`, err);
+        const isRetryable = err.name === 'AbortError' || err.message.includes('Failed to fetch');
+
+        if (isRetryable && attempt < MAX_RETRIES - 1) {
+          attempt++;
+          const delay = Math.pow(2, attempt - 1) * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+
+        const finalMsg = err.name === 'AbortError' ? "Server is not up" : err.message;
+        setSaveError(finalMsg);
+        if (window.showMessage) window.showMessage('Error', finalMsg, 'error', 1500);
+        break;
       }
-
-      // Update Redux
-      if (!targetResumeId && data.resumeId) {
-        dispatch(setCurrentResumeId(data.resumeId));
-      }
-      dispatch(setSavedStyleConfig(updatedConfig));
-      dispatch(setCurrentTemplate(currentTemplateName));
-
-      const msg = "Resume configuration saved successfully!";
-      setSuccessMessage(msg);
-      setIsLayoutDirty(false); // 🆕 Reset dirty flag after save
-      if (window.showMessage) window.showMessage('Success', msg, 'success', 1500);
-
-    } catch (err) {
-      console.error("Save error:", err);
-      setSaveError(err.message);
-      if (window.showMessage) window.showMessage('Error', err.message, 'error', 1500);
-    } finally {
-      setSaving(false);
     }
+    setSaving(false);
   };
 
   // Mobile responsiveness state
@@ -533,6 +544,19 @@ const UIEditor = () => {
     }
 
     // 🚀 Start animating IMMEDIATELY to block DOM re-capture
+    if (!isAnimationsEnabled) {
+      setStyleConfig(prev => ({
+        ...prev,
+        header: {
+          ...prev.header,
+          ...newLayoutConfig,
+          nameStyle: { ...prev.header?.nameStyle, ...newLayoutConfig.nameStyle },
+          titleStyle: { ...prev.header?.titleStyle, ...newLayoutConfig.titleStyle }
+        }
+      }));
+      return;
+    }
+
     setHeaderAnimating(true);
 
     // 1. Capture current position
@@ -572,7 +596,7 @@ const UIEditor = () => {
 
   // 🎬 GPU Skills Layout Animation Handler
   const animateSkillsLayoutChange = async (newLayoutConfig) => {
-    if (!skillsContainerRef.current) {
+    if (!skillsContainerRef.current || !isAnimationsEnabled) {
       setStyleConfig(prev => ({
         ...prev,
         skills: { ...prev.skills, ...newLayoutConfig }
@@ -599,24 +623,6 @@ const UIEditor = () => {
     setTimeout(() => {
       setSkillsAnimating(false);
     }, 600);
-  };
-
-  // 🚀 Physics Animation Handler
-  const handlePhysicsBlast = () => {
-    if (isPhysicsAnimating) return;
-    setIsPhysicsAnimating(true);
-
-    const sectionHeightsMap = {};
-    Object.keys(sectionPositions).forEach(id => {
-      sectionHeightsMap[id] = sectionHeights[id] || (sectionSnapshots[id]?.height) || 120;
-    });
-
-    createPhysicsAnimation(
-      sectionPositions,
-      sectionHeightsMap,
-      setSectionPositions,
-      setIsPhysicsAnimating
-    );
   };
 
 
@@ -1843,6 +1849,29 @@ const UIEditor = () => {
 
       {/* LEFT PANEL - Section Controls */}
       <div className="left-panel">
+        <div className="control-group" style={{ marginBottom: '15px' }}>
+          <button
+            onClick={() => {
+              const newState = !isAnimationsEnabled;
+              setIsAnimationsEnabled(newState);
+              setIsPhysicsEnabled(newState);
+            }}
+            className={`btn-primary full-width ${isAnimationsEnabled ? 'active' : ''}`}
+            style={{
+              background: isAnimationsEnabled ? '#fef3c7' : '#f3f4f6',
+              color: isAnimationsEnabled ? '#92400e' : '#6b7280',
+              borderColor: isAnimationsEnabled ? '#fbbf24' : '#e5e7eb',
+              fontWeight: '700',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
+            }}
+          >
+            {isAnimationsEnabled ? '✨ EFFECTS: ON' : '✨ EFFECTS: OFF'}
+          </button>
+        </div>
+
         {!isMobile && <h3 className="panel-title">TEMPLATE SELECT</h3>}
 
         {TEMPLATES && Object.keys(TEMPLATES).length > 0 && (
@@ -2315,7 +2344,7 @@ const UIEditor = () => {
                 sections={page1Elements.sections}
                 snapshot={sectionSnapshots}
                 physicsEnabled={isPhysicsEnabled}
-                physicsManager={physicsManager.current}
+                physicsManagerRef={physicsManager}
                 onDragStart={(type, id) => {
                   if (type === 'section') handleSectionDragStart(id);
                 }}
@@ -2367,7 +2396,7 @@ const UIEditor = () => {
                 sections={page2Elements.sections}
                 snapshot={sectionSnapshots}
                 physicsEnabled={isPhysicsEnabled}
-                physicsManager={physicsManager.current}
+                physicsManagerRef={physicsManager}
                 onDragStart={(type, id) => {
                   if (type === 'section') handleSectionDragStart(id);
                 }}
@@ -2425,30 +2454,6 @@ const UIEditor = () => {
           <button onClick={() => setZoom(Math.min(2, zoom + 0.1))} className="btn-zoom">+</button>
           <button onClick={() => setZoom(1)} className="btn-zoom-reset">100%</button>
           <button onClick={() => setZoom(0.7)} className="btn-zoom-reset">FIT</button>
-
-          {/* 🚀 Physics Controls */}
-          <button
-            onClick={() => setIsPhysicsEnabled(!isPhysicsEnabled)}
-            className={`btn-zoom-reset ${isPhysicsEnabled ? 'active' : ''}`}
-            style={{ marginLeft: '10px', background: isPhysicsEnabled ? '#fef3c7' : '' }}
-            title="Toggle interactive pushing"
-          >
-            {isPhysicsEnabled ? '🧲 PHYSICS ON' : '🧲 PHYSICS OFF'}
-          </button>
-
-          <button
-            onClick={handlePhysicsBlast}
-            disabled={isPhysicsAnimating}
-            className="btn-zoom-reset"
-            style={{
-              marginLeft: '5px',
-              background: '#fef3c7',
-              border: '1px solid #fbbf24',
-              animation: isPhysicsAnimating ? 'pulse 1s infinite' : ''
-            }}
-          >
-            {isPhysicsAnimating ? '✨ BLASTING...' : '✨ PHYSICS BLAST'}
-          </button>
 
           <button
             onClick={() => setShowPage2(!showPage2)}

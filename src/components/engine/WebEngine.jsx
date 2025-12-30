@@ -2520,7 +2520,7 @@ const WebGLStage = forwardRef(({
     resolution = 2.5,
     background = 0xffffff,
     physicsEnabled = false,
-    physicsManager = null, // 🚀 Added
+    physicsManagerRef = null, // 🚀 Changed to Ref
     yOffset = 0,
     onHeaderContainerReady = null,
     onSkillsContainerReady = null,
@@ -2535,6 +2535,11 @@ const WebGLStage = forwardRef(({
     const sharedRenderer = useRef(null);
     const [initialized, setInitialized] = useState(false);
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
+    const physicsEnabledRef = useRef(physicsEnabled); // 🚀 Added to fix toggle closure
+    useEffect(() => {
+        physicsEnabledRef.current = physicsEnabled;
+    }, [physicsEnabled]);
 
     const dragSession = useRef({
         active: false,
@@ -2653,27 +2658,22 @@ const WebGLStage = forwardRef(({
                 const targetX = session.startX + deltaX;
                 const targetY = session.startY + deltaY;
 
-                if (physicsEnabled && session.type === 'section' && physicsManager) {
-                    // 🚀 Real-time Physics Pushing
-                    // Convert local stage Y to global layout Y for the manager
-                    physicsManager.updateDragging(session.id, targetX, targetY + yOffset);
+                if (physicsEnabledRef.current && session.type === 'section' && physicsManagerRef?.current) {
+                    // 🚀 Real-time Physics Pushing (Matter.js)
+                    const manager = physicsManagerRef.current;
+                    manager.updateDragging(session.id, targetX, targetY + yOffset);
 
-                    const positions = physicsManager.getPositions();
+                    const positions = manager.getPositions();
 
-                    // Update all sections in this stage visually
                     layers.current.sections.children.forEach(c => {
                         if (c._id && positions[c._id]) {
                             c.x = positions[c._id].x;
-                            c.y = positions[c._id].y - yOffset; // Convert back to local
+                            c.y = positions[c._id].y - yOffset;
                         }
                     });
                 } else {
                     session.target.x = targetX;
                     session.target.y = targetY;
-
-                    if (physicsEnabled && session.type === 'section') {
-                        handlePhysics(session.target);
-                    }
                 }
             });
 
@@ -2690,7 +2690,6 @@ const WebGLStage = forwardRef(({
                     if (session.type === 'section' && layers.current.sections) {
                         layers.current.sections.children.forEach(c => {
                             if (c._id) allPositions[c._id] = { x: Math.round(c.x), y: Math.round(c.y) };
-                            c.tint = 0xFFFFFF; // Clear physics tints
                         });
                     }
 
@@ -2715,35 +2714,7 @@ const WebGLStage = forwardRef(({
         };
 
         const handlePhysics = (dragged) => {
-            const sectionsLayer = layers.current.sections;
-            if (!sectionsLayer) return;
-
-            const b1 = dragged.getBounds();
-            sectionsLayer.children.forEach(other => {
-                if (other === dragged) return;
-                const b2 = other.getBounds();
-
-                const isOverlapping = (
-                    b1.x < b2.x + b2.width &&
-                    b1.x + b1.width > b2.x &&
-                    b1.y < b2.y + b2.height &&
-                    b1.y + b1.height > b2.y
-                );
-
-                if (isOverlapping) {
-                    other.tint = 0xFF9999;
-                    const dx = (b2.x + b2.width / 2) - (b1.x + b1.width / 2);
-                    const dy = (b2.y + b2.height / 2) - (b1.y + b1.height / 2);
-
-                    if (Math.abs(dy) > Math.abs(dx)) {
-                        other.y += dy > 0 ? 5 : -5;
-                    } else {
-                        other.x += dx > 0 ? 5 : -5;
-                    }
-                } else {
-                    other.tint = 0xFFFFFF;
-                }
-            });
+            // REMOVED LEGACY PHYSICS (Now fully replaced by PhysicsPushingManager + Matter.js)
         };
 
         initPixi();

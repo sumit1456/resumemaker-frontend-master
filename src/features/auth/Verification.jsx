@@ -18,7 +18,7 @@ export default function EmailVerification() {
     const verifyEmail = async () => {
       // Extract token and email from URL query parameters
       console.log("Starting the verification");
-      
+
       const token = searchParams.get("token");
       console.log(token);
 
@@ -28,24 +28,46 @@ export default function EmailVerification() {
         return;
       }
 
-      try {
-        const response = await axios.get(`${API_BASE_URL}/verify`, {
-          params: { token }
-        });
+      const MAX_RETRIES = 3;
+      let attempt = 0;
 
-        setStatus("success");
-        setMessage(response.data.message || "Email verified successfully!");
-        
-        // Redirect to login after 3 secondss
-        setTimeout(() => {
-          navigate("/login");
-        }, 3000);
-      } catch (error) {
-        setStatus("error");
-        if (error.response) {
-          setMessage(error.response.data.message || "Verification failed. Please try again.");
-        } else {
-          setMessage("Network error. Please check your connection.");
+      while (attempt < MAX_RETRIES) {
+        try {
+          const response = await axios.get(`${API_BASE_URL}/verify`, {
+            params: { token },
+            timeout: 30000
+          });
+
+          setStatus("success");
+          setMessage(response.data.message || "Email verified successfully!");
+
+          // Redirect to login after 3 seconds
+          setTimeout(() => {
+            navigate("/login");
+          }, 3000);
+          return;
+
+        } catch (error) {
+          console.error(`Verification attempt ${attempt + 1} failed:`, error);
+
+          const isRetryable = !error.response || (error.code === 'ECONNABORTED');
+
+          if (isRetryable && attempt < MAX_RETRIES - 1) {
+            attempt++;
+            const delay = Math.pow(2, attempt - 1) * 1000;
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          }
+
+          setStatus("error");
+          if (error.response) {
+            setMessage(error.response.data.message || "Verification failed. Please try again.");
+          } else if (error.code === 'ECONNABORTED' || error.request) {
+            setMessage("Server is not up. Please check your connection.");
+          } else {
+            setMessage("Network error. Please check your connection.");
+          }
+          break;
         }
       }
     };

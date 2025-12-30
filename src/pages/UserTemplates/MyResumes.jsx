@@ -25,63 +25,107 @@ const MyResumes = ({ userId }) => {
 
   const fetchResumes = async () => {
 
-    try {
+    setLoading(true);
+    setError(null);
 
-      if (!id || userId) {
-        window.showMessage('Enable to Fetch resumes', 'Please login first', 'general', 2000);
-        return;
+    const MAX_RETRIES = 3;
+    let attempt = 0;
+    const timeout = 30000;
+
+    while (attempt < MAX_RETRIES) {
+      let controller;
+      try {
+        if (!id || userId) {
+          window.showMessage('Enable to Fetch resumes', 'Please login first', 'general', 2000);
+          setLoading(false);
+          return;
+        }
+
+        controller = new AbortController();
+        const tid = setTimeout(() => controller.abort(), timeout);
+
+        const response = await fetch(`${API_BASE_URL}/my-resumes/${id}`, {
+          signal: controller.signal
+        });
+
+        clearTimeout(tid);
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch resumes');
+        }
+
+        const data = await response.json();
+        setResumes(data);
+        setLoading(false);
+        return; // Success!
+
+      } catch (err) {
+        console.error(`Fetch resumes attempt ${attempt + 1} failed:`, err);
+
+        const isRetryable = err.name === 'AbortError' || err.message.includes('Failed to fetch');
+
+        if (isRetryable && attempt < MAX_RETRIES - 1) {
+          attempt++;
+          const delay = Math.pow(2, attempt - 1) * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+
+        setError(err.name === 'AbortError' ? "Server is not up" : err.message);
+        break;
       }
-      setLoading(true);
-      // const cleanId = String(id).trim();
-      const response = await fetch(`${API_BASE_URL}/my-resumes/${id}`);
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch resumes');
-      }
-
-
-      const data = await response.json();
-      console.log("This is data recieved from backend");
-
-      console.log(data);
-
-
-      setResumes(data);
-    } catch (err) {
-      setError(err.message);
-      console.error('Error fetching resumes:', err);
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   };
 
   const handleDelete = async (resumeId) => {
-    try {
-      setDeleting(resumeId);
-      const response = await fetch(`${API_BASE_URL}/my-resumes/delete-resume/${resumeId}`, {
-        method: 'DELETE',
-      });
-      console.log(response.status);
+    setDeleting(resumeId);
 
+    const MAX_RETRIES = 3;
+    let attempt = 0;
+    const timeout = 30000;
 
-      if (!response.ok || response.status !== 200) {
-        const text = await response.text(); // get backend response
-        throw new Error(`Failed to delete resume. Status: ${response.status}, Response: ${text}`);
+    while (attempt < MAX_RETRIES) {
+      let controller;
+      try {
+        controller = new AbortController();
+        const tid = setTimeout(() => controller.abort(), timeout);
+
+        const response = await fetch(`${API_BASE_URL}/my-resumes/delete-resume/${resumeId}`, {
+          method: 'DELETE',
+          signal: controller.signal
+        });
+
+        clearTimeout(tid);
+
+        if (!response.ok || response.status !== 200) {
+          const text = await response.text();
+          throw new Error(`Failed to delete resume. Status: ${response.status}`);
+        }
+
+        setResumes(resumes.filter(resume => resume.id !== resumeId));
+        setDeleteConfirm(null);
+        window.showMessage('Success', 'Resume deleted successfully', 'success', 2000);
+        break;
+
+      } catch (err) {
+        console.error(`Delete resume attempt ${attempt + 1} failed:`, err);
+
+        const isRetryable = err.name === 'AbortError' || err.message.includes('Failed to fetch');
+
+        if (isRetryable && attempt < MAX_RETRIES - 1) {
+          attempt++;
+          const delay = Math.pow(2, attempt - 1) * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+
+        const msg = err.name === 'AbortError' ? "Server is not up" : "Failed to delete resume. Please try again.";
+        window.showMessage('Error', msg, 'error', 2000);
+        break;
       }
-
-      // Remove the deleted resume from state
-      setResumes(resumes.filter(resume => resume.id !== resumeId));
-      setDeleteConfirm(null);
-    } catch (err) {
-      console.error('Error deleting resume:', err);
-      if (window.showMessage) {
-        window.showMessage('Error', 'Failed to delete resume. Please try again.', 'error', 2000);
-      } else {
-        alert('Failed to delete resume. Please try again.');
-      }
-    } finally {
-      setDeleting(null);
     }
+    setDeleting(null);
   };
 
   const getTemplateName = (templateId) => {

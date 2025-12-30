@@ -41,6 +41,7 @@ import {
     TEMPLATE5_CONFIG,
     NEW_ATS_CONFIG,
 } from "../UI-Edits/TemplateConfigs.js";
+import { defaultResumeData } from "../UI-Edits/Utils.js";
 
 // ==================== TEMPLATE MAPPINGS ====================
 const TEMPLATES = {
@@ -700,101 +701,20 @@ export default function ResumeEditor({ resume: propsResume }) {
 
 
 
-    const [resumeDetails, setResumeDetails] = useState({
-        name: "SUMIT HATEKAR",
-        title: "Full Stack Developer",
-        contact: {
-            phone: "+91 9876543210",
-            email: "sumithatekar@gmail.com",
-            linkedin: "linkedin.com/in/sumithatekar",
-            github: "github.com/sumithatekar",
-            location: "Pune, India",
-        },
-        summary: "Dedicated Java Developer with expertise in Java, Spring Boot, Hibernate/JPA, and RESTful APIs, specializing in building scalable backend systems. Skilled in database design, SQL optimization, and microservices architecture, with strong understanding of OOP and design patterns. Proficient in developing secure, high-performance enterprise applications and experienced in Agile/Scrum environments. Eager to contribute backend expertise while continuously growing as a Java professional.",
-    });
+    const [resumeDetails, setResumeDetails] = useState(defaultResumeData.resumeDetails);
 
-    const [skills, setSkills] = useState([
-        "Programming Languages - Java, JavaScript (ES6+), SQL",
-        "Databases - PostgreSQL, Oracle",
-        "Frameworks & Libraries - React.js, Spring Boot, Hibernate, Express.js (basic)",
-        "Tools & Platforms - Git, GitHub, Postman, Swagger, Maven, Eclipse/IntelliJ",
-        "Cloud & Deployment - AWS (EC2, S3, RDS), Docker (basic)",
-        "Soft Skills - Problem Solving, Communication, Agile Teamwork"
-    ]);
+    const [skills, setSkills] = useState(defaultResumeData.skills);
 
 
-    const [experiences, setExperiences] = useState([
-        {
-            position: "Software Engineer",
-            company: "Tech Solutions Ltd.",
-            location: "Pune, India",
-            duration: "Jan 2022 - Present",
-            achievements: [
-                "Developed client dashboard using React",
-                "Implemented REST APIs in Node.js"
-            ],
-        },
-    ]);
+    const [experiences, setExperiences] = useState(defaultResumeData.experiences);
 
-    const [projects, setProjects] = useState([
-        {
-            name: "Resume Maker Pro",
-            duration: "September 2023 - ongoing",
-            technologies: "React, Java, Spring Boot, Spring Security, Docker",
-            description: [
-                "Developed the backend using Java Spring Boot with Hibernate/JPA for efficient data storage and retrieval.",
-                "Built RESTful APIs to manage resume sections such as personal info, skills, certifications, and experience.",
-                "Implemented React.js frontend for real-time editing and live preview of resume templates.",
-                "Integrated resume download/export functionality (PDF/Docx) with formatted layouts.",
-                "Ensured scalable, modular architecture with clean code and reusable components."
-            ],
-            link: "https://janedoe.dev",
-        },
-        {
-            name: "Find Issue Web Application",
-            duration: "June 2023 - August 2023",
-            technologies: "Java, Spring Boot, Thymeleaf, MySQL",
-            description: [
-                "Built a web application to log, track, and manage software issues.",
-                "Implemented Spring Boot backend with RESTful APIs for CRUD operations on issues.",
-                "Designed MySQL database schema for efficient issue storage and retrieval.",
-                "Created user-friendly UI using Thymeleaf for issue submission and tracking.",
-                "Added role-based access control to allow admin and user-specific views."
-            ],
-            link: "https://github.com/sumithatekar/find-issue-app",
-        }
-    ]);
+    const [projects, setProjects] = useState(defaultResumeData.projects);
 
-    const [educationList, setEducationList] = useState([
-        {
-            degree: "Master of Science in Computer Applications",
-            institution: "Savitribai Phule University",
-            location: "Pune, India",
-            year: "2025",
-            gpa: "Currently pursuing",
-        },
-        {
-            degree: "BSc Chemistry",
-            institution: "Shivaji University",
-            location: "Koregaon Satara, India",
-            year: "2021",
-            gpa: "7.52",
-        },
-    ]);
+    const [educationList, setEducationList] = useState(defaultResumeData.educationList);
 
-    const [certifications, setCertifications] = useState([
-        "Java Full Stack Development - QSpiders Wakad 2024",
-        "Scrum Master Certified",
-    ]);
+    const [certifications, setCertifications] = useState(defaultResumeData.certifications);
 
-    const [sectionTitles, setSectionTitles] = useState({
-        summary: "Summary",
-        skills: "Skills",
-        experience: "Experience",
-        projects: "Projects",
-        education: "Education",
-        certifications: "Certifications"
-    });
+    const [sectionTitles, setSectionTitles] = useState(defaultResumeData.sectionTitles);
 
 
 
@@ -954,262 +874,287 @@ export default function ResumeEditor({ resume: propsResume }) {
             setIsLoadingResume(true);
             setFetchError("");
 
-            try {
-                // Always use main API_BASE_URL
-                const response = await fetch(`${API_BASE_URL}/my-resumes/getresume/${resumeId}`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                    },
-                });
+            const MAX_RETRIES = 3;
+            let attempt = 0;
+            const timeout = 30000;
 
-                if (response.status === 404) {
-                    setFetchError("Resume not found. It may have been deleted.");
-                    setIsLoadingResume(false);
-                    return;
-                }
+            while (attempt < MAX_RETRIES) {
+                let controller;
 
-                if (!response.ok) {
-                    throw new Error(`Server error: ${response.status}`);
-                }
+                try {
+                    controller = new AbortController();
+                    const tid = setTimeout(() => controller.abort(), timeout);
 
-                const data = await response.json();
-                console.log("Fetched resume data:====================");
-                console.log(data);
-                console.log("=======================================");
-
-
-
-
-
-                setResumeTitle(data.title || "");
-
-                let config = data.styleConfig || data.details?.styleConfig || {};
-                if (typeof config === 'string') {
-                    try {
-                        config = JSON.parse(config);
-                    } catch (e) {
-                        console.error("Error parsing styleConfig", e);
-                        config = {};
-                    }
-                }
-
-                // If style config is available, switch to Custom Template automatically
-                console.log("DEBUG: Parsed Config:", config);
-                console.log("DEBUG: Config Keys:", config ? Object.keys(config) : "null");
-
-                // FIX_START
-
-
-
-                // 1️⃣ Normalize Template ID
-                const tId = data.templateId ? String(data.templateId) : "1";
-
-                // 2️⃣ Resolve Base Configuration
-                // Try to find if the ID is a direct config key (like 'ats-optimized') or map it
-                // 2️⃣ Define Mappings
-                const CONFIG_ID_TO_KEY = {
-                    "ats-optimized": "ats",
-                    "modern-ats-two-column": "modern",
-                    "two-column-professional": "twoColumn",
-                    "ats-edgy": "newAts",
-                    "tech-innovator": "template5"
-                };
-
-                console.log("DEBUG: Loading Template ID:", tId);
-                setSelectedTemplate(tId);
-
-                // 3️⃣ Load Base Defaults
-                // 3️⃣ Load Base Defaults (Sync with b3.jsx logic)
-                const TEMPLATE_ID_MAP = {
-                    1: 'ats',           // Classic Template -> ATS
-                    2: 'modern',        // Modern Template
-                    3: 'ats',           // ATS-Friendly Template
-                    4: 'twoColumn',     // Executive Elite -> Two Column
-                    5: 'template5',     // Tech Innovator
-                    6: 'newAts',        // Academic Scholar -> New ATS
-                    7: 'modern',        // Creative Bold -> Modern
-                    10: 'ats',          // Template Coutom ats
-                    11: 'modern'        // Template Coutom modern
-                };
-
-                const TEMPLATES_MAP = {
-                    ats: ATS_TEMPLATE_CONFIG,
-                    modern: MODERN_TEMPLATE_CONFIG,
-                    twoColumn: TWO_COLUMN_TEMPLATE_CONFIG,
-                    template5: TEMPLATE5_CONFIG, // Ensure this import exists
-                    newAts: NEW_ATS_CONFIG      // Ensure this import exists
-                };
-
-                // Resolve key from ID (handle numeric vs string)
-                let resolvedKey = 'ats'; // Default
-                if (TEMPLATE_ID_MAP[tId]) {
-                    resolvedKey = TEMPLATE_ID_MAP[tId];
-                } else if (TEMPLATES_MAP[tId]) {
-                    resolvedKey = tId; // It was already a key like 'ats'
-                } else if (CONFIG_ID_TO_KEY[tId]) {
-                    resolvedKey = CONFIG_ID_TO_KEY[tId]; // Handle aliases like 'ats-optimized'
-                }
-
-                console.log("DEBUG: Resolved Template Key:", resolvedKey);
-
-                const baseConfig = TEMPLATES_MAP[resolvedKey] || ATS_TEMPLATE_CONFIG;
-
-                // 4️⃣ Create Initial Style Config from Base
-                const newStyle = JSON.parse(JSON.stringify(baseConfig)); // Deep copy to avoid mutation issues
-
-                // 5️⃣ OVERLAY Saved Style Config (The "Custom" Part)
-                if (data.styleConfig) {
-                    console.log("✨ Applying Saved Style Config Overlay");
-                    dispatch(setSavedStyleConfig(data.styleConfig)); // 🔄 Sync to global Redux for b3.jsx
-                    // We merge top-level keys. For nested style objects, we might want deeper merge, 
-                    // but usually replacing the section config object is safer to ensure consistency.
-                    Object.keys(data.styleConfig).forEach(key => {
-                        if (data.styleConfig[key]) {
-                            newStyle[key] = data.styleConfig[key];
-                        }
+                    const response = await fetch(`${API_BASE_URL}/my-resumes/getresume/${resumeId}`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                        },
+                        signal: controller.signal
                     });
-                }
 
-                setStyleConfig(newStyle);
+                    clearTimeout(tid);
 
-                // 6️⃣ Set Positions/Lines/Shapes (Priority: Saved > Base)
-                // If saved config has them, use them. Else use base.
-                setSectionPositions((data.styleConfig && data.styleConfig.positions) || baseConfig.positions || {});
-                setLines((data.styleConfig && data.styleConfig.lines) || baseConfig.lines || []);
-                setBackgroundShapes((data.styleConfig && data.styleConfig.shapes) || baseConfig.shapes || []);
-
-
-                setResumeDetails({
-                    name: data.details?.name || "",
-                    title: data.details?.title || "",
-                    summary: data.details?.summary || "",
-                    contact: {
-                        phone: data.contact?.phone || "",
-                        email: data.contact?.email || "",
-                        linkedin: data.contact?.linkedin || "",
-                        github: data.contact?.github || "",
-                        location: data.contact?.location || ""
-                    },
-                    styleConfig: newStyle
-                });
-
-                if (data.skills) {
-                    let skillsArray = [];
-                    if (Array.isArray(data.skills)) {
-                        skillsArray = data.skills.map(s => (typeof s === 'string' ? s : s?.name || '')).filter(s => s !== '');
-                    } else if (typeof data.skills === 'string') {
-                        skillsArray = [data.skills];
+                    if (response.status === 404) {
+                        setFetchError("Resume not found. It may have been deleted.");
+                        setIsLoadingResume(false);
+                        return;
                     }
-                    setSkills(skillsArray.length > 0 ? skillsArray : [""]);
-                }
 
-                // === FIXED EXPERIENCE MAPPING ===
-                if (data.experiences && Array.isArray(data.experiences)) {
-                    const mappedExperiences = data.experiences.map(exp => ({
-                        position: exp.position || "",
-                        company: exp.company || "",
-                        location: exp.location || "",
-                        duration: exp.duration || "",
-                        achievements: Array.isArray(exp.achievements)
-                            ? exp.achievements
-                            : exp.achievements
-                                ? [exp.achievements] // wrap string in array
-                                : [] // ensure not null
-                    }));
-                    setExperiences(mappedExperiences);
-                }
-
-                if (data.projects && Array.isArray(data.projects)) {
-                    const mappedProjects = data.projects.map(proj => ({
-                        name: proj.name || "",
-                        duration: proj.duration || "",
-                        technologies: proj.technologies || "",
-                        description: Array.isArray(proj.description) && proj.description.length > 0 ? proj.description : [""],
-                        link: proj.link || ""
-                    }));
-                    setProjects(mappedProjects);
-                }
-
-                if (data.educationList && Array.isArray(data.educationList)) {
-                    const mappedEducation = data.educationList.map(edu => ({
-                        degree: edu.degree || "",
-                        institution: edu.institution || "",
-                        location: edu.location || "",
-                        year: edu.year || "",
-                        gpa: edu.gpa || ""
-                    }));
-                    setEducationList(mappedEducation);
-                }
-
-                if (data.certifications) {
-                    let certsArray = [];
-                    if (Array.isArray(data.certifications)) {
-                        certsArray = data.certifications.map(c => (typeof c === 'string' ? c : c?.name || '')).filter(c => c !== '');
-                    } else if (typeof data.certifications === 'string') {
-                        certsArray = [data.certifications];
+                    if (!response.ok) {
+                        throw new Error(`Server error: ${response.status}`);
                     }
-                    setCertifications(certsArray.length > 0 ? certsArray : [""]);
-                }
 
-                setShowSummary(data.showSummary !== undefined ? data.showSummary : true);
-                setShowSkills(data.showSkills !== undefined ? data.showSkills : true);
-                setShowExperience(data.showExperience !== undefined ? data.showExperience : true);
-                setShowProjects(data.showProjects !== undefined ? data.showProjects : true);
-                setShowEducation(data.showEducation !== undefined ? data.showEducation : true);
-                setShowCertifications(data.showCertifications !== undefined ? data.showCertifications : true);
+                    const data = await response.json();
+                    console.log("Fetched resume data:====================");
+                    console.log(data);
+                    console.log("=======================================");
 
-                if (data.customSections && Array.isArray(data.customSections)) {
-                    // Transform backend format to frontend format
-                    // Backend sends: { title: "...", sectionData: { items: [...] } }
-                    // Frontend needs: { id: ..., title: "...", items: [...] }
-                    // Note: Generate unique client-side IDs since they're not saved to backend
-                    const transformedCustomSections = data.customSections.map((section, index) => {
-                        // If sectionData is a string (JSON), parse it
-                        let sectionData = section.sectionData;
-                        if (typeof sectionData === 'string') {
-                            try {
-                                sectionData = JSON.parse(sectionData);
-                            } catch (e) {
-                                console.error('Error parsing sectionData:', e);
-                                sectionData = { items: [] };
+
+
+
+
+                    setResumeTitle(data.title || "");
+
+                    let config = data.styleConfig || data.details?.styleConfig || {};
+                    if (typeof config === 'string') {
+                        try {
+                            config = JSON.parse(config);
+                        } catch (e) {
+                            console.error("Error parsing styleConfig", e);
+                            config = {};
+                        }
+                    }
+
+                    // If style config is available, switch to Custom Template automatically
+                    console.log("DEBUG: Parsed Config:", config);
+                    console.log("DEBUG: Config Keys:", config ? Object.keys(config) : "null");
+
+                    // FIX_START
+
+
+
+                    // 1️⃣ Normalize Template ID
+                    const tId = data.templateId ? String(data.templateId) : "1";
+
+                    // 2️⃣ Resolve Base Configuration
+                    // Try to find if the ID is a direct config key (like 'ats-optimized') or map it
+                    // 2️⃣ Define Mappings
+                    const CONFIG_ID_TO_KEY = {
+                        "ats-optimized": "ats",
+                        "modern-ats-two-column": "modern",
+                        "two-column-professional": "twoColumn",
+                        "ats-edgy": "newAts",
+                        "tech-innovator": "template5"
+                    };
+
+                    console.log("DEBUG: Loading Template ID:", tId);
+                    setSelectedTemplate(tId);
+
+                    // 3️⃣ Load Base Defaults
+                    // 3️⃣ Load Base Defaults (Sync with b3.jsx logic)
+                    const TEMPLATE_ID_MAP = {
+                        1: 'ats',           // Classic Template -> ATS
+                        2: 'modern',        // Modern Template
+                        3: 'ats',           // ATS-Friendly Template
+                        4: 'twoColumn',     // Executive Elite -> Two Column
+                        5: 'template5',     // Tech Innovator
+                        6: 'newAts',        // Academic Scholar -> New ATS
+                        7: 'modern',        // Creative Bold -> Modern
+                        10: 'ats',          // Template Coutom ats
+                        11: 'modern'        // Template Coutom modern
+                    };
+
+                    const TEMPLATES_MAP = {
+                        ats: ATS_TEMPLATE_CONFIG,
+                        modern: MODERN_TEMPLATE_CONFIG,
+                        twoColumn: TWO_COLUMN_TEMPLATE_CONFIG,
+                        template5: TEMPLATE5_CONFIG, // Ensure this import exists
+                        newAts: NEW_ATS_CONFIG      // Ensure this import exists
+                    };
+
+                    // Resolve key from ID (handle numeric vs string)
+                    let resolvedKey = 'ats'; // Default
+                    if (TEMPLATE_ID_MAP[tId]) {
+                        resolvedKey = TEMPLATE_ID_MAP[tId];
+                    } else if (TEMPLATES_MAP[tId]) {
+                        resolvedKey = tId; // It was already a key like 'ats'
+                    } else if (CONFIG_ID_TO_KEY[tId]) {
+                        resolvedKey = CONFIG_ID_TO_KEY[tId]; // Handle aliases like 'ats-optimized'
+                    }
+
+                    console.log("DEBUG: Resolved Template Key:", resolvedKey);
+
+                    const baseConfig = TEMPLATES_MAP[resolvedKey] || ATS_TEMPLATE_CONFIG;
+
+                    // 4️⃣ Create Initial Style Config from Base
+                    const newStyle = JSON.parse(JSON.stringify(baseConfig)); // Deep copy to avoid mutation issues
+
+                    // 5️⃣ OVERLAY Saved Style Config (The "Custom" Part)
+                    if (data.styleConfig) {
+                        console.log("✨ Applying Saved Style Config Overlay");
+                        dispatch(setSavedStyleConfig(data.styleConfig)); // 🔄 Sync to global Redux for b3.jsx
+                        // We merge top-level keys. For nested style objects, we might want deeper merge, 
+                        // but usually replacing the section config object is safer to ensure consistency.
+                        Object.keys(data.styleConfig).forEach(key => {
+                            if (data.styleConfig[key]) {
+                                newStyle[key] = data.styleConfig[key];
                             }
+                        });
+                    }
+
+                    setStyleConfig(newStyle);
+
+                    // 6️⃣ Set Positions/Lines/Shapes (Priority: Saved > Base)
+                    // If saved config has them, use them. Else use base.
+                    setSectionPositions((data.styleConfig && data.styleConfig.positions) || baseConfig.positions || {});
+                    setLines((data.styleConfig && data.styleConfig.lines) || baseConfig.lines || []);
+                    setBackgroundShapes((data.styleConfig && data.styleConfig.shapes) || baseConfig.shapes || []);
+
+
+                    setResumeDetails({
+                        name: data.details?.name || "",
+                        title: data.details?.title || "",
+                        summary: data.details?.summary || "",
+                        contact: {
+                            phone: data.contact?.phone || "",
+                            email: data.contact?.email || "",
+                            linkedin: data.contact?.linkedin || "",
+                            github: data.contact?.github || "",
+                            location: data.contact?.location || ""
+                        },
+                        styleConfig: newStyle
+                    });
+
+                    if (data.skills) {
+                        let skillsArray = [];
+                        if (Array.isArray(data.skills)) {
+                            skillsArray = data.skills.map(s => (typeof s === 'string' ? s : s?.name || '')).filter(s => s !== '');
+                        } else if (typeof data.skills === 'string') {
+                            skillsArray = [data.skills];
                         }
+                        setSkills(skillsArray.length > 0 ? skillsArray : [""]);
+                    }
 
-                        return {
-                            id: Date.now() + index, // Generate unique ID for each section
-                            title: section.title || "Untitled Section",
-                            items: sectionData?.items || []
-                        };
-                    });
-                    setCustomSections(transformedCustomSections);
-                    console.log("Loaded custom sections:", transformedCustomSections);
+                    // === FIXED EXPERIENCE MAPPING ===
+                    if (data.experiences && Array.isArray(data.experiences)) {
+                        const mappedExperiences = data.experiences.map(exp => ({
+                            position: exp.position || "",
+                            company: exp.company || "",
+                            location: exp.location || "",
+                            duration: exp.duration || "",
+                            achievements: Array.isArray(exp.achievements)
+                                ? exp.achievements
+                                : exp.achievements
+                                    ? [exp.achievements] // wrap string in array
+                                    : [] // ensure not null
+                        }));
+                        setExperiences(mappedExperiences);
+                    }
+
+                    if (data.projects && Array.isArray(data.projects)) {
+                        const mappedProjects = data.projects.map(proj => ({
+                            name: proj.name || "",
+                            duration: proj.duration || "",
+                            technologies: proj.technologies || "",
+                            description: Array.isArray(proj.description) && proj.description.length > 0 ? proj.description : [""],
+                            link: proj.link || ""
+                        }));
+                        setProjects(mappedProjects);
+                    }
+
+                    if (data.educationList && Array.isArray(data.educationList)) {
+                        const mappedEducation = data.educationList.map(edu => ({
+                            degree: edu.degree || "",
+                            institution: edu.institution || "",
+                            location: edu.location || "",
+                            year: edu.year || "",
+                            gpa: edu.gpa || ""
+                        }));
+                        setEducationList(mappedEducation);
+                    }
+
+                    if (data.certifications) {
+                        let certsArray = [];
+                        if (Array.isArray(data.certifications)) {
+                            certsArray = data.certifications.map(c => (typeof c === 'string' ? c : c?.name || '')).filter(c => c !== '');
+                        } else if (typeof data.certifications === 'string') {
+                            certsArray = [data.certifications];
+                        }
+                        setCertifications(certsArray.length > 0 ? certsArray : [""]);
+                    }
+
+                    setShowSummary(data.showSummary !== undefined ? data.showSummary : true);
+                    setShowSkills(data.showSkills !== undefined ? data.showSkills : true);
+                    setShowExperience(data.showExperience !== undefined ? data.showExperience : true);
+                    setShowProjects(data.showProjects !== undefined ? data.showProjects : true);
+                    setShowEducation(data.showEducation !== undefined ? data.showEducation : true);
+                    setShowCertifications(data.showCertifications !== undefined ? data.showCertifications : true);
+
+                    if (data.customSections && Array.isArray(data.customSections)) {
+                        // Transform backend format to frontend format
+                        // Backend sends: { title: "...", sectionData: { items: [...] } }
+                        // Frontend needs: { id: ..., title: "...", items: [...] }
+                        // Note: Generate unique client-side IDs since they're not saved to backend
+                        const transformedCustomSections = data.customSections.map((section, index) => {
+                            // If sectionData is a string (JSON), parse it
+                            let sectionData = section.sectionData;
+                            if (typeof sectionData === 'string') {
+                                try {
+                                    sectionData = JSON.parse(sectionData);
+                                } catch (e) {
+                                    console.error('Error parsing sectionData:', e);
+                                    sectionData = { items: [] };
+                                }
+                            }
+
+                            return {
+                                id: Date.now() + index, // Generate unique ID for each section
+                                title: section.title || "Untitled Section",
+                                items: sectionData?.items || []
+                            };
+                        });
+                        setCustomSections(transformedCustomSections);
+                        console.log("Loaded custom sections:", transformedCustomSections);
+                    }
+
+                    if (data.sectionTitles) {
+                        setSectionTitles({
+                            summary: data.sectionTitles.summary || "Summary",
+                            skills: data.sectionTitles.skills || "Skills",
+                            experience: data.sectionTitles.experience || "Experience",
+                            projects: data.sectionTitles.projects || "Projects",
+                            education: data.sectionTitles.education || "Education",
+                            certifications: data.sectionTitles.certifications || "Certifications"
+                        });
+                    }
+                    setLocalResune(data);
+
+                    setFetchError("");
+                    setIsLoadingResume(false);
+                    return; // Success!
+
+                } catch (err) {
+                    console.error(`Fetch resume attempt ${attempt + 1} failed:`, err);
+                    const isRetryable = err.name === 'AbortError' || err.message.includes('Failed to fetch');
+
+                    if (isRetryable && attempt < MAX_RETRIES - 1) {
+                        attempt++;
+                        const delay = Math.pow(2, attempt - 1) * 1000;
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        continue;
+                    }
+
+                    setFetchError(err.name === 'AbortError' ? "Server is not up" : `Failed to load resume: ${err.message}`);
+                    break;
                 }
-
-                if (data.sectionTitles) {
-                    setSectionTitles({
-                        summary: data.sectionTitles.summary || "Summary",
-                        skills: data.sectionTitles.skills || "Skills",
-                        experience: data.sectionTitles.experience || "Experience",
-                        projects: data.sectionTitles.projects || "Projects",
-                        education: data.sectionTitles.education || "Education",
-                        certifications: data.sectionTitles.certifications || "Certifications"
-                    });
-                }
-                setLocalResune(data);
-
-                setFetchError("");
-            } catch (err) {
-                console.error("Error fetching resume:", err);
-                setFetchError(`Failed to load resume: ${err.message}`);
-            } finally {
-                setIsLoadingResume(false);
             }
+            setIsLoadingResume(false);
         };
 
         fetchResume();
-    }, [resumeId]);
+    }, [resumeId, dispatch]);
 
 
 
@@ -1688,149 +1633,168 @@ export default function ResumeEditor({ resume: propsResume }) {
             return;
         }
         setSaving(true);
-        setMessage("Saving...");
-        setLoading(true);
         setSaveError("");
         setSuccessMessage("");
-        try {
-            const transformedSkills = skills.map(skill => ({ name: skill.trim() })).filter(skill => skill.name !== "");
-            const transformedCertifications = certifications.map(cert => ({ name: cert.trim() })).filter(cert => cert.name !== "");
+        setLoading(true);
 
-            // Transform custom sections to match backend DTO structure
-            // Backend expects: { title: "...", sectionData: {...} }
-            // Frontend has: { id: ..., title: "...", items: [...] }
-            // Note: id is only for client-side React key management, not saved to backend
-            const transformedCustomSections = customSections.map(section => ({
-                title: section.title,
-                sectionData: {
-                    items: section.items
+        const MAX_RETRIES = 3;
+        let attempt = 0;
+        const timeout = 30000;
+
+        while (attempt < MAX_RETRIES) {
+            let controller;
+            try {
+                const transformedSkills = skills.map(skill => ({ name: skill.trim() })).filter(skill => skill.name !== "");
+                const transformedCertifications = certifications.map(cert => ({ name: cert.trim() })).filter(cert => cert.name !== "");
+
+                // Transform custom sections to match backend DTO structure
+                // Backend expects: { title: "...", sectionData: {...} }
+                // Frontend has: { id: ..., title: "...", items: [...] }
+                // Note: id is only for client-side React key management, not saved to backend
+                const transformedCustomSections = customSections.map(section => ({
+                    title: section.title,
+                    sectionData: {
+                        items: section.items
+                    }
+                }));
+
+                let title = resumeDetails.title;
+
+
+                if (!resumeId && !title) {
+                    title = prompt("Enter the title for the resume");
+                    if (!title) {
+                        setSaving(false);
+                        return;
+                    }
                 }
-            }));
-
-            let title = resumeDetails.title;
 
 
-            if (!resumeId && !title) {
-                title = prompt("Enter the title for the resume");
-                if (!title) {
-                    setSaving(false);
-                    return;
+
+                const payload = {
+                    title,
+                    templateId: Number(selectedTemplate),
+                    userId: id,
+                    details: {
+                        name: resumeDetails.name,
+                        title: resumeDetails.title,
+                        summary: resumeDetails.summary,
+
+                    },
+                    contact: resumeDetails.contact,
+                    skills: transformedSkills,
+                    experiences,
+                    projects,
+                    educationList,
+                    certifications: transformedCertifications,
+                    showSummary,
+                    showSkills,
+                    showExperience,
+                    showProjects,
+                    showEducation,
+                    showCertifications,
+                    customSections: transformedCustomSections
+                };
+
+
+
+
+                console.log("=========================================================================");
+
+                console.log("Custom Sections (Original):", customSections);
+                console.log("Custom Sections (Transformed):", transformedCustomSections);
+
+
+
+
+
+
+                const endpoint = currentResumeId
+                    ? `${API_BASE_URL}/update/${resumeId}`
+                    : `${API_BASE_URL}/saveall`;
+
+                console.log(`The endpoint was ${endpoint}`);
+
+
+                const method = resumeId ? "PUT" : "POST";
+
+                console.log(`Making ${method} request to:`, endpoint);
+
+                controller = new AbortController();
+                const tid = setTimeout(() => controller.abort(), timeout);
+
+                const res = await fetch(endpoint, {
+                    method,
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    },
+                    body: JSON.stringify(payload),
+                    signal: controller.signal
+                });
+
+                clearTimeout(tid);
+
+                console.log(res);
+
+
+
+                const message = localResumeId ? "Resume updated successfully!" : "Resume saved successfully!";
+                setSuccessMessage(message);
+
+                // if (!resumeId && data.id) {
+                //   setTimeout(() => {
+                //     window.location.href = `/dashboard/resume-editor/${data.id}`;
+                //   }, 1500);
+                // }
+
+                // Check if the response is JSON
+                const contentType = res.headers.get("content-type");
+                if (!contentType || !contentType.includes("application/json")) {
+                    const textResponse = await res.text();
+                    console.error("Non-JSON response received:", textResponse);
+                    throw new Error(`Server returned non-JSON response. Status: ${res.status}`);
                 }
+
+                // If response not OK, throw an error
+                if (!res.ok) {
+                    const errorData = await res.json().catch(() => null);
+                    const errorMessage = errorData?.message || `Save failed with status ${res.status}`;
+                    throw new Error(errorMessage);
+                }
+
+                // Parse JSON
+                const data = await res.json(); // { message, resumeId }
+                console.log("Response data:", data);
+
+                // If this is the first save, store the resumeId in Redux or state
+                if (!currentResumeId && data.resumeId) {
+                    dispatch(setCurrentResumeId(data.resumeId));
+                    setLocalResuneId(data.resumeId);
+                }
+
+                window.showMessage('Success', message, 'success', 1500);
+                break; // Success!
+
+            } catch (err) {
+                console.error(`Save attempt ${attempt + 1} failed:`, err);
+                const isRetryable = err.name === 'AbortError' || err.message.includes('Failed to fetch');
+
+                if (isRetryable && attempt < MAX_RETRIES - 1) {
+                    attempt++;
+                    const delay = Math.pow(2, attempt - 1) * 1000;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    continue;
+                }
+
+                const finalMsg = err.name === 'AbortError' ? "Server is not up" : `Failed to save: ${err.message}`;
+                setSaveError(finalMsg);
+                window.showMessage('Error', finalMsg, 'error', 3000);
+                break;
             }
-
-
-
-            const payload = {
-                title,
-                templateId: Number(selectedTemplate),
-                userId: id,
-                details: {
-                    name: resumeDetails.name,
-                    title: resumeDetails.title,
-                    summary: resumeDetails.summary,
-
-                },
-                contact: resumeDetails.contact,
-                skills: transformedSkills,
-                experiences,
-                projects,
-                educationList,
-                certifications: transformedCertifications,
-                showSummary,
-                showSkills,
-                showExperience,
-                showProjects,
-                showEducation,
-                showCertifications,
-                customSections: transformedCustomSections
-            };
-
-
-
-
-            console.log("=========================================================================");
-
-            console.log("Custom Sections (Original):", customSections);
-            console.log("Custom Sections (Transformed):", transformedCustomSections);
-
-
-
-
-
-
-            const endpoint = currentResumeId
-                ? `${API_BASE_URL}/update/${resumeId}`
-                : `${API_BASE_URL}/saveall`;
-
-            console.log(`The endpoint was ${endpoint}`);
-
-
-            const method = resumeId ? "PUT" : "POST";
-
-            console.log(`Making ${method} request to:`, endpoint);
-
-            const res = await fetch(endpoint, {
-                method,
-                headers: {
-                    "Content-Type": "application/json",
-                    "Accept": "application/json"
-                },
-                body: JSON.stringify(payload),
-            });
-
-            console.log(res);
-
-
-
-            const message = localResumeId ? "Resume updated successfully!" : "Resume saved successfully!";
-            setSuccessMessage(message);
-
-            // if (!resumeId && data.id) {
-            //   setTimeout(() => {
-            //     window.location.href = `/dashboard/resume-editor/${data.id}`;
-            //   }, 1500);
-            // }
-
-            // Check if the response is JSON
-            const contentType = res.headers.get("content-type");
-            if (!contentType || !contentType.includes("application/json")) {
-                const textResponse = await res.text();
-                console.error("Non-JSON response received:", textResponse);
-                throw new Error(`Server returned non-JSON response. Status: ${res.status}`);
-            }
-
-            // If response not OK, throw an error
-            if (!res.ok) {
-                const errorData = await res.json().catch(() => null);
-                const errorMessage = errorData?.message || `Save failed with status ${res.status}`;
-                throw new Error(errorMessage);
-            }
-
-            // Parse JSON
-            const data = await res.json(); // { message, resumeId }
-            console.log("Response data:", data);
-
-            // If this is the first save, store the resumeId in Redux or state
-            if (!currentResumeId && data.resumeId) {
-                dispatch(setCurrentResumeId(data.resumeId));
-                setLocalResuneId(data.resumeId);
-            }
-
-            window.showMessage('Success', message, 'success', 1500);;
-
-
-
-
-
-        } catch (err) {
-            console.error("Save error:", err);
-            setSaveError(`Failed to save resume: ${err.message}`);
-            window.showMessage('Error', 'Unable to save your resume', 'error', 1500);
-        } finally {
-            setSaving(false);
-            setLoading(false);
-            setMessage("Loading...");
         }
+        setSaving(false);
+        setLoading(false);
     };
 
 

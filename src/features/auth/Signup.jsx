@@ -27,34 +27,49 @@ export default function Signup() {
     setLoading(true);
     setMessage("");
 
-    try {
-      const response = await axios.post(`${API_BASE_URL}/signup`, {
-        username,
-        email,
-        password
-      }, { timeout: 30000 }); // 30s timeout
+    const MAX_RETRIES = 3;
+    let attempt = 0;
 
-      console.log("printing the response from the backend in signup");
+    while (attempt < MAX_RETRIES) {
+      try {
+        const response = await axios.post(`${API_BASE_URL}/signup`, {
+          username,
+          email,
+          password
+        }, { timeout: 30000 }); // 30s timeout
 
-      const data = response.data;
-      setSuccess(data.success);
-      if (!success) {
-        window.showMessage(res.data.message, 'error');
-        throw new Error(res.data.message);
+        const data = response.data;
+        if (!data.success) {
+          window.showMessage(data.message || "Signup failed", 'error');
+          break; // Don't retry logic errors
+        }
+
+        window.showMessage('Check your email for verification', 'success');
+        return;
+
+      } catch (error) {
+        console.error(`Signup attempt ${attempt + 1} failed:`, error);
+
+        const isRetryable = !error.response || (error.code === 'ECONNABORTED');
+
+        if (isRetryable && attempt < MAX_RETRIES - 1) {
+          attempt++;
+          const delay = Math.pow(2, attempt - 1) * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+
+        if (error.response) {
+          window.showMessage(`${error.response.data.message || "Signup failed"}`, 'error');
+        } else if (error.code === 'ECONNABORTED' || error.request) {
+          window.showMessage("Server is not up", 'error');
+        } else {
+          window.showMessage(`Error: ${error.message}`);
+        }
+        break;
       }
-
-      window.showMessage('Check your email for verification', 'success');
-    } catch (error) {
-      if (error.response) {
-        window.showMessage(`${error.response.data.message}`, 'error');
-      } else if (error.code === 'ECONNABORTED' || error.request) {
-        window.showMessage("Server is not up", 'error');
-      } else {
-        window.showMessage(`Request Method : ${error.message}`)
-      }
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   };
 
   return (

@@ -901,18 +901,26 @@ export default function ResumeAnalyzer({
 
     const MAX_RETRIES = 3;
     let attempt = 0;
+    const timeout = 60000; // 60s for PDF processing
 
     while (attempt <= MAX_RETRIES) {
+      let controller;
       try {
         setMessage(attempt > 0 ? `Retrying Import (${attempt}/${MAX_RETRIES})...` : 'Importing...');
+
+        controller = new AbortController();
+        const tid = setTimeout(() => controller.abort(), timeout);
+
         const response = await fetch(`${API_BASE_URL}/uploadResume`, {
           method: "POST",
           body: formData,
+          signal: controller.signal
         });
 
+        clearTimeout(tid);
+
         if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Server error: ${response.status} - ${errorText}`);
+          throw new Error(`Server error: ${response.status}`);
         }
 
         const data = await response.json();
@@ -940,7 +948,7 @@ export default function ResumeAnalyzer({
 
       } catch (error) {
         console.error(`Upload attempt ${attempt + 1} failed:`, error);
-        const isRetryable = error.message.includes("Connection reset") || error.message.includes("recvAddress") || error.name === "TypeError";
+        const isRetryable = error.name === 'AbortError' || error.message.includes('Failed to fetch') || error.message.includes("Connection reset") || error.message.includes("recvAddress") || error.name === "TypeError";
 
         if (isRetryable && attempt < MAX_RETRIES) {
           attempt++;
@@ -949,7 +957,8 @@ export default function ResumeAnalyzer({
           continue;
         }
 
-        window.showMessage("Error", error.message || 'Importing Failed', "error", 3000);
+        const msg = error.name === 'AbortError' ? "Server processing timeout. The file might be too large." : (error.message || 'Importing Failed');
+        window.showMessage("Error", msg, "error", 3000);
         break;
       }
     }

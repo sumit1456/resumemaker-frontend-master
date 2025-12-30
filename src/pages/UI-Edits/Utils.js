@@ -9,7 +9,7 @@
 export const defaultResumeData = {
   resumeDetails: {
     name: "SUMIT HATEKAR",
-    title: "Full Stack Developer",
+    title: "MSc CA Student & Full Stack Developer",
     contact: {
       phone: "+91 9876543210",
       email: "sumithatekar@gmail.com",
@@ -17,74 +17,92 @@ export const defaultResumeData = {
       github: "github.com/sumithatekar",
       location: "Pune, India",
     },
-    summary: "Dedicated Java Developer with expertise in Java, Spring Boot, Hibernate/JPA, and RESTful APIs, specializing in building scalable backend systems. Skilled in database design, SQL optimization, and microservices architecture, with strong understanding of OOP and design patterns. Proficient in developing secure, high-performance enterprise applications and experienced in Agile/Scrum environments. Eager to contribute backend expertise while continuously growing as a Java professional.",
+    summary: "Passionate Computer Applications student with a strong foundation in Java and Web technologies. I love building things for the web, from backend APIs with Spring Boot to interactive frontend experiences using React and PixiJS. Always curious to learn new technologies and apply them to solve real-world problems.",
   },
 
   skills: [
-    "Programming Languages - Java, JavaScript (ES6+), SQL",
-    "Databases - PostgreSQL, Oracle",
-    "Frameworks & Libraries - React.js, Spring Boot, Hibernate, Express.js (basic)",
-    "Tools & Platforms - Git, GitHub, Postman, Swagger, Maven, Eclipse/IntelliJ",
-    "Cloud & Deployment - AWS (EC2, S3, RDS), Docker (basic)",
-    "Soft Skills - Problem Solving, Communication, Agile Teamwork"
+    "Programming Languages - Java, JavaScript (ES6+), SQL, HTML/CSS",
+    "Databases - PostgreSQL, Oracle SQL, MongoDB, MySQL",
+    "Frameworks & Libraries - React.js, Spring Boot, Hibernate",
+    "Tools & Platforms - Git, GitHub, Postman, Docker, Maven, VS Code",
+    "Soft Skills - Communication, Teamwork, Problem Solving, Agile"
   ],
 
   experiences: [
     {
-      position: "Software Engineer",
-      company: "Tech Solutions Ltd.",
+      position: "Full Stack Developer (Intern/Project Lead)",
+      company: "Technical Projects",
       location: "Pune, India",
-      duration: "Jan 2022 - Present",
+      duration: "2023 - Present",
       achievements: [
-        "Developed client dashboard using React",
-        "Implemented REST APIs in Node.js"
+        "Led the development of a high-performance resume builder platform",
+        "Implemented real-time editing features and AI-driven content suggestions"
       ],
     },
   ],
 
   projects: [
     {
-      name: "Resume Maker Pro",
-      duration: "September 2023 - ongoing",
-      technologies: "React, Java, Spring Boot, Spring Security, Docker",
+      name: "Resume Maker",
+      duration: "October 2023 - Present",
+      technologies: "React, Java Spring Boot, MySQL, Gemini AI",
       description: [
-        "Developed the backend using Java Spring Boot with Hibernate/JPA for efficient data storage and retrieval.",
-        "Built RESTful APIs to manage resume sections such as personal info, skills, certifications, and experience.",
-        "Implemented React.js frontend for real-time editing and live preview of resume templates.",
-        "Integrated resume download/export functionality (PDF/Docx) with formatted layouts.",
-        "Ensured scalable, modular architecture with clean code and reusable components."
+        "Developed a real-time resume builder allowing for instant UI customization and live previews.",
+        "Integrated Google Gemini AI to provide automated content optimization and formatting suggestions.",
+        "Implemented a PDF data extraction feature to import information from existing resumes seamlessly.",
+        "Built a synchronized state management system using React to handle complex layout updates.",
+        "Optimized backend API performance using Java Spring Boot and MySQL for efficient data handling."
       ],
       link: "https://janedoe.dev",
     },
     {
       name: "Find Issue Web Application",
       duration: "June 2023 - August 2023",
-      technologies: "Java, Spring Boot, Thymeleaf, MySQL",
+      technologies: "Java, Spring Boot, MySQL",
       description: [
-        "Built a web application to log, track, and manage software issues.",
-        "Implemented Spring Boot backend with RESTful APIs for CRUD operations on issues.",
-        "Designed MySQL database schema for efficient issue storage and retrieval.",
-        "Created user-friendly UI using Thymeleaf for issue submission and tracking.",
-        "Added role-based access control to allow admin and user-specific views."
+        "Created an issue tracking platform to streamline bug reporting and management workflows.",
+        "Developed robust RESTful APIs using Spring Boot to handle CRUD operations on software issues.",
+        "Designed an intuitive dashboard for monitoring project status and issue life cycles.",
+        "Implemented secure database schemas in MySQL for persistent and reliable data storage."
       ],
       link: "https://github.com/sumithatekar/find-issue-app",
+    },
+    {
+      name: "Dom-Webgl Rederer",
+      duration: "March 2024 - Present",
+      technologies: "PixiJS, WebGL, Matter.js",
+      description: [
+        "Project lead in building a custom rendering engine using PixiJS and WebGL for high-performance graphics.",
+        "Integrated Matter.js to add interactive physics animations, making UI components feel more dynamic.",
+        "Developed a bridge between standard HTML elements and GPU-accelerated graphics for smoother visuals.",
+        "Created smart snapping and layout guide algorithms to improve precision in UI design tools.",
+        "Investigated rendering optimizations to ensure high-frame-rate performance during complex animations."
+      ],
+      link: "https://github.com/sumithatekar/ui-engine",
     }
   ],
 
   educationList: [
     {
-      degree: "Master of Science in Computer Applications",
+      degree: "Master of Science in Computer Applications (MSc CA)",
       institution: "Savitribai Phule University",
       location: "Pune, India",
-      year: "2025",
-      gpa: "Currently pursuing",
+      year: "2025 (Expected)",
+      gpa: "89.63% (First Sem)",
     },
     {
       degree: "BSc Chemistry",
       institution: "Shivaji University",
       location: "Koregaon Satara, India",
       year: "2021",
-      gpa: "7.52",
+      gpa: "7.52 CGPA",
+    },
+    {
+      degree: "HSC (Science)",
+      institution: "Yashwantrao Chavan Institute of Science",
+      location: "Satara, India",
+      year: "2018",
+      gpa: "84%",
     },
   ],
 
