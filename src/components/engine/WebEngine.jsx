@@ -2520,9 +2520,11 @@ const WebGLStage = forwardRef(({
     resolution = 2.5,
     background = 0xffffff,
     physicsEnabled = false,
+    physicsManager = null, // 🚀 Added
     yOffset = 0,
     onHeaderContainerReady = null,
     onSkillsContainerReady = null,
+    onDragStart = () => { }, // 🚀 Added
     className = "",
     style = {},
     stageScale = 1
@@ -2648,11 +2650,30 @@ const WebGLStage = forwardRef(({
                 const deltaX = newPos.x - session.dragStartX;
                 const deltaY = newPos.y - session.dragStartY;
 
-                session.target.x = session.startX + deltaX;
-                session.target.y = session.startY + deltaY;
+                const targetX = session.startX + deltaX;
+                const targetY = session.startY + deltaY;
 
-                if (physicsEnabled && session.type === 'section') {
-                    handlePhysics(session.target);
+                if (physicsEnabled && session.type === 'section' && physicsManager) {
+                    // 🚀 Real-time Physics Pushing
+                    // Convert local stage Y to global layout Y for the manager
+                    physicsManager.updateDragging(session.id, targetX, targetY + yOffset);
+
+                    const positions = physicsManager.getPositions();
+
+                    // Update all sections in this stage visually
+                    layers.current.sections.children.forEach(c => {
+                        if (c._id && positions[c._id]) {
+                            c.x = positions[c._id].x;
+                            c.y = positions[c._id].y - yOffset; // Convert back to local
+                        }
+                    });
+                } else {
+                    session.target.x = targetX;
+                    session.target.y = targetY;
+
+                    if (physicsEnabled && session.type === 'section') {
+                        handlePhysics(session.target);
+                    }
                 }
             });
 
@@ -2853,6 +2874,8 @@ const WebGLStage = forwardRef(({
                         dragStartX: globalPos.x,
                         dragStartY: globalPos.y
                     };
+
+                    if (onDragStart) onDragStart('section', id); // 🚀 Trigger callback
                 });
 
                 layers.current.sections.addChild(sectionContainer);

@@ -23,6 +23,8 @@ import {
   FlexibleSkillsSection, FlexibleSummarySection
 } from "./BaseTemplates.jsx";
 import { GeometrySnapshot, WebGLStage } from "../../components/engine/WebEngine.jsx";
+import { PhysicsPushingManager } from "./physicsPushing.js"; // 🚀 Added
+import { createPhysicsAnimation } from "./physicsAnimation.js"; // 🚀 Added
 import { jsPDF } from "jspdf";
 import * as PIXI from 'pixi.js';
 
@@ -243,9 +245,12 @@ const UIEditor = () => {
 
   // ✨ UI Animation State
   const [isAnimationsEnabled, setIsAnimationsEnabled] = useState(true);
+  const [isPhysicsEnabled, setIsPhysicsEnabled] = useState(true); // 🚀 Added
+  const [isPhysicsAnimating, setIsPhysicsAnimating] = useState(false); // 🚀 Added
 
   const headerContainerRef = useRef(null);
   const skillsContainerRef = useRef(null); // New ref for skills container
+  const physicsManager = useRef(null); // 🚀 Added
 
   const headerAnimationRef = useRef({
     active: false,
@@ -594,6 +599,24 @@ const UIEditor = () => {
     setTimeout(() => {
       setSkillsAnimating(false);
     }, 600);
+  };
+
+  // 🚀 Physics Animation Handler
+  const handlePhysicsBlast = () => {
+    if (isPhysicsAnimating) return;
+    setIsPhysicsAnimating(true);
+
+    const sectionHeightsMap = {};
+    Object.keys(sectionPositions).forEach(id => {
+      sectionHeightsMap[id] = sectionHeights[id] || (sectionSnapshots[id]?.height) || 120;
+    });
+
+    createPhysicsAnimation(
+      sectionPositions,
+      sectionHeightsMap,
+      setSectionPositions,
+      setIsPhysicsAnimating
+    );
   };
 
 
@@ -1329,6 +1352,23 @@ const UIEditor = () => {
 
 
   // ==================== SECTION FUNCTIONS ====================
+
+  // Handle section drag start (Initialize Physics)
+  const handleSectionDragStart = (id) => {
+    if (!isPhysicsEnabled) return;
+
+    if (physicsManager.current) {
+      physicsManager.current.destroy();
+    }
+
+    const allSections = Object.entries(sectionPositions).filter(([name]) => sectionVisibility[name]);
+    physicsManager.current = new PhysicsPushingManager(
+      allSections,
+      sectionSnapshots,
+      sectionWidths,
+      sectionHeights
+    );
+  };
 
   // Handle section drag end
   const handleSectionDragEnd = (sectionName, newPos, allPositions) => {
@@ -2274,6 +2314,11 @@ const UIEditor = () => {
                 lines={page1Elements.lines}
                 sections={page1Elements.sections}
                 snapshot={sectionSnapshots}
+                physicsEnabled={isPhysicsEnabled}
+                physicsManager={physicsManager.current}
+                onDragStart={(type, id) => {
+                  if (type === 'section') handleSectionDragStart(id);
+                }}
                 onDragEnd={(type, id, pos, allPositions) => {
                   if (type === 'section') handleSectionDragEnd(id, pos, allPositions);
                   if (type === 'shape') handleShapeDragEnd(id, pos);
@@ -2321,6 +2366,11 @@ const UIEditor = () => {
                 lines={page2Elements.lines}
                 sections={page2Elements.sections}
                 snapshot={sectionSnapshots}
+                physicsEnabled={isPhysicsEnabled}
+                physicsManager={physicsManager.current}
+                onDragStart={(type, id) => {
+                  if (type === 'section') handleSectionDragStart(id);
+                }}
                 yOffset={842}
                 onDragEnd={(type, id, pos, allPositions) => {
                   const adjustedPos = { ...pos, y: pos.y + 842 };
@@ -2375,6 +2425,31 @@ const UIEditor = () => {
           <button onClick={() => setZoom(Math.min(2, zoom + 0.1))} className="btn-zoom">+</button>
           <button onClick={() => setZoom(1)} className="btn-zoom-reset">100%</button>
           <button onClick={() => setZoom(0.7)} className="btn-zoom-reset">FIT</button>
+
+          {/* 🚀 Physics Controls */}
+          <button
+            onClick={() => setIsPhysicsEnabled(!isPhysicsEnabled)}
+            className={`btn-zoom-reset ${isPhysicsEnabled ? 'active' : ''}`}
+            style={{ marginLeft: '10px', background: isPhysicsEnabled ? '#fef3c7' : '' }}
+            title="Toggle interactive pushing"
+          >
+            {isPhysicsEnabled ? '🧲 PHYSICS ON' : '🧲 PHYSICS OFF'}
+          </button>
+
+          <button
+            onClick={handlePhysicsBlast}
+            disabled={isPhysicsAnimating}
+            className="btn-zoom-reset"
+            style={{
+              marginLeft: '5px',
+              background: '#fef3c7',
+              border: '1px solid #fbbf24',
+              animation: isPhysicsAnimating ? 'pulse 1s infinite' : ''
+            }}
+          >
+            {isPhysicsAnimating ? '✨ BLASTING...' : '✨ PHYSICS BLAST'}
+          </button>
+
           <button
             onClick={() => setShowPage2(!showPage2)}
             className={`btn-zoom-reset ${showPage2 ? 'active' : ''}`}
