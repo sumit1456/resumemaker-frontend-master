@@ -135,14 +135,10 @@ const FlexibleText = ({ children, config = {}, styleConfig = {}, as = "div" }) =
     const Element = as; // Can be div, span, p, h1, etc.
     const { href, target, rel, ...styleProps } = config;
 
-    // Smart color resolution: Prioritize local config, then global granular colors, then primary/text fallbacks
+    // Simplified color resolution: Prioritize local config, then global primary/text fallbacks
     let resolvedColor = styleProps.color;
     if (!resolvedColor) {
-        if ((styleProps.isTitle || styleProps.as === 'h1') && styleConfig.globalTitleColor) {
-            resolvedColor = styleConfig.globalTitleColor;
-        } else if (styleProps.variant === 'subtitle' && styleConfig.globalSubtitleColor) {
-            resolvedColor = styleConfig.globalSubtitleColor;
-        } else if (styleProps.isPrimary && styleConfig.globalPrimaryColor) {
+        if (styleProps.isPrimary && styleConfig.globalPrimaryColor) {
             resolvedColor = styleConfig.globalPrimaryColor;
         } else {
             resolvedColor = styleConfig.globalTextColor || "#000000";
@@ -260,7 +256,7 @@ const FlexibleBulletList = ({ items = [], styleConfig = {}, globalStyleConfig = 
                     {/* Bullet */}
                     <div
                         style={applyStyles({
-                            marginTop: "2px",
+                            marginTop: `${(parseFloat(globalStyleConfig.globalBulletTop) || 0) + (parseFloat(config.bulletStyle?.marginTop) || 2)}px`,
                             width: "10px",
                             minWidth: "10px",
                             fontSize: config.bulletSize || "12px",

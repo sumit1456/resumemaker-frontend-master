@@ -139,7 +139,7 @@ const UIEditor = () => {
   const [selectedShape, setSelectedShape] = useState(null);
   const [selectedSection, setSelectedSection] = useState(null);
   const [showPage2, setShowPage2] = useState(false);
-  const [isAutoFlowEnabled, setIsAutoFlowEnabled] = useState(true); // 🎯 Default to true for "Auto Management"
+  const [isAutoFlowEnabled, setIsAutoFlowEnabled] = useState(false); // 🎯 Default to false as requested by user
   const [zoom, setZoom] = useState(1);
 
   const extractWidthsAndHeightsFromConfig = (config) => {
@@ -839,7 +839,7 @@ const UIEditor = () => {
     }));
 
     // 🚀 Force engine rerender for these critical changes
-    if (key === 'globalFontFamily' || key.includes('Color')) {
+    if (key === 'globalFontFamily' || key.includes('Color') || key === 'globalBulletTop') {
       setStyleKey(prev => prev + 1);
     }
 
@@ -1661,6 +1661,7 @@ const UIEditor = () => {
         prevStyleConfigRef.current.globalSubtitleColor !== styleConfig.globalSubtitleColor ||
         prevStyleConfigRef.current.globalTextColor !== styleConfig.globalTextColor ||
         prevStyleConfigRef.current.globalBulletColor !== styleConfig.globalBulletColor ||
+        prevStyleConfigRef.current.globalBulletTop !== styleConfig.globalBulletTop ||
         prevStyleConfigRef.current.globalPrimaryColor !== styleConfig.globalPrimaryColor;
 
       // Always capture if no snapshot exists
@@ -1803,29 +1804,37 @@ const UIEditor = () => {
 
       {/* Hidden rendering area */}
       <div className="hidden-render" style={{
-        position: 'absolute',
-        right: '220px',
-        top: '0',
-        visibility: 'hidden',
-        width: '595px',
-        height: '842px',
+        position: 'fixed',
+        right: '20px',
+        bottom: '20px',
+        visibility: 'visible', // 🛠️ Debug Mode: Make visible as requested
+        width: '400px', // Smaller for debug overlay
+        height: '560px',
         background: 'white',
-        padding: '0',
+        boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+        border: '2px solid #3b82f6',
+        borderRadius: '8px',
+        padding: '20px',
         zIndex: 10000000,
         pointerEvents: 'none',
-        transform: 'scale(1)',
-        transformOrigin: 'top right',
-        overflow: 'hidden',
+        transform: 'scale(0.8)',
+        transformOrigin: 'bottom right',
+        overflowY: 'auto',
         maxWidth: 'none',
         fontFamily: styleConfig.globalFontFamily || 'Helvetica',
         color: styleConfig.globalTextColor || '#000000',
       }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', background: '#3b82f6', color: 'white', padding: '4px 8px', fontSize: '10px', fontWeight: 'bold' }}>
+          🛠️ LIVE DOM RENDER (Snapshot Source)
+        </div>
         {TemplateComponents && Object.entries(sectionRefs.current).map(([key, ref]) => {
           const Component = TemplateComponents[key];
           if (!Component) return null;
 
-          // 🚀 DIRECT PASS: Use global config directly if editing (avoids async state lag)
-          const renderConfig = (resumeId && currentResume?.styleConfig) ? currentResume.styleConfig : styleConfig;
+          // 🚀 DIRECT PASS: Always use the local styleConfig for the hidden render
+          // This ensures that live edits (colors, fonts, bullet offsets) are reflected immediately in the DOM renderer.
+          // Note: currentResume?.styleConfig is stale relative to local state during active editing.
+          const renderConfig = styleConfig;
 
           // Map data according to your FlexibleSection component props
           const propsMap = {
@@ -1901,85 +1910,7 @@ const UIEditor = () => {
           </button>
         </div>
 
-        {/* --- GLOBAL STYLES --- */}
-        <h3 className="panel-title">GLOBAL STYLES</h3>
-        <div className="control-group" style={{ marginBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.1)', pb: '15px' }}>
-
-          {/* FONT SELECTOR */}
-          <div style={{ marginBottom: '15px' }}>
-            <label className="control-label">Resume Font (ATS Friendly)</label>
-            <select
-              value={styleConfig.globalFontFamily || 'Helvetica'}
-              onChange={(e) => handleGlobalStyleChange('globalFontFamily', e.target.value)}
-              className="control-select"
-              style={{
-                fontFamily: styleConfig.globalFontFamily || 'inherit',
-                fontWeight: '600',
-                fontSize: '14px',
-                height: '40px'
-              }}
-            >
-              <option value="Arial">Arial (Standard)</option>
-              <option value="Helvetica">Helvetica (Classic)</option>
-              <option value="Times New Roman">Times New Roman (Serif)</option>
-              <option value="Georgia">Georgia (Professional Serif)</option>
-              <option value="Calibri">Calibri (Modern)</option>
-              <option value="Verdana">Verdana (Clear Sans)</option>
-              <option value="Tahoma">Tahoma (Compact)</option>
-              <option value="Roboto">Roboto (Clean)</option>
-              <option value="Inter">Inter (Premium)</option>
-            </select>
-          </div>
-
-          {/* COLOR PICKERS - GRANULAR */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            <div>
-              <label className="control-label" style={{ fontSize: '10px' }}>Title Color</label>
-              <input
-                type="color"
-                value={normalizeColorForInput(styleConfig.globalTitleColor || styleConfig.globalPrimaryColor || '#000000')}
-                onChange={(e) => handleGlobalStyleChange('globalTitleColor', e.target.value)}
-                className="control-color"
-                style={{ width: '100%', height: '30px', padding: '2px' }}
-              />
-            </div>
-            <div>
-              <label className="control-label" style={{ fontSize: '10px' }}>Subtitle Color</label>
-              <input
-                type="color"
-                value={normalizeColorForInput(styleConfig.globalSubtitleColor || styleConfig.globalPrimaryColor || '#000000')}
-                onChange={(e) => handleGlobalStyleChange('globalSubtitleColor', e.target.value)}
-                className="control-color"
-                style={{ width: '100%', height: '30px', padding: '2px' }}
-              />
-            </div>
-            <div>
-              <label className="control-label" style={{ fontSize: '10px' }}>Text Color</label>
-              <input
-                type="color"
-                value={normalizeColorForInput(styleConfig.globalTextColor || '#000000')}
-                onChange={(e) => handleGlobalStyleChange('globalTextColor', e.target.value)}
-                className="control-color"
-                style={{ width: '100%', height: '30px', padding: '2px' }}
-              />
-            </div>
-            <div>
-              <label className="control-label" style={{ fontSize: '10px' }}>Bullet Color</label>
-              <input
-                type="color"
-                value={normalizeColorForInput(styleConfig.globalBulletColor || styleConfig.globalPrimaryColor || '#000000')}
-                onChange={(e) => handleGlobalStyleChange('globalBulletColor', e.target.value)}
-                className="control-color"
-                style={{ width: '100%', height: '30px', padding: '2px' }}
-              />
-            </div>
-          </div>
-
-          <p style={{ fontSize: '10px', color: '#6b7280', marginTop: '10px', fontStyle: 'italic', lineHeight: '1.4' }}>
-            ℹ️ These global settings override template defaults for a consistent look.
-          </p>
-        </div>
-
+        {/* --- TEMPLATE SELECT --- (Moved Up) */}
         {!isMobile && <h3 className="panel-title">TEMPLATE SELECT</h3>}
 
         {TEMPLATES && Object.keys(TEMPLATES).length > 0 && (
@@ -2028,6 +1959,70 @@ const UIEditor = () => {
             )}
           </div>
         )}
+
+        {/* --- GLOBAL STYLES --- */}
+        <h3 className="panel-title">GLOBAL STYLES</h3>
+        <div className="control-group" style={{ marginBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.1)', pb: '15px' }}>
+
+          {/* FONT SELECTOR */}
+          <div style={{ marginBottom: '15px' }}>
+            <label className="control-label">Resume Font (ATS Friendly)</label>
+            <select
+              value={styleConfig.globalFontFamily || 'Helvetica'}
+              onChange={(e) => handleGlobalStyleChange('globalFontFamily', e.target.value)}
+              className="control-select"
+              style={{
+                fontFamily: styleConfig.globalFontFamily || 'inherit',
+                fontWeight: '600',
+                fontSize: '14px',
+                height: '40px'
+              }}
+            >
+              <option value="Arial">Arial (Standard)</option>
+              <option value="Helvetica">Helvetica (Classic)</option>
+              <option value="Times New Roman">Times New Roman (Serif)</option>
+              <option value="Georgia">Georgia (Professional Serif)</option>
+              <option value="Calibri">Calibri (Modern)</option>
+              <option value="Verdana">Verdana (Clear Sans)</option>
+              <option value="Tahoma">Tahoma (Compact)</option>
+              <option value="Roboto">Roboto (Clean)</option>
+              <option value="Inter">Inter (Premium)</option>
+            </select>
+          </div>
+
+          {/* COLOR PICKER - BULLET ONLY */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '10px' }}>
+            <div>
+              <label className="control-label" style={{ fontSize: '10px' }}>Bullet Color</label>
+              <input
+                type="color"
+                value={normalizeColorForInput(styleConfig.globalBulletColor || styleConfig.globalPrimaryColor || '#000000')}
+                onChange={(e) => handleGlobalStyleChange('globalBulletColor', e.target.value)}
+                className="control-color"
+                style={{ width: '100%', height: '30px', padding: '2px' }}
+              />
+            </div>
+          </div>
+
+          <div style={{ marginTop: '10px' }}>
+            <label className="control-label" style={{ fontSize: '11px', display: 'flex', justifyContent: 'space-between' }}>
+              Bullet Vertical Offset <span>{styleConfig.globalBulletTop || 0}px</span>
+            </label>
+            <input
+              type="range"
+              min="-10"
+              max="10"
+              step="1"
+              value={styleConfig.globalBulletTop || 0}
+              onChange={(e) => handleGlobalStyleChange('globalBulletTop', e.target.value)}
+              style={{ width: '100%', accentColor: '#3b82f6' }}
+            />
+          </div>
+
+          <p style={{ fontSize: '10px', color: '#6b7280', marginTop: '10px', fontStyle: 'italic', lineHeight: '1.4' }}>
+            ℹ️ These global settings override template defaults for a consistent look.
+          </p>
+        </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
           <div style={{ display: 'flex', gap: '10px' }}>

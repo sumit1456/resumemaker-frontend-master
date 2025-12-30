@@ -159,6 +159,7 @@ export const defaultStyleConfig = {
   fontFamily: 'Helvetica',
   bulletStyle: '•',
   textTransform: 'uppercase',
+  globalBulletTop: 0,
 };
 
 /**
