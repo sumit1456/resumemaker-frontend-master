@@ -213,9 +213,20 @@ export async function captureDOMToCanvas(element, options = {}) {
   const canvas = document.createElement('canvas');
   const engine = new CanvasLayoutEngine(canvas, { scale });
 
+  const renderStart = performance.now();
   engine.renderSnapshot(snapshot);
+  const renderTime = performance.now() - renderStart;
 
-  return engine.toImage();
+  const img = await engine.toImage();
+
+  return {
+    src: img.src,
+    stats: {
+      nodeCount: snapshot.stats.nodeCount,
+      captureTime: snapshot.stats.captureTime,
+      renderTime: renderTime
+    }
+  };
 }
 
 // ==================== ADVANCED EXAMPLES ====================

@@ -141,6 +141,7 @@ const UIEditor = () => {
   const [showPage2, setShowPage2] = useState(false);
   const [isAutoFlowEnabled, setIsAutoFlowEnabled] = useState(false); // 🎯 Default to false as requested by user
   const [zoom, setZoom] = useState(1);
+  const [isMagneticEnabled, setIsMagneticEnabled] = useState(true); // 🚀 NEW: Magnetic Flow (Default ON)
 
   const extractWidthsAndHeightsFromConfig = (config) => {
     const widths = {};
@@ -1893,6 +1894,7 @@ const UIEditor = () => {
               const newState = !isAnimationsEnabled;
               setIsAnimationsEnabled(newState);
               setIsPhysicsEnabled(newState);
+              if (newState) setIsMagneticEnabled(false); // 🚀 Turning on Physics turns OFF Magnet
             }}
             className={`btn-primary full-width ${isAnimationsEnabled ? 'active' : ''}`}
             style={{
@@ -2048,6 +2050,26 @@ const UIEditor = () => {
             className={`btn-primary full-width btn-auto-flow-action ${isAutoFlowEnabled ? 'active' : ''}`}
           >
             {isAutoFlowEnabled ? 'Auto-Flow: ON (Header Aligned)' : 'Auto-Flow: OFF'}
+          </button>
+
+          <button
+            onClick={() => {
+              const newState = !isMagneticEnabled;
+              setIsMagneticEnabled(newState);
+              if (newState) {
+                setIsAnimationsEnabled(false); // 🚀 Turning on Magnet turns OFF Physics
+                setIsPhysicsEnabled(false);
+              }
+            }}
+            className={`btn-primary full-width btn-auto-flow-action ${isMagneticEnabled ? 'active' : ''}`}
+            style={{
+              marginTop: '10px',
+              backgroundColor: isMagneticEnabled ? '#e0f2fe' : 'white',
+              color: isMagneticEnabled ? '#0369a1' : '#1f2937',
+              borderColor: isMagneticEnabled ? '#7dd3fc' : '#e5e7eb'
+            }}
+          >
+            {isMagneticEnabled ? '🧲 Magnetic Flow: ON' : '🧲 Magnetic Flow: OFF'}
           </button>
         </div>
 
@@ -2447,6 +2469,7 @@ const UIEditor = () => {
                 lines={page1Elements.lines}
                 sections={page1Elements.sections}
                 snapshot={sectionSnapshots}
+                isMagneticEnabled={isMagneticEnabled}
                 physicsEnabled={isPhysicsEnabled}
                 physicsManagerRef={physicsManager}
                 onDragStart={(type, id) => {

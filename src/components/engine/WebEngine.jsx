@@ -2524,7 +2524,8 @@ const WebGLStage = forwardRef(({
     yOffset = 0,
     onHeaderContainerReady = null,
     onSkillsContainerReady = null,
-    onDragStart = () => { }, // 🚀 Added
+    onDragStart = () => { },
+    isMagneticEnabled = false, // 🚀 NEW: Magnetic Flow Toggle
     className = "",
     style = {},
     stageScale = 1
@@ -2536,10 +2537,15 @@ const WebGLStage = forwardRef(({
     const [initialized, setInitialized] = useState(false);
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
-    const physicsEnabledRef = useRef(physicsEnabled); // 🚀 Added to fix toggle closure
+    const physicsEnabledRef = useRef(physicsEnabled);
+    const isMagneticEnabledRef = useRef(isMagneticEnabled); // 🚀 NEW
+    const yOffsetRef = useRef(yOffset); // 🚀 NEW
+
     useEffect(() => {
         physicsEnabledRef.current = physicsEnabled;
-    }, [physicsEnabled]);
+        isMagneticEnabledRef.current = isMagneticEnabled;
+        yOffsetRef.current = yOffset;
+    }, [physicsEnabled, isMagneticEnabled, yOffset]);
 
     const dragSession = useRef({
         active: false,
@@ -2550,7 +2556,8 @@ const WebGLStage = forwardRef(({
         startY: 0,
         dragStartX: 0,
         dragStartY: 0,
-        wasDragging: false
+        wasDragging: false,
+        initialPositions: {} // 🚀 NEW: Captured at start of drag
     });
 
     // --- PIXI INITIALIZATION ---
@@ -2657,18 +2664,55 @@ const WebGLStage = forwardRef(({
 
                 const targetX = session.startX + deltaX;
                 const targetY = session.startY + deltaY;
-
                 if (physicsEnabledRef.current && session.type === 'section' && physicsManagerRef?.current) {
                     // 🚀 Real-time Physics Pushing (Matter.js)
                     const manager = physicsManagerRef.current;
-                    manager.updateDragging(session.id, targetX, targetY + yOffset);
+                    manager.updateDragging(session.id, targetX, targetY + yOffsetRef.current);
 
                     const positions = manager.getPositions();
 
                     layers.current.sections.children.forEach(c => {
                         if (c._id && positions[c._id]) {
                             c.x = positions[c._id].x;
-                            c.y = positions[c._id].y - yOffset;
+                            c.y = positions[c._id].y - yOffsetRef.current;
+                        }
+                    });
+                } else if (isMagneticEnabledRef.current && session.type === 'section') {
+                    // 🚀 NEW: Magnetic Flow (Cascaded Vertical Shift)
+                    // 1. Update the dragged element
+                    session.target.x = targetX;
+                    session.target.y = targetY;
+
+                    // 2. Shift all sections below it that are in the same column
+                    const deltaY = targetY - session.startY;
+                    const draggedInitialY = session.startY;
+                    const draggedInitialX = session.startX;
+                    // We need a width for the dragged section to check overlap
+                    const draggedWidth = session.target.getBounds?.().width || 575;
+
+                    layers.current.sections.children.forEach(c => {
+                        if (c._id && c._id !== session.id) {
+                            const initialPos = session.initialPositions[c._id];
+                            if (!initialPos) return;
+
+                            // Condition 1: Section started BELOW the dragged one
+                            // Condition 2: Section is in the SAME column (X overlap)
+                            const isBelow = initialPos.y > draggedInitialY;
+
+                            // Simple X overlap check
+                            const sectionWidth = c.getBounds?.().width || 575;
+                            const hasXOverlap = (initialPos.x < draggedInitialX + draggedWidth) &&
+                                (initialPos.x + sectionWidth > draggedInitialX);
+
+                            if (isBelow && hasXOverlap) {
+                                // 🎯 Refined: Snap to Column + Cascaded Shift
+                                c.x = targetX;
+                                c.y = initialPos.y + deltaY;
+                            } else {
+                                // 🎯 Restore initial relative positions if not in the flow
+                                c.x = initialPos.x;
+                                c.y = initialPos.y;
+                            }
                         }
                     });
                 } else {
@@ -2843,8 +2887,18 @@ const WebGLStage = forwardRef(({
                         startX: sectionContainer.x,
                         startY: sectionContainer.y,
                         dragStartX: globalPos.x,
-                        dragStartY: globalPos.y
+                        dragStartY: globalPos.y,
+                        initialPositions: {}
                     };
+
+                    // 🚀 Capture all current positions for followers
+                    if (layers.current.sections) {
+                        layers.current.sections.children.forEach(c => {
+                            if (c._id) {
+                                dragSession.current.initialPositions[c._id] = { x: c.x, y: c.y };
+                            }
+                        });
+                    }
 
                     if (onDragStart) onDragStart('section', id); // 🚀 Trigger callback
                 });

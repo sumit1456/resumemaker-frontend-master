@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { WebGLStage, useWebGLSnapshot } from './components/engine/WebEngine';
 import { captureDOMToCanvas } from './components/canvasEngine/CanvasEngineFunctions';
 import './Demo.css';
@@ -14,7 +14,7 @@ const Demo = () => {
     const styleWorkerRef = useRef(null);
     const gradientWorkerRef = useRef(null);
 
-    React.useEffect(() => {
+    useEffect(() => {
         styleWorkerRef.current = new Worker('/workers/styleWorker.js');
         gradientWorkerRef.current = new Worker('/workers/gradientWorker.js');
         return () => {
@@ -23,25 +23,36 @@ const Demo = () => {
         };
     }, []);
 
+    const [canvasStats, setCanvasStats] = useState(null);
+    const [webglStats, setWebglStats] = useState(null);
+
     const { capture: captureWebGL } = useWebGLSnapshot();
 
     const runCanvasTest = async () => {
         const start = performance.now();
-        const img = await captureDOMToCanvas(targetRef.current, {
+        const result = await captureDOMToCanvas(targetRef.current, {
             scale: 2,
             mode: mode,
             styleWorker: styleWorkerRef.current,
             gradientWorker: gradientWorkerRef.current
         });
-        setCanvasTime(performance.now() - start);
-        setCanvasImage(img.src);
+        const total = performance.now() - start;
+        setCanvasTime(total);
+        setCanvasImage(result.src);
+        setCanvasStats({ ...result.stats, total });
     };
 
     const runWebGLTest = async () => {
         const start = performance.now();
         const snapshot = await captureWebGL(targetRef.current, { mode: mode });
-        setWebglTime(performance.now() - start);
+        const total = performance.now() - start;
+        setWebglTime(total);
         setWebglSnapshot(snapshot);
+        setWebglStats({
+            nodeCount: snapshot?.stats?.nodeCount || 0,
+            captureTime: snapshot?.stats?.captureTime || 0,
+            total
+        });
     };
 
     return (
@@ -52,25 +63,10 @@ const Demo = () => {
             </header>
 
             <main className="demo-main">
-                {/* TARGET ELEMENT */}
+                {/* TARGET ELEMENT - The Test Suite */}
                 <section className="demo-section">
-                    <h2>1. Source DOM Element</h2>
-                    <div ref={targetRef} className="sample-card">
-                        <div className="card-header">
-                            <h3>Professional Summary</h3>
-                            <span className="badge">Featured</span>
-                        </div>
-                        <p className="card-body">
-                            Innovative Software Engineer with 5+ years of experience in building
-                            high-performance web applications. Expert in React, PixiJS, and
-                            geometric layout engines.
-                        </p>
-                        <div className="card-footer">
-                            <div className="tag">React</div>
-                            <div className="tag">WebGL</div>
-                            <div className="tag">Canvas</div>
-                        </div>
-                    </div>
+                    <h2>1. Source DOM Element (Test Suite)</h2>
+
                     <div className="controls">
                         <select className="mode-select" value={mode} onChange={(e) => setMode(e.target.value)}>
                             <option value="performance">Performance Mode (Fast)</option>
@@ -83,6 +79,45 @@ const Demo = () => {
                             Capture with WebGL Engine
                         </button>
                     </div>
+
+                    <div style={{ padding: '20px', border: '1px solid #ccc', marginTop: '20px', borderRadius: '8px', background: '#e2e8f0' }}>
+                        <div ref={targetRef} className="test-suite">
+
+                            {/* TEST CASE 1: LINES & BORDERS */}
+                            <div className="test-category">
+                                <h3>Test 1: Lines & Borders (Dashed/Dotted)</h3>
+                                <div className="line-box dashed-border">Dashed Border (Blue)</div>
+                                <div className="line-box dotted-border">Dotted Border (Red)</div>
+                                <div className="line-box mixed-border">Mixed Borders</div>
+                            </div>
+
+                            {/* TEST CASE 2: GRADIENTS */}
+                            <div className="test-category">
+                                <h3>Test 2: Gradients</h3>
+                                <div className="gradient-box linear-gradient">Linear Gradient</div>
+                                <div className="gradient-box radial-gradient">Radial Gradient</div>
+                                <div className="gradient-box complex-gradient">Complex Gradient</div>
+                            </div>
+
+                            {/* TEST CASE 3: LAYOUT & Z-INDEX */}
+                            <div className="test-category">
+                                <h3>Test 3: Layout & Layers</h3>
+                                <div className="layout-grid-test">
+                                    <div className="layering-container">
+                                        <div className="layer-box layer-1">Z-10</div>
+                                        <div className="layer-box layer-2">Z-20</div>
+                                        <div className="layer-box layer-3">Z-5</div>
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                        <div style={{ background: '#ddd', padding: '5px' }}>Flex Item 1</div>
+                                        <div style={{ background: '#ccc', padding: '5px' }}>Flex Item 2</div>
+                                        <div style={{ background: '#bbb', padding: '5px' }}>Flex Item 3</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
                 </section>
 
                 {/* RESULTS */}
@@ -91,7 +126,18 @@ const Demo = () => {
                     <section className="demo-section">
                         <div className="section-header">
                             <h2>2. Canvas Engine Result</h2>
-                            {canvasTime > 0 && <span className="time">{canvasTime.toFixed(2)}ms</span>}
+                            {canvasTime > 0 && (
+                                <div className="stats-box">
+                                    <span className="time-badge">{canvasTime.toFixed(2)}ms Total</span>
+                                    {canvasStats && (
+                                        <div className="stats-details">
+                                            <span>Nodes: {canvasStats.nodeCount}</span>
+                                            <span>Parse: {canvasStats.captureTime?.toFixed(2)}ms</span>
+                                            <span>Render: {canvasStats.renderTime?.toFixed(2)}ms</span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                         <div className="canvas-output-container">
                             {canvasImage ? (
@@ -106,7 +152,18 @@ const Demo = () => {
                     <section className="demo-section">
                         <div className="section-header">
                             <h2>3. WebGL Engine Result</h2>
-                            {webglTime > 0 && <span className="time">{webglTime.toFixed(2)}ms</span>}
+                            {webglTime > 0 && (
+                                <div className="stats-box">
+                                    <span className="time-badge">{webglTime.toFixed(2)}ms Total</span>
+                                    {webglStats && (
+                                        <div className="stats-details">
+                                            <span>Nodes: {webglStats.nodeCount}</span>
+                                            <span>Parse: {webglStats.captureTime?.toFixed(2)}ms</span>
+                                            <span>GPU Upload: {(webglStats.total - webglStats.captureTime).toFixed(2)}ms</span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                         <div className="webgl-output-container">
                             {webglSnapshot ? (
@@ -114,6 +171,7 @@ const Demo = () => {
                                     snapshot={webglSnapshot}
                                     width={webglSnapshot.width}
                                     height={webglSnapshot.height}
+                                    stageScale={1} // Ensure 1:1 scale for comparison
                                     resolution={2}
                                 />
                             ) : (

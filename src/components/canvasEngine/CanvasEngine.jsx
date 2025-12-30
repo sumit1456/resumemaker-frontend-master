@@ -247,15 +247,16 @@ class GeometrySnapshot {
       boxShadow: computed.boxShadow,
       transform: computed.transform,
       lineHeight: computed.lineHeight,
-      opacity: computed.opacity
+      opacity: computed.opacity,
+      // New properties for text rendering
+      letterSpacing: computed.letterSpacing,
+      whiteSpace: computed.whiteSpace,
+      wordBreak: computed.wordBreak
     };
 
     if (raw.backgroundColor !== 'rgba(0, 0, 0, 0)' && raw.backgroundColor !== 'transparent') {
       // Only log if it has a background to avoid spam
-      console.log(`[GeometrySnapshot] Extracted raw styles:`, {
-        bg: raw.backgroundColor,
-        color: raw.color
-      });
+      // console.log(`[GeometrySnapshot] Extracted raw styles:`, { bg: raw.backgroundColor });
     }
 
     return raw;
@@ -283,8 +284,17 @@ class GeometrySnapshot {
         left: parseFloat(raw.paddingLeft) || 0
       },
       boxShadow: raw.boxShadow !== 'none' ? raw.boxShadow : null,
-      transform: raw.transform !== 'none' ? raw.transform : null
+      transform: raw.transform !== 'none' ? raw.transform : null,
+      letterSpacing: parseFloat(raw.letterSpacing) || 0,
+      whiteSpace: raw.whiteSpace,
+      wordBreak: raw.wordBreak
     });
+
+    // Also handle gradient if present
+    if (raw.backgroundImage && raw.backgroundImage !== 'none') {
+      const gradient = this.parseGradient(raw.backgroundImage);
+      if (gradient) nodeData.styles.gradient = gradient;
+    }
   }
 
   dispatchAllStyles() {
@@ -292,14 +302,11 @@ class GeometrySnapshot {
       const id = Math.random().toString(36).substr(2, 9);
       const rawStylesBatch = this.pendingStyles.map(p => p.raw);
 
-      console.log(`[GeometrySnapshot] Dispatching ALL ${rawStylesBatch.length} styles to worker (ID: ${id})`);
+      // console.log(`[GeometrySnapshot] Dispatching ALL ${rawStylesBatch.length} styles to worker (ID: ${id})`);
 
       const handler = (e) => {
         if (e.data.type === 'STYLES_PROCESSED' && e.data.id === id) {
-          console.log(`[GeometrySnapshot] Received processed styles from worker (ID: ${id})`);
-          if (e.data.processedBatch.length > 0) {
-            console.log(`[GeometrySnapshot] Sample processed style (Node 0):`, e.data.processedBatch[0]);
-          }
+          // console.log(`[GeometrySnapshot] Received processed styles from worker (ID: ${id})`);
           e.data.processedBatch.forEach((styles, i) => {
             Object.assign(this.pendingStyles[i].nodeData.styles, styles);
           });
@@ -317,7 +324,6 @@ class GeometrySnapshot {
       const id = Math.random().toString(36).substr(2, 9);
       const handler = (e) => {
         if (e.data.type === 'GRADIENT_PARSED' && e.data.id === id) {
-          console.log(`[GeometrySnapshot] Received parsed gradient (ID: ${id}):`, e.data.gradient);
           nodeData.styles.gradient = e.data.gradient;
           this.gradientWorker.removeEventListener('message', handler);
           resolve();
@@ -329,12 +335,108 @@ class GeometrySnapshot {
   }
 
   parseGradient(bgImage) {
-    // Basic fallback parsing if worker not available
     if (!bgImage || bgImage === 'none') return null;
-    if (bgImage.includes('linear-gradient')) {
-      return { type: 'linear', stops: [{ color: '#ffffff', position: 0 }, { color: '#000000', position: 1 }] };
+
+    // Robust layer splitting: match top-level commas
+    let layers = [];
+    let depth = 0;
+    let lastIdx = 0;
+    for (let i = 0; i < bgImage.length; i++) {
+      if (bgImage[i] === '(') depth++;
+      else if (bgImage[i] === ')') depth--;
+      else if (bgImage[i] === ',' && depth === 0) {
+        layers.push(bgImage.substring(lastIdx, i).trim());
+        lastIdx = i + 1;
+      }
     }
-    return null;
+    layers.push(bgImage.substring(lastIdx).trim());
+
+    const cleanBg = layers[0];
+    let result = null;
+
+    // Match linear or radial gradient
+    const linearMatch = cleanBg.match(/linear-gradient\((.*)\)/s);
+    const radialMatch = cleanBg.match(/radial-gradient\((.*)\)/s);
+
+    if (linearMatch) {
+      result = this.parseLinearGradient(linearMatch[1].trim());
+    } else if (radialMatch) {
+      result = this.parseRadialGradient(radialMatch[1].trim());
+    }
+
+    return result;
+  }
+
+  parseLinearGradient(content) {
+    let parts = [];
+    let depth = 0;
+    let lastIdx = 0;
+    for (let i = 0; i < content.length; i++) {
+      if (content[i] === '(') depth++;
+      else if (content[i] === ')') depth--;
+      else if (content[i] === ',' && depth === 0) {
+        parts.push(content.substring(lastIdx, i).trim());
+        lastIdx = i + 1;
+      }
+    }
+    parts.push(content.substring(lastIdx).trim());
+
+    let angle = 180; // default (to bottom)
+    let startIdx = 0;
+
+    const firstPart = parts[0];
+    if (firstPart.includes('deg')) {
+      angle = parseFloat(parts[0]);
+      startIdx = 1;
+    } else if (parts[0].includes('to ')) {
+      const direction = parts[0].toLowerCase();
+      if (direction.includes('right')) angle = 90;
+      if (direction.includes('left')) angle = 270;
+      if (direction.includes('top')) angle = 0;
+      if (direction.includes('bottom')) angle = 180;
+      startIdx = 1;
+    }
+
+    const stops = this.parseColorStops(parts, startIdx);
+    return { type: 'linear', angle, stops };
+  }
+
+  parseRadialGradient(content) {
+    let parts = [];
+    let depth = 0;
+    let lastIdx = 0;
+    for (let i = 0; i < content.length; i++) {
+      if (content[i] === '(') depth++;
+      else if (content[i] === ')') depth--;
+      else if (content[i] === ',' && depth === 0) {
+        parts.push(content.substring(lastIdx, i).trim());
+        lastIdx = i + 1;
+      }
+    }
+    parts.push(content.substring(lastIdx).trim());
+
+    const hasShape = parts[0].includes('circle') || parts[0].includes('ellipse') || parts[0].includes('at ');
+    return {
+      type: 'radial',
+      stops: this.parseColorStops(parts, hasShape ? 1 : 0)
+    };
+  }
+
+  parseColorStops(parts, startIdx) {
+    const stops = [];
+    for (let i = startIdx; i < parts.length; i++) {
+      const stop = parts[i];
+      const colorMatch = stop.match(/(#[a-fA-F0-0]{3,8}|rgba?\(.*?\)|[a-zA-Z]+)/);
+      const percentMatch = stop.match(/(\d+)%/);
+
+      if (colorMatch) {
+        const color = colorMatch[0];
+        const position = percentMatch ? parseFloat(percentMatch[1]) / 100 :
+          (i - startIdx) / (parts.length - startIdx - 1 || 1);
+        stops.push({ color, position });
+      }
+    }
+    return stops;
   }
 }
 
@@ -1290,55 +1392,66 @@ class CanvasLayoutEngine {
 
     // Granular debug for ALL nodes
     const hasBg = styles.backgroundColor && styles.backgroundColor !== 'transparent' && styles.backgroundColor !== 'rgba(0, 0, 0, 0)';
-    const hasGrad = !!styles.gradient;
-    const isVisible = hasBg || hasGrad || type === 'text' || type === 'image';
-
-    if (isVisible) {
-      console.log(`[CanvasLayoutEngine] DRAWING ${type} at (${Math.round(x)}, ${Math.round(y)}) ${width}x${height}`, {
-        bg: styles.backgroundColor,
-        color: styles.color,
-        grad: hasGrad
-      });
-    } else {
-      console.log(`[CanvasLayoutEngine] SKIPPED ${type} (invisible) at (${Math.round(x)}, ${Math.round(y)})`);
-    }
+    this.renderNode(this.ctx, node);
+  }
+  renderNode(ctx, node) {
+    const { x, y, width, height, styles, type, text, src } = node;
 
     ctx.save();
 
-    // Handle transform
-    if (styles.transform && styles.transform !== 'none') {
-      const matrixMatch = styles.transform.match(/matrix\(([^)]+)\)/);
-      if (matrixMatch) {
-        const [a, b, c, d, tx, ty] = matrixMatch[1].split(',').map(v => parseFloat(v));
-        ctx.transform(a, b, c, d, tx, ty);
+    // 0. GLOBAL OPACITY
+    if (styles.opacity !== undefined) {
+      ctx.globalAlpha = styles.opacity;
+    }
+
+    // 1. SHADOW
+    if (styles.boxShadow && styles.boxShadow !== 'none') {
+      const colorMatch = styles.boxShadow.match(/(rgba?\(.*?\)|#[0-9a-fA-F]{3,8}|[a-zA-Z]+)/);
+      if (colorMatch) {
+        const shadowColor = colorMatch[0];
+        const otherParts = styles.boxShadow.replace(shadowColor, '').trim().split(/\s+/);
+
+        ctx.shadowColor = shadowColor;
+        ctx.shadowOffsetX = parseFloat(otherParts[0]) || 0;
+        ctx.shadowOffsetY = parseFloat(otherParts[1]) || 0;
+        ctx.shadowBlur = parseFloat(otherParts[2]) || 0;
       }
     }
 
-    ctx.globalAlpha = styles.opacity || 1;
+    // Helper to get absolute border radius
+    const getRadius = () => {
+      let r = styles.borderRadius || 0;
+      if (typeof r === 'string' && r.endsWith('%')) {
+        return (Math.min(width, height) * parseFloat(r)) / 100;
+      }
+      return parseFloat(r) || 0;
+    };
+    const radius = getRadius();
 
-    // Background & Borders
+
+    // 2. BACKGROUND & GRADIENT
     if (styles.backgroundColor && styles.backgroundColor !== 'transparent' && styles.backgroundColor !== 'rgba(0, 0, 0, 0)') {
       ctx.fillStyle = styles.backgroundColor;
-      const radius = parseFloat(styles.borderRadius) || 0;
       if (radius > 0) {
         this.roundRect(ctx, { x, y, width, height }, radius);
         ctx.fill();
+        ctx.shadowColor = 'transparent'; // clear after fill
       } else {
         ctx.fillRect(x, y, width, height);
+        ctx.shadowColor = 'transparent';
       }
     }
 
-    // Gradient Background
+    // Gradient Handling
     if (styles.gradient) {
-      const g = styles.gradient;
-      let grad;
-      if (g.type === 'radial') {
+      let gradient;
+      if (styles.gradient.type === 'radial') {
         const centerX = x + width / 2;
         const centerY = y + height / 2;
-        const radius = Math.max(width, height) / 2;
-        grad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+        const gr = Math.max(width, height) / 2;
+        gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, gr);
       } else {
-        const angle = g.angle !== undefined ? g.angle : 180;
+        const angle = styles.gradient.angle !== undefined ? styles.gradient.angle : 180;
         const angleRad = ((angle - 90) * Math.PI) / 180;
         const length = Math.abs(width * Math.cos(angleRad)) + Math.abs(height * Math.sin(angleRad));
         const centerX = x + width / 2;
@@ -1347,101 +1460,121 @@ class CanvasLayoutEngine {
         const y1 = centerY - (Math.sin(angleRad) * length) / 2;
         const x2 = centerX + (Math.cos(angleRad) * length) / 2;
         const y2 = centerY + (Math.sin(angleRad) * length) / 2;
-        grad = ctx.createLinearGradient(x1, y1, x2, y2);
+        gradient = ctx.createLinearGradient(x1, y1, x2, y2);
       }
-      g.stops.forEach(stop => grad.addColorStop(stop.position, stop.color));
-      ctx.fillStyle = grad;
-      const radius = parseFloat(styles.borderRadius) || 0;
+
+      styles.gradient.stops.forEach(stop => {
+        gradient.addColorStop(stop.position, stop.color);
+      });
+
+      ctx.fillStyle = gradient;
       if (radius > 0) {
         this.roundRect(ctx, { x, y, width, height }, radius);
         ctx.fill();
       } else {
         ctx.fillRect(x, y, width, height);
       }
+      ctx.shadowColor = 'transparent';
     }
 
-    // Shadow
-    if (styles.boxShadow && styles.boxShadow !== 'none') {
-      const parts = styles.boxShadow.split(/ (?![^(]*\))/);
-      let color = '#000000';
-      let ox = 0, oy = 0, blur = 0;
-      for (const part of parts) {
-        if (part.includes('rgb') || part.startsWith('#')) color = part;
-        else if (part.endsWith('px')) {
-          const val = parseFloat(part);
-          if (ox === 0) ox = val;
-          else if (oy === 0) oy = val;
-          else blur = val;
-        }
-      }
-      ctx.shadowColor = color;
-      ctx.shadowBlur = blur;
-      ctx.shadowOffsetX = ox;
-      ctx.shadowOffsetY = oy;
-    }
 
+    // 3. BORDER (Dashed/Dotted Support)
     if (styles.borderWidth > 0 && styles.borderStyle !== 'none') {
-      ctx.strokeStyle = styles.borderColor;
+      const bColor = styles.borderColor || '#000';
+      ctx.strokeStyle = bColor;
       ctx.lineWidth = styles.borderWidth;
-      const radius = parseFloat(styles.borderRadius) || 0;
+
+      if (styles.borderStyle === 'dashed') {
+        ctx.setLineDash([styles.borderWidth * 3, styles.borderWidth * 2]);
+      } else if (styles.borderStyle === 'dotted') {
+        ctx.setLineDash([styles.borderWidth, styles.borderWidth]);
+      } else {
+        ctx.setLineDash([]);
+      }
+
       if (radius > 0) {
         this.roundRect(ctx, { x, y, width, height }, radius);
         ctx.stroke();
       } else {
         ctx.strokeRect(x, y, width, height);
       }
+      ctx.setLineDash([]); // Reset
     }
 
-    // Reset shadow
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 0;
-
-    // Content
-    if (type === 'text' && text) {
-      const weight = styles.fontWeight || 'normal';
-      const size = typeof styles.fontSize === 'number' ? `${styles.fontSize}px` : (styles.fontSize || '12px');
-      const family = styles.fontFamily || 'Arial';
-
-      ctx.font = `${weight} ${size} ${family}`;
-      ctx.fillStyle = styles.color || '#000000';
-      ctx.textBaseline = 'top';
-
-      console.log(`[CanvasLayoutEngine] Text Style applied: font="${ctx.font}", color="${ctx.fillStyle}"`);
-
-      const lineHeight = parseFloat(styles.lineHeight) || parseFloat(styles.fontSize) * 1.2;
-      const words = text.split(' ');
-      let line = '';
-      let currentY = y;
-
-      for (let n = 0; n < words.length; n++) {
-        const testLine = line + words[n] + ' ';
-        const metrics = ctx.measureText(testLine);
-        if (metrics.width > width && n > 0) {
-          ctx.fillText(line, x, currentY);
-          line = words[n] + ' ';
-          currentY += lineHeight;
-        } else {
-          line = testLine;
-        }
-      }
-      ctx.fillText(line, x, currentY);
-    } else if (type === 'image' && src) {
+    // 4. IMAGE
+    if (type === 'image' && src) {
       const img = new Image();
       img.src = src;
-      if (img.complete) {
-        ctx.drawImage(img, x, y, width, height);
-      } else {
-        img.onload = () => {
+      if (img.complete && img.width > 0) {
+        if (radius > 0) {
           ctx.save();
-          ctx.globalAlpha = styles.opacity || 1;
+          this.roundRect(ctx, { x, y, width, height }, radius);
+          ctx.clip();
           ctx.drawImage(img, x, y, width, height);
           ctx.restore();
-        };
+        } else {
+          ctx.drawImage(img, x, y, width, height);
+        }
       }
+    }
+
+    // 5. TEXT
+    if (type === 'text' && text) {
+      this.renderText(ctx, node);
     }
 
     ctx.restore();
+  }
+
+  renderText(ctx, node) {
+    const { x, y, width, height, text, styles } = node;
+    const fontSize = styles.fontSize || 12;
+    const fontFamily = styles.fontFamily || 'Arial';
+    const fontWeight = styles.fontWeight || 'normal';
+    const fontStyle = styles.fontStyle || 'normal';
+
+    ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`;
+    ctx.fillStyle = styles.color || '#000';
+    ctx.textBaseline = 'top';
+
+    // Alignment
+    const align = styles.textAlign || 'left';
+    const lineHeight = styles.lineHeight || fontSize * 1.2;
+    const padding = styles.padding || { left: 0, top: 0, right: 0 };
+
+    const words = text.split(' ');
+    let line = '';
+    let lineY = y + (padding.top || 0);
+
+    const maxWidth = width - ((padding.left || 0) + (padding.right || 0));
+    const startX = x + (padding.left || 0);
+
+    for (let n = 0; n < words.length; n++) {
+      const testLine = line + words[n] + ' ';
+      const metrics = ctx.measureText(testLine);
+
+      if (metrics.width > maxWidth && n > 0) {
+        this.fillTextLine(ctx, line, startX, lineY, maxWidth, align);
+        line = words[n] + ' ';
+        lineY += lineHeight;
+      }
+      else {
+        line = testLine;
+      }
+    }
+    this.fillTextLine(ctx, line, startX, lineY, maxWidth, align);
+  }
+
+  fillTextLine(ctx, text, x, y, maxWidth, align) {
+    if (align === 'center') {
+      const metrics = ctx.measureText(text);
+      ctx.fillText(text, x + (maxWidth - metrics.width) / 2, y);
+    } else if (align === 'right') {
+      const metrics = ctx.measureText(text);
+      ctx.fillText(text, x + maxWidth - metrics.width, y);
+    } else {
+      ctx.fillText(text, x, y);
+    }
   }
 
   roundRect(ctx, bounds, radius) {
