@@ -583,9 +583,16 @@ export default function ResumeAnalyzer({
     const MAX_RETRIES = 3;
     let attempt = 0;
 
+    let controller;
+    const timeout = 30000; // 30 seconds
+
     while (attempt <= MAX_RETRIES) {
       try {
         setMessage(attempt > 0 ? `Retrying AI Analysis (${attempt}/${MAX_RETRIES})...` : 'AI Analysis...');
+
+        controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeout);
+
         const payload = {
           jobDescription,
           resume: buildResumeString()
@@ -595,7 +602,10 @@ export default function ResumeAnalyzer({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
+          signal: controller.signal
         });
+
+        clearTimeout(id);
 
         if (!res.ok) throw new Error(`Status ${res.status}`);
 
@@ -640,7 +650,15 @@ export default function ResumeAnalyzer({
 
       } catch (err) {
         console.error(`AI Analysis attempt ${attempt + 1} failed:`, err);
-        const isRetryable = err.message.includes("Connection reset") || err.message.includes("recvAddress") || err.name === "TypeError"; // TypeError is often network-related in fetch
+
+        let errorMessage = err.message;
+        if (err.name === 'AbortError') {
+          errorMessage = "Server is not up";
+        } else if (errorMessage.includes("Failed to fetch") || errorMessage.includes("NetworkError")) {
+          errorMessage = "Server is not up";
+        }
+
+        const isRetryable = (err.message.includes("Connection reset") || err.message.includes("recvAddress") || err.name === "TypeError") && err.name !== 'AbortError';
 
         if (isRetryable && attempt < MAX_RETRIES) {
           attempt++;
@@ -652,10 +670,11 @@ export default function ResumeAnalyzer({
         setJobDescriptionInsights(
           <ErrorState
             title="Connection Error"
-            message={err.message}
-            subtitle="Make sure your backend is running on API_BASE_URL"
+            message={errorMessage}
+            subtitle="Make sure your backend is running"
           />
         );
+        window.showMessage("Error", errorMessage, "error", 1500);
         break;
       }
     }
@@ -711,9 +730,15 @@ export default function ResumeAnalyzer({
     setLoading(true);
     setReportOutput(<LoadingState />);
 
+    let controller;
+    const timeout = 30000;
+
     while (attempt <= MAX_RETRIES) {
       try {
         setMessage(attempt > 0 ? `Retrying Report (${attempt}/${MAX_RETRIES})...` : 'Creating Report...');
+
+        controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeout);
 
         const payload = {
           oldResume: currentLocalResume,
@@ -724,7 +749,10 @@ export default function ResumeAnalyzer({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
+          signal: controller.signal
         });
+
+        clearTimeout(id);
 
         if (!res.ok) {
           const text = await res.text();
@@ -763,7 +791,15 @@ export default function ResumeAnalyzer({
 
       } catch (err) {
         console.error(`Create Report attempt ${attempt + 1} failed:`, err);
-        const isRetryable = err.message.includes("Connection reset") || err.message.includes("recvAddress") || err.name === "TypeError";
+
+        let errorMessage = err.message;
+        if (err.name === 'AbortError') {
+          errorMessage = "Server is not up";
+        } else if (errorMessage.includes("Failed to fetch") || errorMessage.includes("NetworkError")) {
+          errorMessage = "Server is not up";
+        }
+
+        const isRetryable = (err.message.includes("Connection reset") || err.message.includes("recvAddress") || err.name === "TypeError") && err.name !== 'AbortError';
 
         if (isRetryable && attempt < MAX_RETRIES) {
           attempt++;
@@ -772,8 +808,8 @@ export default function ResumeAnalyzer({
           continue;
         }
 
-        window.showMessage("Error", 'Unable to generate report', "error", 1500);
-        setReportOutput(<ErrorState title="Connection Error" message={err.message} />);
+        window.showMessage("Error", errorMessage, "error", 1500);
+        setReportOutput(<ErrorState title="Connection Error" message={errorMessage} />);
         break;
       }
     }
@@ -792,28 +828,47 @@ export default function ResumeAnalyzer({
     const payload = buildATSPayload();
     setCurrentLocalResume(payload);
 
+    let controller;
+    const timeout = 30000;
+
     while (attempt <= MAX_RETRIES) {
       try {
         setMessage(attempt > 0 ? `Retrying Enhancement (${attempt}/${MAX_RETRIES})...` : 'Enhancing your Resume...');
 
+        controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeout);
+
         const res = await fetch(`${API_BASE_URL}/enhanceResume`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(payload),
+          signal: controller.signal
         });
+
+        clearTimeout(id);
 
         if (!res.ok) throw new Error(`Status ${res.status}`);
 
-        const data = await res.json();
-        dispatch(setEnhancedResume(data));
-        window.showMessage('Success', 'Enhancement Completed', 'success', 1500);
+        const result = await res.json();
+        const enhancedData = result.enhanced_resume || result;
 
-        setNewLocalResume(data);
-        break; // Success!
+        setNewLocalResume(enhancedData);
+        dispatch(setEnhancedResume(enhancedData));
+
+        window.showMessage("Success", 'Resume Enhanced with AI', "success", 1500);
+        break;
 
       } catch (err) {
-        console.error(`Enhance Resume attempt ${attempt + 1} failed:`, err);
-        const isRetryable = err.message.includes("Connection reset") || err.message.includes("recvAddress") || err.name === "TypeError";
+        console.error(`Enhancement attempt ${attempt + 1} failed:`, err);
+
+        let errorMessage = err.message;
+        if (err.name === 'AbortError') {
+          errorMessage = "Server is not up";
+        } else if (errorMessage.includes("Failed to fetch") || errorMessage.includes("NetworkError")) {
+          errorMessage = "Server is not up";
+        }
+
+        const isRetryable = (err.message.includes("Connection reset") || err.message.includes("recvAddress") || err.name === "TypeError") && err.name !== 'AbortError';
 
         if (isRetryable && attempt < MAX_RETRIES) {
           attempt++;
@@ -822,7 +877,7 @@ export default function ResumeAnalyzer({
           continue;
         }
 
-        window.showMessage(`${err.message || 'Error'} enhancing failed`, 'error');
+        window.showMessage("Error", errorMessage, "error", 1500);
         break;
       }
     }

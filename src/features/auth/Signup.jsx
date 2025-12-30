@@ -32,21 +32,23 @@ export default function Signup() {
         username,
         email,
         password
-      });
+      }, { timeout: 30000 }); // 30s timeout
 
       console.log("printing the response from the backend in signup");
-    
+
       const data = response.data;
       setSuccess(data.success);
       if (!success) {
-          window.showMessage(res.data.message, 'error');
-          throw new Error(res.data.message);
+        window.showMessage(res.data.message, 'error');
+        throw new Error(res.data.message);
       }
 
       window.showMessage('Check your email for verification', 'success');
     } catch (error) {
       if (error.response) {
-         window.showMessage(`${error.response.data.message}`, 'error');
+        window.showMessage(`${error.response.data.message}`, 'error');
+      } else if (error.code === 'ECONNABORTED' || error.request) {
+        window.showMessage("Server is not up", 'error');
       } else {
         window.showMessage(`Request Method : ${error.message}`)
       }
