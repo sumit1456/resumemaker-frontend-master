@@ -1771,11 +1771,70 @@ const UIEditor = () => {
     };
   }, [isAnimating]);
 
+  // 🔄 Sync positions from ResumeEditorv3 when savedStyleConfig changes
+  useEffect(() => {
+    console.log('🔍 [Position Sync] useEffect triggered', {
+      hasSavedStyleConfig: !!savedStyleConfig,
+      savedStyleConfig: savedStyleConfig
+    });
+
+    if (!savedStyleConfig) {
+      console.log('⚠️ [Position Sync] No savedStyleConfig in Redux');
+      return;
+    }
+
+    console.log('🔄 [Position Sync] Syncing from ResumeEditorv3:', {
+      hasPositions: !!savedStyleConfig.positions,
+      positionsCount: savedStyleConfig.positions ? Object.keys(savedStyleConfig.positions).length : 0,
+      hasLines: !!savedStyleConfig.lines,
+      linesCount: savedStyleConfig.lines ? savedStyleConfig.lines.length : 0,
+      hasShapes: !!savedStyleConfig.shapes,
+      shapesCount: savedStyleConfig.shapes ? savedStyleConfig.shapes.length : 0
+    });
+
+    // Update positions if they exist in savedStyleConfig
+    if (savedStyleConfig.positions && Object.keys(savedStyleConfig.positions).length > 0) {
+      console.log('✅ [Position Sync] Updating section positions:', savedStyleConfig.positions);
+      setSectionPositions(prev => {
+        const updated = {
+          ...prev,
+          ...savedStyleConfig.positions
+        };
+        console.log('📍 [Position Sync] New positions:', updated);
+        return updated;
+      });
+    }
+
+    // Update lines if they exist
+    if (savedStyleConfig.lines && Array.isArray(savedStyleConfig.lines)) {
+      console.log('✅ [Position Sync] Updating lines:', savedStyleConfig.lines.length);
+      setLines(savedStyleConfig.lines);
+      if (savedStyleConfig.lines.length > 0) {
+        setNextLineId(Math.max(...savedStyleConfig.lines.map(l => l.id)) + 1);
+      }
+    }
+
+    // Update shapes if they exist
+    if (savedStyleConfig.shapes && Array.isArray(savedStyleConfig.shapes)) {
+      console.log('✅ [Position Sync] Updating shapes:', savedStyleConfig.shapes.length);
+      setBackgroundShapes(savedStyleConfig.shapes);
+      if (savedStyleConfig.shapes.length > 0) {
+        setNextShapeId(Math.max(...savedStyleConfig.shapes.map(s => s.id)) + 1);
+      }
+    }
+  }, [savedStyleConfig]);
+
   // Initialize layout on mount
   useEffect(() => {
+    // 🛡️ Don't reset if we have saved positions from ResumeEditorv3
+    if (savedStyleConfig && savedStyleConfig.positions && Object.keys(savedStyleConfig.positions).length > 0) {
+      console.log('⏭️ Skipping layout reset - using saved positions from ResumeEditorv3');
+      return;
+    }
+
     console.log('Initial layout reset');
     resetLayout();
-  }, [currentTemplateName]);
+  }, [currentTemplateName, savedStyleConfig]);
 
   // Calculate page elements
   // Calculate page elements - Optimized with Memo
