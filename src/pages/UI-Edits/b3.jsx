@@ -198,6 +198,7 @@ const UIEditor = () => {
   });
   const [styleConfig, setStyleConfig] = useState(initialConfig);
   const [styleKey, setStyleKey] = useState(0); // 🚀 Force rerender key
+  const [webglResetKey, setWebglResetKey] = useState(0); // 🚀 Restart engine key
   const [backupConfig, setBackupConfig] = useState(null); // 🆕 Store previous layout for restore
   const [isLayoutDirty, setIsLayoutDirty] = useState(false); // 🆕 Track manual layout changes
   const [sectionSnapshots, setSectionSnapshots] = useState({});
@@ -2064,6 +2065,26 @@ const UIEditor = () => {
           </button>
         </div>
 
+        {/* --- GROUP 4: RECOVERY --- */}
+        <h3 className="panel-title">RECOVERY</h3>
+        <div className="control-group" style={{ marginBottom: '20px' }}>
+          <button
+            onClick={() => setWebglResetKey(prev => prev + 1)}
+            className="btn-primary full-width"
+            style={{
+              backgroundColor: '#fee2e2',
+              color: '#991b1b',
+              borderColor: '#fecaca',
+              fontWeight: '600'
+            }}
+          >
+            🔄 RESTART WEBGL ENGINE
+          </button>
+          <p style={{ fontSize: '10px', color: '#6b7280', marginTop: '6px', fontStyle: 'italic', textAlign: 'center' }}>
+            Use if preview disappears or freezes
+          </p>
+        </div>
+
         {/* --- ACCORDION SECTIONS --- */}
 
 
@@ -2438,7 +2459,7 @@ const UIEditor = () => {
             {/* Page 1 */}
             <div className="canvas-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
               <WebGLStage
-                key={`page1-${styleKey}`}
+                key={`page1-${styleKey}-${webglResetKey}`}
                 width={canvasTargetWidth}
                 height={canvasTargetHeight}
                 stageScale={canvasScale}
@@ -2492,7 +2513,7 @@ const UIEditor = () => {
               }}
             >
               <WebGLStage
-                key={`page2-${styleKey}`}
+                key={`page2-${styleKey}-${webglResetKey}`}
                 width={canvasTargetWidth}
                 height={canvasTargetHeight}
                 stageScale={canvasScale}

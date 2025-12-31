@@ -483,6 +483,7 @@ export default function ResumeEditor({ resume: propsResume }) {
     const [showPage2, setShowPage2] = useState(false);
     const prevStyleConfigRef = useRef({});
     const [isAutoFlowEnabled, setIsAutoFlowEnabled] = useState(false); // Auto-flow OFF by default
+    const [webglResetKey, setWebglResetKey] = useState(0); // 🔄 WebGL restart key
     const [sectionWidths, setSectionWidths] = useState({});
     const [sectionHeights, setSectionHeights] = useState({});
     // ============================================================
@@ -2353,6 +2354,7 @@ export default function ResumeEditor({ resume: propsResume }) {
                                     <div className="canvas-wrapper" style={{ position: 'relative', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
                                         <ErrorBoundary>
                                             <WebGLStage
+                                                key={`page1-${webglResetKey}`}
                                                 width={canvasTargetWidth}
                                                 height={canvasTargetHeight}
                                                 stageScale={canvasScale}
@@ -2384,6 +2386,7 @@ export default function ResumeEditor({ resume: propsResume }) {
                                     >
                                         <ErrorBoundary>
                                             <WebGLStage
+                                                key={`page2-${webglResetKey}`}
                                                 width={canvasTargetWidth}
                                                 height={canvasTargetHeight}
                                                 stageScale={canvasScale}
@@ -2441,6 +2444,24 @@ export default function ResumeEditor({ resume: propsResume }) {
                                         title={isAutoFlowEnabled ? "Auto-flow is ON - sections align automatically" : "Auto-flow is OFF - manual positioning"}
                                     >
                                         {isAutoFlowEnabled ? '✓ Auto-Flow ON' : 'Auto-Flow OFF'}
+                                    </button>
+
+                                    <button
+                                        onClick={() => setWebglResetKey(prev => prev + 1)}
+                                        className="btn-primary"
+                                        style={{
+                                            padding: '6px 12px',
+                                            borderRadius: '4px',
+                                            border: 'none',
+                                            background: '#fee2e2',
+                                            color: '#991b1b',
+                                            fontSize: '12px',
+                                            cursor: 'pointer',
+                                            fontWeight: '600'
+                                        }}
+                                        title="Restart WebGL engine if preview freezes"
+                                    >
+                                        🔄 Restart WebGL
                                     </button>
                                 </div>
                             </div>
