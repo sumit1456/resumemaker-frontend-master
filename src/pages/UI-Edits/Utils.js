@@ -44,8 +44,8 @@ export const defaultResumeData = {
   projects: [
     {
       name: "Resume Maker",
-      duration: "October 2023 - Present",
-      technologies: "React, Java Spring Boot, MySQL, Gemini AI",
+      duration: "September 2025 - December 2025",
+      technologies: "React, Java Spring Boot, PostgreSQL, Pixi.js , WebGl, Matter.js, Canvas 2D API",
       description: [
         "Developed a real-time resume builder allowing for instant UI customization and live previews.",
         "Integrated Google Gemini AI to provide automated content optimization and formatting suggestions.",
@@ -53,7 +53,7 @@ export const defaultResumeData = {
         "Built a synchronized state management system using React to handle complex layout updates.",
         "Optimized backend API performance using Java Spring Boot and MySQL for efficient data handling."
       ],
-      link: "https://janedoe.dev",
+      link: "https://resume-maker-pro.netlify.app",
     },
     {
       name: "Find Issue Web Application",
