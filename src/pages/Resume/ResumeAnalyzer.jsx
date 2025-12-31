@@ -42,6 +42,10 @@ export default function ResumeAnalyzer({
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [jobDescriptionInsights, setJobDescriptionInsights] = useState("");
   const [createComparisonReport, setCreateComparisonReport] = useState("false");
+
+  const [foundSkills, setFoundSkills] = useState([]);
+  const [foundVerbs, setFoundVerbs] = useState([]);
+
   const enhancedResume = useSelector((state) => state.resume.enhancedResume);
   const currentResume = useSelector((state) => state.resume.currentResume);
 
@@ -52,7 +56,6 @@ export default function ResumeAnalyzer({
 
   const [currentLocalResume, setCurrentLocalResume] = useState(null);
   const [newLocalResume, setNewLocalResume] = useState(null);
-  const [reportOutput, setReportOutput] = useState(null);
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -311,62 +314,18 @@ export default function ResumeAnalyzer({
     return <span className="version-content">{String(value)}</span>;
   };
 
-  const formatComparisonReport = (report) => {
 
-    if (!report?.differences) return <p>No comparison found.</p>;
-
-    return (
-      <div>
-        {Object.entries(report.differences).map(([section, data], idx) => {
-          const icon = section.includes("summary") ? "📋"
-            : section.includes("skills") ? "🧩"
-              : section.includes("project") ? "🛠️"
-                : section.includes("experience") ? "⚡"
-                  : "📄";
-
-          return (
-            <div key={idx} className="comparison-section">
-              <h4 className="comparison-header">
-                {icon} {section.replace(/_/g, " ").toUpperCase()}
-              </h4>
-
-              {/* Old Version */}
-              <div className="comparison-version-card old">
-                <div className="version-label old">Old Version</div>
-                <div className="version-content">{formatValue(data.old)}</div>
-              </div>
-
-              {/* New Version */}
-              <div className="comparison-version-card new">
-                <div className="version-label new">New Version</div>
-                <div className="version-content">{formatValue(data.new)}</div>
-              </div>
-
-              {/* Changes Detected */}
-              {Array.isArray(data.changes) && data.changes.length > 0 && (
-                <div className="changes-detected-card">
-                  <div className="changes-label">Changes Detected</div>
-                  <div>
-                    {data.changes.map((c, i) => (
-                      <div key={i} className="ai-point-item">
-                        <span className="ai-bullet">•</span>
-                        <span>{c}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
 
   const analyzeQuick = () => {
     setLoading(true);
     setMessage('Analyzing Resume...')
-    if (!jobDescription.trim()) return;
+
+    if (!jobDescription.trim()) {
+      setLoading(false);
+      window.showMessage("Info", "Please enter a job description", "info");
+      return;
+    }
+
     setIsAnalyzing(true);
     setIsAIAnalysis(false);
 
@@ -716,104 +675,7 @@ export default function ResumeAnalyzer({
     };
   };
 
-  const createReport = async () => {
 
-    if (!currentLocalResume && newLocalResume) {
-      window.showMessage('For report Enhance your Resume first', 'info');
-      return;
-    }
-
-    const MAX_RETRIES = 3;
-    let attempt = 0;
-
-    setCreateComparisonReport(true);
-    setLoading(true);
-    setReportOutput(<LoadingState />);
-
-    let controller;
-    const timeout = 30000;
-
-    while (attempt <= MAX_RETRIES) {
-      try {
-        setMessage(attempt > 0 ? `Retrying Report (${attempt}/${MAX_RETRIES})...` : 'Creating Report...');
-
-        controller = new AbortController();
-        const id = setTimeout(() => controller.abort(), timeout);
-
-        const payload = {
-          oldResume: currentLocalResume,
-          newResume: newLocalResume,
-        };
-
-        const res = await api({
-          method: "POST",
-          url: `/create-report`,
-          data: payload,
-          signal: controller.signal
-        });
-
-        clearTimeout(id);
-
-        // Axios automatic error handling: throws on status outside 2xx
-
-        const resData = res.data;
-
-        if (resData.error) {
-          setReportOutput(<ErrorState title="Report Generation Failed" message={resData.error} />);
-          return;
-        }
-
-        const reportData = resData.result || resData;
-        setReportOutput(
-          <div className="analysis-output-wrapper">
-            <div className="analysis-container">
-              <div className="analysis-header">
-                <h2 className="analysis-header-title">📄 Resume Comparison Report</h2>
-                <p className="analysis-header-subtitle">Generated from your old vs new resume • Powered by AI</p>
-              </div>
-
-              <div>{formatComparisonReport(reportData)}</div>
-
-              <div className="next-steps-card light">
-                <h4 className="next-steps-title">💡 Next Steps</h4>
-                <p className="next-steps-content">
-                  Review the comparison highlights above and update your resume accordingly.
-                </p>
-              </div>
-            </div>
-          </div>
-        );
-        window.showMessage("Success", 'Report has been generated', "general", 1500);
-        break; // Success!
-
-      } catch (err) {
-        console.error(`Create Report attempt ${attempt + 1} failed:`, err);
-
-        let errorMessage = err.message;
-        if (err.name === 'AbortError') {
-          errorMessage = "Server is not up";
-        } else if (errorMessage.includes("Failed to fetch") || errorMessage.includes("NetworkError")) {
-          errorMessage = "Server is not up";
-        }
-
-        const isRetryable = (err.message.includes("Connection reset") || err.message.includes("recvAddress") || err.name === "TypeError") && err.name !== 'AbortError';
-
-        if (isRetryable && attempt < MAX_RETRIES) {
-          attempt++;
-          const delay = Math.pow(2, attempt - 1) * 1000;
-          await new Promise(resolve => setTimeout(resolve, delay));
-          continue;
-        }
-
-        window.showMessage("Error", errorMessage, "error", 1500);
-        setReportOutput(<ErrorState title="Connection Error" message={errorMessage} />);
-        break;
-      }
-    }
-
-    setCreateComparisonReport(false);
-    setLoading(false);
-  };
 
   const improveATSContent = async () => {
     setIsEnhancing(true);
@@ -984,8 +846,7 @@ export default function ResumeAnalyzer({
         className="job-description-textarea"
         placeholder={`Type "Analyze" for general resume feedback.
 Paste a Job Description for Quick Analysis or AI Analysis.
-Press "Enhance Resume" to improve your resume.
-Generate a Report to compare original vs enhanced resume.`}
+Press "Enhance Resume" to improve your resume.`}
         value={jobDescription}
         onChange={(e) => setJobDescription(e.target.value)}
       />
@@ -1013,15 +874,7 @@ Generate a Report to compare original vs enhanced resume.`}
           {isEnhancing ? "Enhancing..." : "Enhance Your Resume"}
         </button>
 
-        {canGenerateReport && (
-          <button
-            className={`ai-button generate-report ${createComparisonReport ? "disabled" : ""}`}
-            onClick={createReport}
-            disabled={createComparisonReport}
-          >
-            {createComparisonReport ? "Generating..." : "Generate Report"}
-          </button>
-        )}
+
 
 
         <label className="ai-button">
@@ -1043,8 +896,6 @@ Generate a Report to compare original vs enhanced resume.`}
             setJobDescriptionInsights("");
             setFoundSkills([]);
             setFoundVerbs([]);
-            setCreateComparisonReport([]);
-            setReportOutput([]);
           }}
         >
           Clear
@@ -1060,14 +911,7 @@ Generate a Report to compare original vs enhanced resume.`}
         </div>
       )}
 
-      {reportOutput && (
-        <div className="ai-analysis-output">
-          <h4 className="ai-output-title">
-            {createComparisonReport ? "⏳ Generating Report..." : "📊 Resume Comparison"}
-          </h4>
-          {reportOutput}
-        </div>
-      )}
+
     </div>
   );
 }

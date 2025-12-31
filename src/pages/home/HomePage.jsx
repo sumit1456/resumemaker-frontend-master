@@ -5,39 +5,39 @@ import Signup from "../../features/auth/Signup.jsx";
 import ResumeDashboard from "../Dashboard/Dashboard.jsx";
 import "./css-files/HomePage2.css";
 import About from "../About/About.jsx";
-import TemplatesShowcase from "../Templates showcase/Templatesshowcase.jsx";
+
 import MyResumes from "../UserTemplates/MyResumes.jsx";
-import ViewResume from "../UserTemplates/ViewTemplate.jsx";
+
 import EmailVerification from "../../features/auth/Verification.jsx";
-import { useSelector} from "react-redux";
+import { useSelector } from "react-redux";
 import store from "../../redux/store.js";
 
 
 
 export default function HomePage(
   {
-  
-  userId,
-  setUserId,
-}) {
 
-  const isLoggedIn = useSelector((state)=> state.auth.isLoggedIn);
-  const id = useSelector((state)=> state.auth.userId);
+    userId,
+    setUserId,
+  }) {
+
+  const isLoggedIn = useSelector((state) => state.auth.isLoggedIn);
+  const id = useSelector((state) => state.auth.userId);
   console.log(isLoggedIn);
   console.log(id);
   console.log(store.getState());
 
-  
-     
-  
-  
-  
-  
 
- 
+
+
+
+
+
+
+
   return (
 
-     
+
     <div className="home-container">
       {/* Animated background elements */}
       <div className="bg-decoration">
@@ -68,7 +68,7 @@ export default function HomePage(
         <Route
           path="login"
           element={
-            <Login  setUserId={setUserId} />
+            <Login setUserId={setUserId} />
           }
         />
         <Route path="signup" element={<Signup />} />
@@ -77,26 +77,18 @@ export default function HomePage(
           element={<ResumeDashboard userId={userId} />}
         />
 
-         <Route
+        <Route
           path="about"
           element={<About />}
         />
 
-          <Route
-          path="templates"
-          element={<TemplatesShowcase />}
-        />
-
-        
-          <Route
-          path="user-templates"
-          element={<MyResumes userId={userId}/>}
-        />
 
         <Route
-          path="my-resumes/getresume/:resumeId"
-          element={<ViewResume />}
+          path="user-templates"
+          element={<MyResumes userId={userId} />}
         />
+
+
 
         <Route path="/verify" element={<Login />} />
 
@@ -105,12 +97,12 @@ export default function HomePage(
   );
 }
 
-function MainLanding({userId }) {
+function MainLanding({ userId }) {
 
 
-  
-  const isLoggedIn = useSelector((state)=> state.auth.isLoggedIn);
-  const id = useSelector((s)=>s.auth.userId);
+
+  const isLoggedIn = useSelector((state) => state.auth.isLoggedIn);
+  const id = useSelector((s) => s.auth.userId);
   return (
     <div className="main-landing">
       <div className="hero-section">
@@ -118,21 +110,21 @@ function MainLanding({userId }) {
           <div className="hero-badge">
             <span>✨ AI-Powered Resume Builder</span>
           </div>
-          
+
           <h1 className="hero-title">
             Build Your Perfect{" "}
             <span className="highlight">Resume</span>
           </h1>
-          
+
           <p className="hero-subtitle">
-            Create professional, ATS-friendly resumes in minutes with our 
+            Create professional, ATS-friendly resumes in minutes with our
             intelligent builder. Stand out from the crowd and land your dream job.
           </p>
 
           {isLoggedIn && id ? (
-            
+
             <div className="user-actions">
-              
+
               <div className="user-status">
                 <div className="status-indicator"></div>
                 <span>Logged in as ID: <strong>{id}</strong></span>

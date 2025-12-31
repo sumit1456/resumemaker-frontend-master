@@ -10,15 +10,9 @@ import api from "../../api/axios.js";
 
 // Import Template Configurations
 // Template Imports
-import ResumeDocument from './Template1';
-import ModernResumeDocument from './Template2';
-import ATSFriendlyResumeDocument from './Template3';
-import ExecutiveEliteDocument from './Template4';
-import TechInnovatorDocument from './Template5';
-import AcademicScholarDocument from './Template6';
-import CreativeBold from './Template7';
-import NewTemplate from './Template8.jsx';
+// Template Imports
 import CoustomTemplate from './CoustomTemplate.jsx';
+
 
 import { useDispatch, useSelector } from 'react-redux';
 import { setCurrentResume, setEnhancedResume, setCurrentTemplate, setSavedStyleConfig } from "../../redux/store.js";
@@ -1299,19 +1293,15 @@ export default function ResumeEditor({ resume: propsResume }) {
         if (isTemplateLoading) return null;
         console.log("️ [RENDER] Creating React Document for template:", selectedTemplate);
         switch (selectedTemplate) {
-            case "ats": return <ResumeDocument {...debouncedData} />;
-            case "modern": return <ModernResumeDocument {...debouncedData} />;
-            case "twoColumn": return <ExecutiveEliteDocument {...debouncedData} />;
-            case "template5": return <TechInnovatorDocument {...debouncedData} />;
-            case "newAts": return <AcademicScholarDocument {...debouncedData} />;
-            case "7": return <CreativeBold {...debouncedData} />;
-            case "8": return <NewTemplate {...debouncedData} />;
             case "custom":
                 return <CoustomTemplate
                     {...debouncedData}
                     styleConfig={resumeDetails.styleConfig || {}}
                 />;
-            default: return <ResumeDocument {...debouncedData} />;
+            default: return <CoustomTemplate
+                {...debouncedData}
+                styleConfig={resumeDetails.styleConfig || {}}
+            />;
         }
     }, [selectedTemplate, debouncedData, isTemplateLoading, resumeDetails.styleConfig]);
 
@@ -1510,27 +1500,6 @@ export default function ResumeEditor({ resume: propsResume }) {
             console.log("DEBUG: Rendering Template:", selectedTemplate);
             console.log("DEBUG: Resume Details StyleConfig:", resumeDetails.styleConfig);
             switch (selectedTemplate) {
-                case "ats":
-                    doc = React.createElement(ResumeDocument, downloadData);
-                    break;
-                case "modern":
-                    doc = React.createElement(ModernResumeDocument, downloadData);
-                    break;
-                case "twoColumn":
-                    doc = React.createElement(ExecutiveEliteDocument, downloadData);
-                    break;
-                case "template5":
-                    doc = React.createElement(TechInnovatorDocument, downloadData);
-                    break;
-                case "newAts":
-                    doc = React.createElement(AcademicScholarDocument, downloadData);
-                    break;
-                case "7":
-                    doc = React.createElement(CreativeBold, downloadData);
-                    break;
-                case "8":
-                    doc = React.createElement(NewTemplate, downloadData);
-                    break;
                 case "custom":
                     doc = React.createElement(CoustomTemplate, {
                         ...downloadData,
@@ -1538,7 +1507,10 @@ export default function ResumeEditor({ resume: propsResume }) {
                     });
                     break;
                 default:
-                    doc = React.createElement(ResumeDocument, downloadData);
+                    doc = React.createElement(CoustomTemplate, {
+                        ...downloadData,
+                        styleConfig: resumeDetails.styleConfig || {}
+                    });
             }
 
             const asPdf = pdf(doc);

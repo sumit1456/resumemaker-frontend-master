@@ -897,8 +897,8 @@
   padding: 20px;
   background: #000;
   position: relative;
-  border-right: 1px solid #222;
   min-height: 100vh;
+  overflow-y: scroll;
   box-sizing: border-box;
 }
 
@@ -1165,6 +1165,10 @@
     overflow-y: auto !important;
 
   }
+
+
+
+
 
   .left-panel,
   .right-panel {

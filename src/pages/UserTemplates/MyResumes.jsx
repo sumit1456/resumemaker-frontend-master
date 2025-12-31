@@ -5,9 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import './MyResumes.css';
 import { useSelector } from 'react-redux';
-
-const API_BASE_URL2 = 'http://localhost:8080';
-const API_BASE_URL = 'https://resumemaker-1.onrender.com';
+import api from '../../api/axios';
 
 const MyResumes = ({ userId }) => {
   const navigate = useNavigate();
@@ -35,7 +33,7 @@ const MyResumes = ({ userId }) => {
     while (attempt < MAX_RETRIES) {
       let controller;
       try {
-        if (!id || userId) {
+        if (!id) {
           window.showMessage('Enable to Fetch resumes', 'Please login first', 'general', 2000);
           setLoading(false);
           return;
@@ -44,25 +42,20 @@ const MyResumes = ({ userId }) => {
         controller = new AbortController();
         const tid = setTimeout(() => controller.abort(), timeout);
 
-        const response = await fetch(`${API_BASE_URL}/my-resumes/${id}`, {
+        const response = await api.get(`/my-resumes/${id}`, {
           signal: controller.signal
         });
 
         clearTimeout(tid);
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch resumes');
-        }
-
-        const data = await response.json();
-        setResumes(data);
+        setResumes(response.data);
         setLoading(false);
         return; // Success!
 
       } catch (err) {
         console.error(`Fetch resumes attempt ${attempt + 1} failed:`, err);
 
-        const isRetryable = err.name === 'AbortError' || err.message.includes('Failed to fetch');
+        const isRetryable = err.name === 'AbortError' || err.message.includes('Failed to fetch') || err.message.includes("NetworkError");
 
         if (isRetryable && attempt < MAX_RETRIES - 1) {
           attempt++;
@@ -91,17 +84,11 @@ const MyResumes = ({ userId }) => {
         controller = new AbortController();
         const tid = setTimeout(() => controller.abort(), timeout);
 
-        const response = await fetch(`${API_BASE_URL}/my-resumes/delete-resume/${resumeId}`, {
-          method: 'DELETE',
+        await api.delete(`/my-resumes/delete-resume/${resumeId}`, {
           signal: controller.signal
         });
 
         clearTimeout(tid);
-
-        if (!response.ok || response.status !== 200) {
-          const text = await response.text();
-          throw new Error(`Failed to delete resume. Status: ${response.status}`);
-        }
 
         setResumes(resumes.filter(resume => resume.id !== resumeId));
         setDeleteConfirm(null);

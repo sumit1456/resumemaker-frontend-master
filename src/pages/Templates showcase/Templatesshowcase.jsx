@@ -9,6 +9,7 @@ import ats from './images/ats.png'
 import tech from './images/tech.png'
 import creative from './images/creative.png'
 import newmodern from './images/newmodern.png'
+import atsOptimized from "./images/ats-1st.png"
 
 
 
@@ -42,10 +43,10 @@ const TemplatesShowcase = () => {
     },
     {
       id: 4,
-      name: "Executive Elite",
+      name: "ATS Optimized",
       description: "Sophisticated design for senior-level professionals and executives",
       features: ["Premium styling", "Leadership focus", "Strategic layout", "High-impact design"],
-      image: executive,
+      image: atsOptimized,
       category: "Executive"
     },
     {
@@ -69,8 +70,8 @@ const TemplatesShowcase = () => {
   const categories = ["All", "Professional", "Creative", "Classic", "Executive", "Technical", "Academic"];
   const [activeCategory, setActiveCategory] = useState("All");
 
-  const filteredTemplates = activeCategory === "All" 
-    ? templates 
+  const filteredTemplates = activeCategory === "All"
+    ? templates
     : templates.filter(t => t.category === activeCategory);
 
   return (
@@ -93,14 +94,14 @@ const TemplatesShowcase = () => {
             <Sparkles className="badge-icon" />
             Resume Templates
           </div>
-          
+
           <h1 className="templates-title">
             Choose Your
             <span className="title-outline">Perfect Template</span>
           </h1>
-          
+
           <p className="templates-subtitle">
-            Professional resume templates designed to make you stand out. 
+            Professional resume templates designed to make you stand out.
             Choose from our carefully crafted collection.
           </p>
         </div>
@@ -139,8 +140,8 @@ const TemplatesShowcase = () => {
 
               {/* Template Image */}
               <div className="template-image-container">
-                <img 
-                  src={template.image} 
+                <img
+                  src={template.image}
                   alt={template.name}
                   className="template-image"
                   onError={(e) => {
@@ -175,7 +176,7 @@ const TemplatesShowcase = () => {
 
                 {/* Select Button */}
                 <div className="template-actions">
-                  <button 
+                  <button
                     onClick={() => setSelectedTemplate(template.id)}
                     className={`select-btn ${selectedTemplate === template.id ? 'selected' : ''}`}
                   >
