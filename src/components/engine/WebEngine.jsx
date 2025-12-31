@@ -159,10 +159,11 @@ class GeometrySnapshot {
         if (this.processedNodes.has(element)) return;
 
         const rect = element.getBoundingClientRect();
-        const x = Math.round((rect.left - this.rootRect.left) * 2) / 2;
-        const y = Math.round((rect.top - this.rootRect.top) * 2) / 2;
-        const width = Math.round(rect.width * 2) / 2;
-        const height = Math.round(rect.height * 2) / 2;
+        // 🔧 Round to WHOLE pixels to prevent gaps in PDF export
+        const x = Math.round(rect.left - this.rootRect.left);
+        const y = Math.round(rect.top - this.rootRect.top);
+        const width = Math.round(rect.width);
+        const height = Math.round(rect.height);
 
         const computed = window.getComputedStyle(element);
 
@@ -2640,6 +2641,7 @@ const WebGLStage = forwardRef(({
                     background,
                     resolution: isMobile ? Math.min(mobileResolution, 2) : resolution,
                     antialias: true,
+                    roundPixels: true, // 🔧 Fix mobile export artifacts
                     preference: 'webgl',
                     autoDensity: true
                 };

@@ -26,6 +26,7 @@ import { GeometrySnapshot, WebGLStage } from "../../components/engine/WebEngine.
 import { PhysicsPushingManager } from "./physicsPushing.js"; // 🚀 Added
 import { createPhysicsAnimation } from "./physicsAnimation.js"; // 🚀 Added
 import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
 import * as PIXI from 'pixi.js';
 import api from "../../api/axios";
 
@@ -919,10 +920,14 @@ const UIEditor = () => {
           console.error("❌ CRITICAL: Stage content bounds are ZERO! Nothing to capture.");
         }
 
-        // 3. Extract
+        // 3. Extract with resolution = 1 on mobile to avoid artifacts
         console.log("📸 [getPageCanvas] Triggering PIXI extract...");
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const exportResolution = isMobile ? 1 : (app.renderer.resolution || 1);
+
         const canvas = await app.renderer.extract.canvas({
           target: app.stage,
+          resolution: exportResolution,
           frame: new PIXI.Rectangle(0, 0, 595, 842)
         });
 
@@ -996,15 +1001,20 @@ const UIEditor = () => {
     const getPageCanvas = async (app) => {
       if (!app) return null;
       try {
+        // 1. Hide ALL visual artifacts (borders, masks, selection indicators)
         app.stage.children.forEach(l => l.children?.forEach(c => {
           const b = c.children?.find(ch => ch.name === 'selectionBorder');
           if (b) b.visible = false;
         }));
-        const initialBounds = app.stage.getBounds();
+
+        // 2. Hide stage mask and borders that cause lines
         const originalScale = app.stage.scale.x;
         const originalMask = app.stage.mask;
+        const originalAlpha = app.stage.alpha;
+
         app.stage.scale.set(1);
         app.stage.mask = null;
+        app.stage.alpha = 1; // Ensure full opacity
         if (originalMask) originalMask.visible = false;
 
         if (app.renderer) {
@@ -1021,8 +1031,15 @@ const UIEditor = () => {
           firstChildAlpha: app.stage.children[0]?.alpha
         });
 
+        // 🔧 Use renderer resolution for export
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const exportResolution = app.renderer.resolution || 1;
+
+        console.log("📐 [PDF Export] Resolution:", { isMobile, exportResolution });
+
         const canvas = await app.renderer.extract.canvas({
           target: app.stage,
+          resolution: exportResolution,
           frame: new PIXI.Rectangle(0, 0, 595, 842)
         });
 
@@ -1985,8 +2002,28 @@ const UIEditor = () => {
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+          {/* Mobile PDF Quality Warning */}
+          {/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) && (
+            <div style={{
+              padding: '12px',
+              backgroundColor: '#fef3c7',
+              color: '#92400e',
+              borderRadius: '6px',
+              fontSize: '11px',
+              border: '1px solid #fcd34d',
+              lineHeight: '1.5',
+              marginBottom: '8px'
+            }}>
+              <div style={{ fontWeight: '700', marginBottom: '4px', fontSize: '12px' }}>⚠️ Mobile Export Notice</div>
+              <div>PDF exports may have minor visual artifacts on mobile devices. For best quality, please use a desktop/laptop computer.</div>
+            </div>
+          )}
+
           <div style={{ display: 'flex', gap: '10px' }}>
-            <button onClick={downloadResume} className="btn-secondary full-width" style={{ backgroundColor: 'white', color: '#1f2937' }}>📥 DOWNLOAD PNG</button>
+            {/* Hide PNG download on mobile - it's broken */}
+            {!(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) && (
+              <button onClick={downloadResume} className="btn-secondary full-width" style={{ backgroundColor: 'white', color: '#1f2937' }}>📥 DOWNLOAD PNG</button>
+            )}
             <button onClick={downloadPDF} className="btn-secondary full-width" style={{ backgroundColor: 'white', color: '#1f2937' }}>📄 DOWNLOAD PDF</button>
           </div>
           <button
