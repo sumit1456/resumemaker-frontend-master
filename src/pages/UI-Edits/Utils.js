@@ -9,7 +9,7 @@
 export const defaultResumeData = {
   resumeDetails: {
     name: "SUMIT HATEKAR",
-    title: "MSc CA Student & Full Stack Developer",
+    title: "Full Stack Developer",
     contact: {
       phone: "+91 9876543210",
       email: "sumithatekar@gmail.com",
