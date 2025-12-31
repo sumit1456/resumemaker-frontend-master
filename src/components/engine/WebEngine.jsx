@@ -154,7 +154,7 @@ class GeometrySnapshot {
         };
     }
 
-    captureNode(element, batchContext = null) {
+    captureNode(element, batchContext = null, parentClip = null) {
         if (!element || element.nodeType !== Node.ELEMENT_NODE) return;
         if (this.processedNodes.has(element)) return;
 
@@ -172,6 +172,27 @@ class GeometrySnapshot {
 
         const type = this.getNodeType(element, computed);
 
+        // Calculate effective clip region
+        let currentClip = parentClip;
+        if (computed.overflow === 'hidden' || computed.overflow === 'auto') {
+            const myClip = { x, y, width, height, radius: parseFloat(computed.borderRadius) || 0 };
+            if (parentClip) {
+                // Intersect parent clip and my clip
+                const x1 = Math.max(parentClip.x, myClip.x);
+                const y1 = Math.max(parentClip.y, myClip.y);
+                const x2 = Math.min(parentClip.x + parentClip.width, myClip.x + myClip.width);
+                const y2 = Math.min(parentClip.y + parentClip.height, myClip.y + myClip.height);
+
+                if (x2 > x1 && y2 > y1) {
+                    currentClip = { x: x1, y: y1, width: x2 - x1, height: y2 - y1, radius: myClip.radius };
+                } else {
+                    currentClip = { x: 0, y: 0, width: 0, height: 0, radius: 0 };
+                }
+            } else {
+                currentClip = myClip;
+            }
+        }
+
         // Threshold for batching styles
         const useWorkers = this.options.useWorkers && this.styleWorker;
         const isSmallElement = rect.width < 1 && rect.height < 1;
@@ -181,7 +202,8 @@ class GeometrySnapshot {
             x, y, width, height,
             styles: {}, // Will be populated by extractStyles
             zIndex: parseInt(computed.zIndex) || 0,
-            href: (element.tagName === 'A') ? element.getAttribute('href') : null
+            href: (element.tagName === 'A') ? element.getAttribute('href') : null,
+            clip: parentClip // Store inherited clip
         };
 
         // Populate styles (Directly or via Worker)
@@ -234,7 +256,7 @@ class GeometrySnapshot {
             }
 
             for (const child of element.children) {
-                this.captureNode(child, nextBatch);
+                this.captureNode(child, nextBatch, currentClip);
             }
         }
     }
@@ -1095,6 +1117,32 @@ class PixiRendererEngine {
 
         // Apply visual properties
         if (styles.opacity !== undefined) wrap.alpha = styles.opacity;
+
+        // 0. CLIP (Parent Overflow)
+        if (node.clip) {
+            const mask = new PIXI_LIB.Graphics();
+            mask.beginFill(0xffffff);
+            if (node.clip.radius > 0) {
+                // Adjust mask coordinates relative to the node's position if needed
+                // But wait, wrap.x/y will be set to node.x/y. 
+                // The clip coordinates are ABSOLUTE (relative to root).
+                // So the mask needs to be positioned relative to the wrap (node.x, node.y).
+                // Or we can add the mask to the parent and set it as mask.
+
+                // Let's draw the mask in LOCAL coordinates of the wrap
+                const localX = node.clip.x - x;
+                const localY = node.clip.y - y;
+
+                mask.drawRoundedRect(localX, localY, node.clip.width, node.clip.height, node.clip.radius);
+            } else {
+                const localX = node.clip.x - x;
+                const localY = node.clip.y - y;
+                mask.drawRect(localX, localY, node.clip.width, node.clip.height);
+            }
+            mask.endFill();
+            wrap.addChild(mask);
+            wrap.mask = mask;
+        }
 
         // Respect transform
         if (styles.transform && styles.transform !== 'none') {

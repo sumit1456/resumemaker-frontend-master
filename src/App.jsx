@@ -11,15 +11,34 @@ import BackendWakePopup from "./components/PopUp/Backendpopup.jsx";
 import EditorPage from "./pages/UI-Edits/EditorPage.jsx";
 import B3 from "./pages/UI-Edits/b3.jsx";
 import Demo from "./Demo.jsx";
+import { logInUser } from "./redux/store.js";
 
 
 
 export default function App() {
 
+  const dispatch = useDispatch();
   const isLoggedIn = useSelector((state) => state.auth.isLoggedIn);
 
   const [isLogged, setIsLogged] = useState(false);
   const [userId, setUserId] = useState(null);
+
+  useEffect(() => {
+    // Check for token and userId in localStorage on mount
+    const token = localStorage.getItem('token');
+    const storedUserId = localStorage.getItem('userId');
+
+    if (token && storedUserId) {
+      // Restore Redux state
+      dispatch(logInUser(storedUserId));
+
+      // Restore Local App state (if acceptable to continue using mixed state)
+      // Note: setUserId is passed from parent usually or defined here. 
+      // In this component, 'userId' state is defined on line 22.
+      setUserId(storedUserId);
+      setIsLogged(true);
+    }
+  }, [dispatch]);
 
   useEffect(() => {
     const wakeserver = async () => {

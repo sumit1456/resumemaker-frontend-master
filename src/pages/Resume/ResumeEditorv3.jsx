@@ -6,6 +6,7 @@ import ErrorBoundary from "../../ErrorBoundry.jsx";
 import ResumeAnalyzer from "./ResumeAnalyzer.jsx";
 import { AlignRight } from "lucide-react";
 import LoadingAnimation from "../../components/PopUp/LoadingAnimation.jsx";
+import api from "../../api/axios.js";
 
 // Import Template Configurations
 // Template Imports
@@ -885,12 +886,7 @@ export default function ResumeEditor({ resume: propsResume }) {
                     controller = new AbortController();
                     const tid = setTimeout(() => controller.abort(), timeout);
 
-                    const response = await fetch(`${API_BASE_URL}/my-resumes/getresume/${resumeId}`, {
-                        method: 'GET',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                        },
+                    const response = await api.get(`/my-resumes/getresume/${resumeId}`, {
                         signal: controller.signal
                     });
 
@@ -902,11 +898,10 @@ export default function ResumeEditor({ resume: propsResume }) {
                         return;
                     }
 
-                    if (!response.ok) {
-                        throw new Error(`Server error: ${response.status}`);
-                    }
+                    // Axios throws on non-2xx status, effectively handling !response.ok check
 
-                    const data = await response.json();
+
+                    const data = response.data;
                     console.log("Fetched resume data:====================");
                     console.log(data);
                     console.log("=======================================");
@@ -1710,8 +1705,8 @@ export default function ResumeEditor({ resume: propsResume }) {
 
 
                 const endpoint = currentResumeId
-                    ? `${API_BASE_URL}/update/${resumeId}`
-                    : `${API_BASE_URL}/saveall`;
+                    ? `/update/${resumeId}`
+                    : `/saveall`;
 
                 console.log(`The endpoint was ${endpoint}`);
 
@@ -1723,13 +1718,10 @@ export default function ResumeEditor({ resume: propsResume }) {
                 controller = new AbortController();
                 const tid = setTimeout(() => controller.abort(), timeout);
 
-                const res = await fetch(endpoint, {
-                    method,
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Accept": "application/json"
-                    },
-                    body: JSON.stringify(payload),
+                const res = await api({
+                    method: method,
+                    url: endpoint,
+                    data: payload,
                     signal: controller.signal
                 });
 
@@ -1742,29 +1734,8 @@ export default function ResumeEditor({ resume: propsResume }) {
                 const message = localResumeId ? "Resume updated successfully!" : "Resume saved successfully!";
                 setSuccessMessage(message);
 
-                // if (!resumeId && data.id) {
-                //   setTimeout(() => {
-                //     window.location.href = `/dashboard/resume-editor/${data.id}`;
-                //   }, 1500);
-                // }
-
-                // Check if the response is JSON
-                const contentType = res.headers.get("content-type");
-                if (!contentType || !contentType.includes("application/json")) {
-                    const textResponse = await res.text();
-                    console.error("Non-JSON response received:", textResponse);
-                    throw new Error(`Server returned non-JSON response. Status: ${res.status}`);
-                }
-
-                // If response not OK, throw an error
-                if (!res.ok) {
-                    const errorData = await res.json().catch(() => null);
-                    const errorMessage = errorData?.message || `Save failed with status ${res.status}`;
-                    throw new Error(errorMessage);
-                }
-
-                // Parse JSON
-                const data = await res.json(); // { message, resumeId }
+                // Axios returns parsed data in res.data
+                const data = res.data; // { message, resumeId }
                 console.log("Response data:", data);
 
                 // If this is the first save, store the resumeId in Redux or state
@@ -1773,12 +1744,12 @@ export default function ResumeEditor({ resume: propsResume }) {
                     setLocalResuneId(data.resumeId);
                 }
 
-                window.showMessage('Success', message, 'success', 1500);
+                if (window.showMessage) window.showMessage('Success', message, 'success', 1500);
                 break; // Success!
 
             } catch (err) {
                 console.error(`Save attempt ${attempt + 1} failed:`, err);
-                const isRetryable = err.name === 'AbortError' || err.message.includes('Failed to fetch');
+                const isRetryable = err.code === 'ECONNABORTED' || err.message.includes('Network Error');
 
                 if (isRetryable && attempt < MAX_RETRIES - 1) {
                     attempt++;
@@ -1787,9 +1758,9 @@ export default function ResumeEditor({ resume: propsResume }) {
                     continue;
                 }
 
-                const finalMsg = err.name === 'AbortError' ? "Server is not up" : `Failed to save: ${err.message}`;
+                const finalMsg = err.code === 'ECONNABORTED' ? "Server is not up" : (err.response?.data?.message || err.message);
                 setSaveError(finalMsg);
-                window.showMessage('Error', finalMsg, 'error', 3000);
+                if (window.showMessage) window.showMessage('Error', finalMsg, 'error', 3000);
                 break;
             }
         }

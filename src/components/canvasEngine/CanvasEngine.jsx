@@ -127,7 +127,7 @@ class GeometrySnapshot {
     };
   }
 
-  captureNode(element) {
+  captureNode(element, parentClip = null) {
     if (!element || element.nodeType !== Node.ELEMENT_NODE) return;
     if (this.processedNodes.has(element)) return;
 
@@ -142,12 +142,41 @@ class GeometrySnapshot {
 
     const type = this.getNodeType(element, computed);
 
+    // Calculate effective clip region
+    let currentClip = parentClip;
+    if (computed.overflow === 'hidden' || computed.overflow === 'auto') {
+      const myClip = { x, y, width, height, radius: parseFloat(computed.borderRadius) || 0 };
+      if (parentClip) {
+        // Intersect parent clip and my clip
+        const x1 = Math.max(parentClip.x, myClip.x);
+        const y1 = Math.max(parentClip.y, myClip.y);
+        const x2 = Math.min(parentClip.x + parentClip.width, myClip.x + myClip.width);
+        const y2 = Math.min(parentClip.y + parentClip.height, myClip.y + myClip.height);
+
+        if (x2 > x1 && y2 > y1) {
+          currentClip = { x: x1, y: y1, width: x2 - x1, height: y2 - y1, radius: myClip.radius }; // Simplification: using newest radius
+          // NOTE: Nested rounded clipping is hard; we prioritize the immediate clipper's radius or rectangle intersection
+        } else {
+          currentClip = { x: 0, y: 0, width: 0, height: 0, radius: 0 }; // Fully clipped
+        }
+      } else {
+        currentClip = myClip;
+      }
+    }
+
     const nodeData = {
       type,
       x, y, width, height,
       styles: {},
-      zIndex: parseInt(computed.zIndex) || 0
+      zIndex: parseInt(computed.zIndex) || 0,
+      clip: parentClip // Store the clip region inherited from parent to apply to THIS node (Wait, parentClip clips ME, currentClip clips MY CHILDREN)
     };
+    // FIX: The clip applied to `this` node is `parentClip`. 
+    // The clip applied to `children` is `currentClip`.
+
+    // Correction: If *I* have overflow:hidden, that shouldn't clip *ME* (except border-radius maybe?), it clips my CHILDREN.
+    // However, if my parent had overflow:hidden, that clips ME.
+    // So `nodeData.clip` should be `parentClip`.
 
     // Extract basic styles immediately, defer complex ones
     const styles = nodeData.styles;
@@ -188,9 +217,10 @@ class GeometrySnapshot {
 
     this.nodes.push(nodeData);
 
+    // Pass the calculated 'currentClip' (which includes my own overflow if hidden) to children
     if (type !== 'text') {
       for (const child of element.children) {
-        this.captureNode(child);
+        this.captureNode(child, currentClip);
       }
     }
   }
@@ -1398,6 +1428,17 @@ class CanvasLayoutEngine {
     const { x, y, width, height, styles, type, text, src } = node;
 
     ctx.save();
+
+    // 0. CLIP (Parent Overflow)
+    if (node.clip) {
+      ctx.beginPath();
+      if (node.clip.radius > 0) {
+        this.roundRect(ctx, node.clip, node.clip.radius);
+      } else {
+        ctx.rect(node.clip.x, node.clip.y, node.clip.width, node.clip.height);
+      }
+      ctx.clip();
+    }
 
     // Handle transform (matrix from computed style)
     if (styles.transform && styles.transform !== 'none') {

@@ -27,6 +27,7 @@ import { PhysicsPushingManager } from "./physicsPushing.js"; // 🚀 Added
 import { createPhysicsAnimation } from "./physicsAnimation.js"; // 🚀 Added
 import { jsPDF } from "jspdf";
 import * as PIXI from 'pixi.js';
+import api from "../../api/axios";
 
 // ==================== TEMPLATE MAPPINGS ====================
 // ==================== TEMPLATE MAPPINGS ====================
@@ -237,8 +238,7 @@ const UIEditor = () => {
     }
   }, [resumeData]);
 
-  const API_BASE_URL = 'http://localhost:8080';
-  const API_BASE_URL2 = 'https://resumemaker-1.onrender.com';
+
 
   // 🎬 GPU Animation State
   const [headerAnimating, setHeaderAnimating] = useState(false);
@@ -419,38 +419,25 @@ const UIEditor = () => {
 
         const targetResumeId = resumeId || currentResumeId;
         const endpoint = targetResumeId
-          ? `${API_BASE_URL}/update/${targetResumeId}`
-          : `${API_BASE_URL}/saveall`;
+          ? `/update/${targetResumeId}`
+          : `/saveall`;
 
         const method = targetResumeId ? "PUT" : "POST";
 
         controller = new AbortController();
         const tid = setTimeout(() => controller.abort(), timeout);
 
-        const res = await fetch(endpoint, {
-          method,
-          headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-          },
-          body: JSON.stringify(payload),
+        const res = await api({
+          method: method,
+          url: endpoint,
+          data: payload,
           signal: controller.signal
         });
 
         clearTimeout(tid);
 
-        if (!res.ok) {
-          const errorData = await res.json().catch(() => null);
-          throw new Error(errorData?.message || `Save failed: ${res.status}`);
-        }
-
-        const text = await res.text();
-        let data = {};
-        try {
-          data = JSON.parse(text);
-        } catch (e) {
-          data = { message: text };
-        }
+        // Axios throws on non-2xx by default, but we can double check or just catch
+        const data = res.data;
 
         if (!targetResumeId && data.resumeId) {
           dispatch(setCurrentResumeId(data.resumeId));
@@ -466,7 +453,7 @@ const UIEditor = () => {
 
       } catch (err) {
         console.error(`Save attempt ${attempt + 1} failed:`, err);
-        const isRetryable = err.name === 'AbortError' || err.message.includes('Failed to fetch');
+        const isRetryable = err.code === 'ECONNABORTED' || err.message.includes('Network Error');
 
         if (isRetryable && attempt < MAX_RETRIES - 1) {
           attempt++;
@@ -475,7 +462,7 @@ const UIEditor = () => {
           continue;
         }
 
-        const finalMsg = err.name === 'AbortError' ? "Server is not up" : err.message;
+        const finalMsg = err.code === 'ECONNABORTED' ? "Server is not up" : (err.response?.data?.message || err.message);
         setSaveError(finalMsg);
         if (window.showMessage) window.showMessage('Error', finalMsg, 'error', 1500);
         break;
@@ -1808,7 +1795,7 @@ const UIEditor = () => {
         position: 'fixed',
         right: '20px',
         bottom: '20px',
-        visibility: 'visible', // 🛠️ Debug Mode: Make visible as requested
+        visibility: 'hidden', // 🛠️ Debug Mode: Make visible as requested
         width: '400px', // Smaller for debug overlay
         height: '560px',
         background: 'white',

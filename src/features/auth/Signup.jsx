@@ -1,10 +1,7 @@
 import React, { useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom"; // ✅ only useNavigate (not Navigate)
 import "./Signup.css";
-
-const API_BASE_URL = "https://resumemaker-1.onrender.com";
-const API_BASE_URL2 = 'http://localhost:8080';
+import api from "../../api/axios";
 
 export default function Signup() {
   const [username, setUsername] = useState("");
@@ -32,11 +29,11 @@ export default function Signup() {
 
     while (attempt < MAX_RETRIES) {
       try {
-        const response = await axios.post(`${API_BASE_URL}/signup`, {
+        const response = await api.post(`/signup`, {
           username,
           email,
           password
-        }, { timeout: 30000 }); // 30s timeout
+        }); // timeout handled in instance
 
         const data = response.data;
         if (!data.success) {

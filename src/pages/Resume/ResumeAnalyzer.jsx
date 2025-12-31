@@ -4,9 +4,10 @@ import { setCurrentResume, setEnhancedResume, setImportedResume } from "../../re
 import "./css-files/analyze.css";
 import LoadingAnimation from "../../components/PopUp/LoadingAnimation";
 // import "./css-files/analysis-output.css"; // Import the new CSS file
+import api from "../../api/axios";
 
-const API_BASE_URL = 'https://resumemaker-1.onrender.com';
-const API_BASE_URL2 = 'http://localhost:8080';
+// const API_BASE_URL = 'https://resumemaker-1.onrender.com';
+// const API_BASE_URL2 = 'http://localhost:8080';
 
 const techSkills = [
   "javascript", "python", "java", "react", "angular", "vue", "node",
@@ -598,18 +599,17 @@ export default function ResumeAnalyzer({
           resume: buildResumeString()
         };
 
-        const res = await fetch(`${API_BASE_URL}/analyze`, {
+        const res = await api({
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          url: `/analyze`,
+          data: payload,
           signal: controller.signal
         });
 
         clearTimeout(id);
 
-        if (!res.ok) throw new Error(`Status ${res.status}`);
-
-        const data = await res.json();
+        // Axios throws on error, but let's handle data
+        const data = res.data;
 
         if (data.error) {
           setJobDescriptionInsights(
@@ -745,21 +745,18 @@ export default function ResumeAnalyzer({
           newResume: newLocalResume,
         };
 
-        const res = await fetch(`${API_BASE_URL}/create-report`, {
+        const res = await api({
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          url: `/create-report`,
+          data: payload,
           signal: controller.signal
         });
 
         clearTimeout(id);
 
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(`Backend responded with status ${res.status}: ${text}`);
-        }
+        // Axios automatic error handling: throws on status outside 2xx
 
-        const resData = await res.json();
+        const resData = res.data;
 
         if (resData.error) {
           setReportOutput(<ErrorState title="Report Generation Failed" message={resData.error} />);
@@ -838,19 +835,15 @@ export default function ResumeAnalyzer({
         controller = new AbortController();
         const id = setTimeout(() => controller.abort(), timeout);
 
-        const res = await fetch(`${API_BASE_URL}/enhanceResume`, {
-          method: "POST",
+        const res = await api.post('/enhanceResume', payload, {
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
           signal: controller.signal
         });
 
         clearTimeout(id);
 
-        if (!res.ok) throw new Error(`Status ${res.status}`);
-
-        const result = await res.json();
-        const enhancedData = result.enhanced_resume || result;
+        // Axios throws on non-2xx status
+        const enhancedData = res.data.enhanced_resume || res.data;
 
         setNewLocalResume(enhancedData);
         dispatch(setEnhancedResume(enhancedData));
@@ -911,19 +904,17 @@ export default function ResumeAnalyzer({
         controller = new AbortController();
         const tid = setTimeout(() => controller.abort(), timeout);
 
-        const response = await fetch(`${API_BASE_URL}/uploadResume`, {
-          method: "POST",
-          body: formData,
+        const response = await api.post('/uploadResume', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
           signal: controller.signal
         });
 
         clearTimeout(tid);
 
-        if (!response.ok) {
-          throw new Error(`Server error: ${response.status}`);
-        }
-
-        const data = await response.json();
+        // Axios throws on non-2xx status
+        const data = response.data;
 
         if (data.error) {
           throw new Error(data.error);

@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import './Login.css';
 import { useSelector, useDispatch } from "react-redux";
@@ -7,9 +6,7 @@ import { logInUser } from "../../redux/store.js";
 import { GoogleLogin } from '@react-oauth/google';
 
 import LoadingAnimation from "../../components/PopUp/LoadingAnimation.jsx";
-
-const API_BASE_URL = 'https://resumemaker-1.onrender.com';
-const API_BASE_URL2 = 'http://localhost:8080';
+import api from "../../api/axios";
 
 export default function Login({ setUserId }) {
   const isLoggedIn = useSelector((state) => state.auth.isLoggedIn);
@@ -38,17 +35,30 @@ export default function Login({ setUserId }) {
 
     while (attempt < MAX_RETRIES) {
       try {
-        const response = await axios.post(`${API_BASE_URL}/login`, {
+        const response = await api.post(`/login`, {
           email,
           password
-        }, { timeout: 30000 }); // 30s timeout
+        });
 
-        console.log("User ID from response:", response.data.userId);
-        window.showMessage("Success", response.data.message, "success", 1500);
-        setUserId(response.data.userId);
-        dispatch(logInUser(response.data.userId));
+        console.log("Response:", response.data);
+        const { userId, jwt, message } = response.data; // Assuming 'jwt' is the field name, verify this!
+
+        if (jwt) {
+          localStorage.setItem('token', jwt);
+        } else if (response.data.token) {
+          localStorage.setItem('token', response.data.token);
+        }
+
+        if (userId) {
+          localStorage.setItem('userId', userId);
+        }
+
+        window.showMessage("Success", message, "success", 1500);
+        setUserId(userId);
+        dispatch(logInUser(userId));
         navigate("/");
         return; // Success, exit function
+
 
       } catch (error) {
         console.error(`Login attempt ${attempt + 1} failed:`, error);
@@ -86,11 +96,22 @@ export default function Login({ setUserId }) {
 
     while (attempt < MAX_RETRIES) {
       try {
-        const response = await axios.post(`${API_BASE_URL}/google-login`, {
+        const response = await api.post(`/google-login`, {
           token: credentialResponse.credential
-        }, { timeout: 30000 });
+        });
 
-        dispatch(logInUser(response.data));
+        const { userId, jwt, message } = response.data;
+        if (jwt) {
+          localStorage.setItem('token', jwt);
+        } else if (response.data.token) {
+          localStorage.setItem('token', response.data.token);
+        }
+
+        if (userId) {
+          localStorage.setItem('userId', userId);
+        }
+
+        dispatch(logInUser(userId));
         window.showMessage("Success", 'Login Successful', "success", 1500);
         navigate("/");
         return;
