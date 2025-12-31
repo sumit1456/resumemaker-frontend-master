@@ -33,7 +33,6 @@ import api from "../../api/axios";
 // ==================== TEMPLATE MAPPINGS ====================
 const TEMPLATES = {
   custom: { name: 'Custom (Saved)', ...ATS_TEMPLATE_CONFIG }, // 🆕 Custom Option
-  ats: ATS_TEMPLATE_CONFIG,
   modern: MODERN_TEMPLATE_CONFIG,
   twoColumn: TWO_COLUMN_TEMPLATE_CONFIG,
   template5: TEMPLATE5_CONFIG,
@@ -1875,32 +1874,8 @@ const UIEditor = () => {
 
       {/* LEFT PANEL - Section Controls */}
       <div className="left-panel">
-        <div className="control-group" style={{ marginBottom: '15px' }}>
-          <button
-            onClick={() => {
-              const newState = !isAnimationsEnabled;
-              setIsAnimationsEnabled(newState);
-              setIsPhysicsEnabled(newState);
-              if (newState) setIsMagneticEnabled(false); // 🚀 Turning on Physics turns OFF Magnet
-            }}
-            className={`btn-primary full-width ${isAnimationsEnabled ? 'active' : ''}`}
-            style={{
-              background: isAnimationsEnabled ? '#fef3c7' : '#f3f4f6',
-              color: isAnimationsEnabled ? '#92400e' : '#6b7280',
-              borderColor: isAnimationsEnabled ? '#fbbf24' : '#e5e7eb',
-              fontWeight: '700',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px'
-            }}
-          >
-            {isAnimationsEnabled ? '✨ EFFECTS: ON' : '✨ EFFECTS: OFF'}
-          </button>
-        </div>
-
-        {/* --- TEMPLATE SELECT --- (Moved Up) */}
-        {!isMobile && <h3 className="panel-title">TEMPLATE SELECT</h3>}
+        {/* --- GROUP 1: TEMPLATE & ACTIONS --- */}
+        {!isMobile && <h3 className="panel-title">TEMPLATE & ACTIONS</h3>}
 
         {TEMPLATES && Object.keys(TEMPLATES).length > 0 && (
           <div className="control-group">
@@ -1949,9 +1924,28 @@ const UIEditor = () => {
           </div>
         )}
 
-        {/* --- GLOBAL STYLES --- */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button onClick={downloadResume} className="btn-secondary full-width" style={{ backgroundColor: 'white', color: '#1f2937' }}>📥 DOWNLOAD PNG</button>
+            <button onClick={downloadPDF} className="btn-secondary full-width" style={{ backgroundColor: 'white', color: '#1f2937' }}>📄 DOWNLOAD PDF</button>
+          </div>
+          <button
+            onClick={handleSaveAll}
+            className="btn-primary full-width"
+            style={{ backgroundColor: 'white', color: '#1f2937', border: '1px solid #e5e7eb' }}
+            disabled={saving}
+          >
+            {saving ? 'SAVING...' : (resumeId ? '💾 UPDATE TEMPLATE' : '💾 SAVE TEMPLATE')}
+          </button>
+          <button onClick={resetLayout} className="btn-primary full-width">
+            ↻ RESET LAYOUT
+          </button>
+        </div>
+
+
+        {/* --- GROUP 2: GLOBAL STYLES --- */}
         <h3 className="panel-title">GLOBAL STYLES</h3>
-        <div className="control-group" style={{ marginBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.1)', pb: '15px' }}>
+        <div className="control-group" style={{ marginBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '15px' }}>
 
           {/* FONT SELECTOR */}
           <div style={{ marginBottom: '15px' }}>
@@ -2013,25 +2007,11 @@ const UIEditor = () => {
           </p>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button onClick={downloadResume} className="btn-secondary full-width" style={{ backgroundColor: 'white', color: '#1f2937' }}>📥 DOWNLOAD PNG</button>
-            <button onClick={downloadPDF} className="btn-secondary full-width" style={{ backgroundColor: 'white', color: '#1f2937' }}>📄 DOWNLOAD PDF</button>
-          </div>
-          <button
-            onClick={handleSaveAll}
-            className="btn-primary full-width"
-            style={{ backgroundColor: 'white', color: '#1f2937', border: '1px solid #e5e7eb' }}
-            disabled={saving}
-          >
-            {saving ? 'SAVING...' : (resumeId ? '💾 UPDATE TEMPLATE' : '💾 SAVE TEMPLATE')}
-          </button>
-          <button onClick={resetLayout} className="btn-primary full-width">
-            ↻ RESET LAYOUT
-          </button>
-        </div>
 
-        <div className="flow-action">
+        {/* --- GROUP 3: FLOW & SMART FEATURES --- */}
+        <h3 className="panel-title">SMART FEATURES</h3>
+
+        <div className="flow-action" style={{ marginBottom: '15px' }}>
           <button
             onClick={() => setIsAutoFlowEnabled(!isAutoFlowEnabled)}
             className={`btn-primary full-width btn-auto-flow-action ${isAutoFlowEnabled ? 'active' : ''}`}
@@ -2057,6 +2037,30 @@ const UIEditor = () => {
             }}
           >
             {isMagneticEnabled ? '🧲 Magnetic Flow: ON' : '🧲 Magnetic Flow: OFF'}
+          </button>
+        </div>
+
+        <div className="control-group" style={{ marginBottom: '20px' }}>
+          <button
+            onClick={() => {
+              const newState = !isAnimationsEnabled;
+              setIsAnimationsEnabled(newState);
+              setIsPhysicsEnabled(newState);
+              if (newState) setIsMagneticEnabled(false); // 🚀 Turning on Physics turns OFF Magnet
+            }}
+            className={`btn-primary full-width ${isAnimationsEnabled ? 'active' : ''}`}
+            style={{
+              background: isAnimationsEnabled ? '#fef3c7' : '#f3f4f6',
+              color: isAnimationsEnabled ? '#92400e' : '#6b7280',
+              borderColor: isAnimationsEnabled ? '#fbbf24' : '#e5e7eb',
+              fontWeight: '700',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
+            }}
+          >
+            {isAnimationsEnabled ? '✨ EFFECTS: ON' : '✨ EFFECTS: OFF'}
           </button>
         </div>
 
@@ -2136,20 +2140,6 @@ const UIEditor = () => {
                                 padding: '6px',
                                 border: styleConfig.header?.nameAlign === layout.config.nameAlign ? '2px solid #3b82f6' : '1px solid #ddd'
                               }}
-                            >
-                              {layout.label}
-                            </button>
-                          ))}
-                        </div>
-
-                        <label className="control-label-small" style={{ marginBottom: '8px', display: 'block' }}>Contact Style</label>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                          {CONTACT_LAYOUTS && Object.entries(CONTACT_LAYOUTS).map(([key, layout]) => (
-                            <button
-                              key={key}
-                              onClick={() => animateHeaderLayoutChange(layout.config)}
-                              className="btn-secondary"
-                              style={{ fontSize: '10px', padding: '6px' }}
                             >
                               {layout.label}
                             </button>
@@ -2586,6 +2576,33 @@ const UIEditor = () => {
 
       < div className="right-panel" >
         <h3 className="panel-title">QUICK STYLE</h3>
+
+        {/* --- SECTION SELECTOR (Unified Switcher) --- */}
+        <div style={{ padding: '0 12px 16px 12px', borderBottom: '1px solid #e5e7eb', marginBottom: '8px' }}>
+          <label style={{ fontSize: '10px', color: '#6b7280', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '8px' }}>
+            Select Section
+          </label>
+          <select
+            value={selectedSection || ''}
+            onChange={(e) => {
+              const val = e.target.value;
+              setSelectedSection(val || null);
+              if (val) {
+                setSelectedShape(null);
+                setSelectedLine(null);
+              }
+            }}
+            className="control-select"
+            style={{ width: '100%' }}
+          >
+            <option value="">-- No Selection --</option>
+            {sectionVisibility && Object.keys(sectionVisibility).map(name => (
+              <option key={name} value={name}>
+                📍 {name.charAt(0).toUpperCase() + name.slice(1)}
+              </option>
+            ))}
+          </select>
+        </div>
 
         {
           selectedSection ? (
@@ -3033,6 +3050,17 @@ const UIEditor = () => {
                       </span>
                     </div>
                   </div>
+
+                  {/* Underline Toggle */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <label style={{ fontSize: '11px', fontWeight: '600', color: '#374151' }}>Show Underline</label>
+                    <input
+                      type="checkbox"
+                      checked={styleConfig.projects?.linkStyle?.textDecoration === 'underline'}
+                      onChange={(e) => handleStyleChange('projects', 'linkStyle', e.target.checked ? 'underline' : 'none', 'textDecoration')}
+                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                    />
+                  </div>
                 </div>
               )}
 
@@ -3380,7 +3408,6 @@ const UIEditor = () => {
                   <li>Drag elements to reposition</li>
                   <li>Click to select and style</li>
                   <li>Use "Nudge" for fine control</li>
-                  <li>Navigate using left panel accordions</li>
                 </ul>
               </div>
             </div>
@@ -3394,7 +3421,7 @@ const UIEditor = () => {
 
 
 
-    </div>
+    </div >
 
 
   );
