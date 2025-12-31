@@ -142,7 +142,7 @@ const UIEditor = () => {
   const [showPage2, setShowPage2] = useState(false);
   const [isAutoFlowEnabled, setIsAutoFlowEnabled] = useState(false); // 🎯 Default to false as requested by user
   const [zoom, setZoom] = useState(1);
-  const [isMagneticEnabled, setIsMagneticEnabled] = useState(true); // 🚀 NEW: Magnetic Flow (Default ON)
+  const [isMagneticEnabled, setIsMagneticEnabled] = useState(false); // 🚀 NEW: Magnetic Flow (Default OFF)
 
   const extractWidthsAndHeightsFromConfig = (config) => {
     const widths = {};
@@ -246,8 +246,8 @@ const UIEditor = () => {
   const [activeSectionAccordion, setActiveSectionAccordion] = useState(null); // 🗂 Sub-section accordion state
 
   // ✨ UI Animation State
-  const [isAnimationsEnabled, setIsAnimationsEnabled] = useState(true);
-  const [isPhysicsEnabled, setIsPhysicsEnabled] = useState(true); // 🚀 Added
+  const [isAnimationsEnabled, setIsAnimationsEnabled] = useState(false);
+  const [isPhysicsEnabled, setIsPhysicsEnabled] = useState(false); // 🚀 Added
 
   const headerContainerRef = useRef(null);
   const skillsContainerRef = useRef(null); // New ref for skills container

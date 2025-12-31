@@ -81,7 +81,7 @@ export default function NavBar() {
         <p><Link to="/about" onClick={toggleSidebar}>About</Link></p>
         <p><Link to="/user-templates" onClick={toggleSidebar}>User Templates</Link></p>
         <p><Link to="/dashboard/resume-editor" onClick={toggleSidebar}>Text Editor</Link></p>
-        <p><Link to="/ui-editor/webgl" onClick={toggleSidebar} style={{ color: '#ec4899', fontWeight: 'bold' }}>WebGL Editor ✨</Link></p>
+        <p><Link to="/ui-editor/webgl" onClick={toggleSidebar}>WebGL Editor ✨</Link></p>
       </div>
 
       {/* Overlay */}

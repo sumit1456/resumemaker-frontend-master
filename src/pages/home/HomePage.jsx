@@ -6,6 +6,7 @@ import ResumeDashboard from "../Dashboard/Dashboard.jsx";
 import "./css-files/HomePage2.css";
 import About from "../About/About.jsx";
 
+import TemplatesShowcase from "../Templates showcase/Templatesshowcase.jsx";
 import MyResumes from "../UserTemplates/MyResumes.jsx";
 
 import EmailVerification from "../../features/auth/Verification.jsx";
@@ -82,6 +83,11 @@ export default function HomePage(
           element={<About />}
         />
 
+
+        <Route
+          path="templates"
+          element={<TemplatesShowcase />}
+        />
 
         <Route
           path="user-templates"

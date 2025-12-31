@@ -2736,7 +2736,7 @@ const WebGLStage = forwardRef(({
                     const draggedInitialY = session.startY;
                     const draggedInitialX = session.startX;
                     // We need a width for the dragged section to check overlap
-                    const draggedWidth = session.target.getBounds?.().width || 575;
+                    const draggedWidth = session.width || session.target.getBounds?.().width || 575;
 
                     layers.current.sections.children.forEach(c => {
                         if (c._id && c._id !== session.id) {
@@ -2748,13 +2748,13 @@ const WebGLStage = forwardRef(({
                             const isBelow = initialPos.y > draggedInitialY;
 
                             // Simple X overlap check
-                            const sectionWidth = c.getBounds?.().width || 575;
+                            const sectionWidth = initialPos.width || c.getBounds?.().width || 575;
                             const hasXOverlap = (initialPos.x < draggedInitialX + draggedWidth) &&
                                 (initialPos.x + sectionWidth > draggedInitialX);
 
                             if (isBelow && hasXOverlap) {
                                 // 🎯 Refined: Snap to Column + Cascaded Shift
-                                c.x = targetX;
+                                c.x = targetX; // Matches X alignment
                                 c.y = initialPos.y + deltaY;
                             } else {
                                 // 🎯 Restore initial relative positions if not in the flow
@@ -2914,6 +2914,8 @@ const WebGLStage = forwardRef(({
                 border.visible = isSelected; // Initial state
                 sectionContainer.addChild(border);
 
+                sectionContainer._width = snapshotData.width; // 🚀 Cache explicit width
+
                 sectionContainer.on('pointerover', () => {
                     if (selectedId !== id) border.visible = true;
                 });
@@ -2936,6 +2938,7 @@ const WebGLStage = forwardRef(({
                         startY: sectionContainer.y,
                         dragStartX: globalPos.x,
                         dragStartY: globalPos.y,
+                        width: snapshotData.width, // 🚀 Capture explicit width
                         initialPositions: {}
                     };
 
@@ -2943,7 +2946,11 @@ const WebGLStage = forwardRef(({
                     if (layers.current.sections) {
                         layers.current.sections.children.forEach(c => {
                             if (c._id) {
-                                dragSession.current.initialPositions[c._id] = { x: c.x, y: c.y };
+                                dragSession.current.initialPositions[c._id] = {
+                                    x: c.x,
+                                    y: c.y,
+                                    width: c._width || c.width // Capture width for others too
+                                };
                             }
                         });
                     }

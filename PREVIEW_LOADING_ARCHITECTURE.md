@@ -440,11 +440,14 @@ const TEMPLATES = {
 };
 ```
 
+> **Note**: Legacy templates have been consolidated. The editor now defaults to `CoustomTemplate` for maximum flexibility.
+
 #### **2. Interactive Drag & Drop**
 - Drag sections on canvas
 - Drag divider lines
 - Drag background shapes
 - Real-time position updates
+- **Magnetic Flow**: Optional "magnetic" sorting that creates space for dragged sections. *Defaulted to OFF for better control.*
 - Snap-to-grid support (optional)
 
 ```javascript
@@ -457,6 +460,11 @@ const TEMPLATES = {
   }}
 />
 ```
+
+### **API & Authentication Architecture**
+- **Centralized Axios**: All requests flow through `src/api/axios.js`.
+- **JWT Auth**: Tokens stored in `localStorage`, attached automatically via interceptors.
+- **Auto-Restore**: User session restored on app launch.
 
 #### **3. Live Styling**
 - Font size adjustment (quick controls)
@@ -953,4 +961,4 @@ renderSectionWithEngine(sectionName)
 
 **Document Version**: 1.0  
 **Last Updated**: December 18, 2025  
-**Maintainer**: Technical Documentation Team
+
