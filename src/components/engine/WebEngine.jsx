@@ -2579,10 +2579,12 @@ const WebGLStage = forwardRef(({
     stageScale = 1
 }, ref) => {
     const containerRef = useRef(null);
+    const fallbackCanvasRef = useRef(null); // 🚀 NEW: Fallback Ref
     const pixiApp = useRef(null);
     const layers = useRef({ background: null, shapes: null, sections: null, lines: null });
     const sharedRenderer = useRef(null);
     const [initialized, setInitialized] = useState(false);
+    const [useFallback, setUseFallback] = useState(false); // 🚀 NEW: Fallback state
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
     const physicsEnabledRef = useRef(physicsEnabled);
@@ -2617,6 +2619,14 @@ const WebGLStage = forwardRef(({
             if (!containerRef.current || !isMounted) return;
 
             const PIXI_LIB = PIXI || window.PIXI;
+
+            // Check if PIXI is available
+            if (!PIXI_LIB) {
+                console.error("[WebGLStage] PIXI not found, falling back to Canvas");
+                setUseFallback(true);
+                return;
+            }
+
             const app = new PIXI_LIB.Application();
 
             try {
@@ -2639,11 +2649,18 @@ const WebGLStage = forwardRef(({
                 } catch (firstTryErr) {
                     console.warn("[WebGLStage] Primary init failed, retrying with safe settings...", firstTryErr);
                     // Fallback to minimal settings for old/low-power mobile devices
-                    await app.init({
-                        ...initOptions,
-                        resolution: 1,
-                        antialias: false
-                    });
+                    try {
+                        await app.init({
+                            ...initOptions,
+                            resolution: 1,
+                            antialias: false,
+                            preference: 'canvas' // Try canvas preference in pixi if webgl fails
+                        });
+                    } catch (secondTryErr) {
+                        console.error("[WebGLStage] PixiJS init completely failed:", secondTryErr);
+                        setUseFallback(true); // 🚨 COMPLETE FAIL -> TRIGGER FALLBACK
+                        return;
+                    }
                 }
 
                 if (!isMounted) {
@@ -3063,6 +3080,25 @@ const WebGLStage = forwardRef(({
 
     }, [selectedId, initialized]);
 
+    // --- FALLBACK CANVAS RENDERER ---
+    useEffect(() => {
+        if (useFallback && snapshot && fallbackCanvasRef.current) {
+            // Rehydrate a temporary engine to use its valid render logic
+            const engine = new GeometrySnapshot();
+            engine.nodes = snapshot.nodes || [];
+            engine.rootWidth = snapshot.width || width;
+            engine.rootHeight = snapshot.height || height;
+
+            // Use existing render logic
+            try {
+                engine.renderToCanvas(fallbackCanvasRef.current, resolution);
+                console.log("[WebGLStage] 🎨 Fallback Canvas Rendered");
+            } catch (e) {
+                console.error("[WebGLStage] Fallback render failed:", e);
+            }
+        }
+    }, [useFallback, snapshot, width, height, resolution]);
+
     useImperativeHandle(ref, () => ({
         app: pixiApp.current,
         exportImage: () => sharedRenderer.current ? sharedRenderer.current.exportImage() : null
@@ -3079,7 +3115,23 @@ const WebGLStage = forwardRef(({
                 touchAction: 'none', // Critical for mobile dragging
                 ...style
             }}
-        />
+        >
+            {useFallback && (
+                <canvas
+                    ref={fallbackCanvasRef}
+                    style={{
+                        maxWidth: '100%',
+                        maxHeight: '100%',
+                        boxShadow: '0 10px 30px rgba(0,0,0,0.2)'
+                    }}
+                />
+            )}
+            {useFallback && !snapshot && (
+                <div style={{ color: '#aaa', fontFamily: 'sans-serif' }}>
+                    Generating Preview...
+                </div>
+            )}
+        </div>
     );
 });
 
