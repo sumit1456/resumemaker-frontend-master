@@ -204,12 +204,12 @@ const UIEditor = () => {
   const [isLayoutDirty, setIsLayoutDirty] = useState(false); // 🆕 Track manual layout changes
   const [sectionSnapshots, setSectionSnapshots] = useState({});
   const [TemplateComponents, setTemplateComponents] = useState(null);
-  const [resumeData, setResumeData] = useState(defaultResumeData);
   const currentResume = useSelector((state) => state.resume.currentResume);
   const currentResumeId = useSelector((state) => state.resume.resumeId);
+  const lastDispatchedRef = useRef(null); // 🛡️ Prevent infinite sync loops
 
-  const globalResumeDetails = useSelector((state => state.resume.currentResume));
-  const [resumeDetails, setResumeDetails] = useState(currentResume ? currentResume : defaultResumeData);
+  const [resumeData, setResumeData] = useState(defaultResumeData);
+  const [resumeDetails, setResumeDetails] = useState(defaultResumeData);
 
   // 🛡️ Section Visibility State (New Feature)
   const [sectionVisibility, setSectionVisibility] = useState({
@@ -506,8 +506,14 @@ const UIEditor = () => {
   const canvasTargetHeight = 842 * canvasScale;
   useEffect(() => {
     if (!currentResume) return;
-    setResumeData(currentResume);
-    setResumeDetails(currentResume); // Sync local resumeDetails state
+
+    // 🛡️ Only update local state if Redux changed from an EXTERNAL source
+    const currentResumeStr = JSON.stringify(currentResume);
+    if (currentResumeStr !== lastDispatchedRef.current && currentResumeStr !== JSON.stringify(resumeData)) {
+      console.log("📥 Syncing b3 local state from Redux");
+      setResumeData(currentResume);
+      setResumeDetails(currentResume);
+    }
   }, [currentResume]);
 
   // 🔄 Sync local template state when Redux template changes (e.g., from ResumeEditorv3)
@@ -1840,6 +1846,31 @@ const UIEditor = () => {
       }
     }
   }, [savedStyleConfig]);
+
+  // 🔄 SYNC TO GLOBAL REDUX: Keep currentResume updated for ResumeEditorv3
+  useEffect(() => {
+    if (!resumeData) return;
+
+    const updatedResume = {
+      ...resumeData,
+      styleConfig: {
+        ...styleConfig,
+        positions: sectionPositions,
+        lines: lines,
+        shapes: backgroundShapes,
+      }
+    };
+
+    const updatedResumeStr = JSON.stringify(updatedResume);
+    const currentResumeStr = JSON.stringify(currentResume);
+
+    // Check if data actually changed to avoid redundant dispatches
+    if (updatedResumeStr !== currentResumeStr) {
+      lastDispatchedRef.current = updatedResumeStr; // 🛡️ Mark as our own change
+      dispatch(setCurrentResume(updatedResume));
+      console.log("🔄 Global currentResume synced from b3.jsx");
+    }
+  }, [resumeData, styleConfig, sectionPositions, lines, backgroundShapes, dispatch, currentResume]);
 
   // Initialize layout on mount
   useEffect(() => {

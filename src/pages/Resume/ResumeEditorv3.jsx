@@ -416,7 +416,7 @@ export default function ResumeEditor({ resume: propsResume }) {
 
 
 
-    const [localResume, setLocalResune] = useState(null);
+    const [localResume, setLocalResume] = useState(null);
 
     console.log("From the state the user id is" + userId);
 
@@ -796,6 +796,32 @@ export default function ResumeEditor({ resume: propsResume }) {
         return () => clearTimeout(timer);
     }, [selectedTemplate, styleConfig, resumeDetails, skills, experiences, projects, educationList, certifications, customSections]);
 
+
+    // 📥 INITIALIZE FROM GLOBAL REDUX: Load data if returning from another page
+    useEffect(() => {
+        if (currentResume && !localResume && !isLoadingResume) {
+            console.log("📥 Initializing Editorv3 from global currentResume");
+
+            setLocalResume(currentResume); // 🟢 Mark as loaded to prevent re-init or fetch overwrite if inappropriate
+
+            if (currentResume.resumeDetails) setResumeDetails(currentResume.resumeDetails);
+            if (currentResume.skills) setSkills(currentResume.skills);
+            if (currentResume.experiences) setExperiences(currentResume.experiences);
+            if (currentResume.projects) setProjects(currentResume.projects);
+            if (currentResume.educationList) setEducationList(currentResume.educationList);
+            if (currentResume.certifications) setCertifications(currentResume.certifications);
+            if (currentResume.customSections) setCustomSections(currentResume.customSections);
+            if (currentResume.sectionTitles) setSectionTitles(currentResume.sectionTitles);
+
+            setShowSummary(currentResume.showSummary !== undefined ? currentResume.showSummary : true);
+            setShowSkills(currentResume.showSkills !== undefined ? currentResume.showSkills : true);
+            setShowExperience(currentResume.showExperience !== undefined ? currentResume.showExperience : true);
+            setShowProjects(currentResume.showProjects !== undefined ? currentResume.showProjects : true);
+            setShowEducation(currentResume.showEducation !== undefined ? currentResume.showEducation : true);
+            setShowCertifications(currentResume.showCertifications !== undefined ? currentResume.showCertifications : true);
+        }
+    }, [currentResume, localResume, isLoadingResume]);
+
     // 🎯 REACTIVE AUTO-FLOW: Trigger on content change (from b3.jsx line 1272)
     useEffect(() => {
         // 🛡️ Disable auto-flow for multi-column templates based on Config ID/Type
@@ -1119,7 +1145,7 @@ export default function ResumeEditor({ resume: propsResume }) {
                             certifications: data.sectionTitles.certifications || "Certifications"
                         });
                     }
-                    setLocalResune(data);
+                    setLocalResume(data);
 
                     setFetchError("");
                     setIsLoadingResume(false);
@@ -1233,6 +1259,14 @@ export default function ResumeEditor({ resume: propsResume }) {
     );
 
     const debouncedData = useDebounce(combinedData, 1500);
+
+    // 🔄 SYNC TO GLOBAL REDUX: Keep currentResume updated for other components (like b3.jsx)
+    useEffect(() => {
+        if (debouncedData) {
+            dispatch(setCurrentResume(debouncedData));
+            console.log("🔄 Global currentResume synced from Editorv3");
+        }
+    }, [debouncedData, dispatch]);
 
 
 
