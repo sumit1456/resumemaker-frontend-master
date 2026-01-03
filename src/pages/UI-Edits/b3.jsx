@@ -146,6 +146,7 @@ const UIEditor = () => {
   const [isAutoFlowEnabled, setIsAutoFlowEnabled] = useState(false); // 🎯 Default to false as requested by user
   const [zoom, setZoom] = useState(1);
   const [isMagneticEnabled, setIsMagneticEnabled] = useState(false); // 🚀 NEW: Magnetic Flow (Default OFF)
+  const [isDividerSyncEnabled, setIsDividerSyncEnabled] = useState(false); // 🚀 NEW: Divider Auto-Sync (Default OFF per user request)
 
   const extractWidthsAndHeightsFromConfig = (config) => {
     const widths = {};
@@ -1233,23 +1234,36 @@ const UIEditor = () => {
 
   // Move line
   const moveLine = (id, direction) => {
-    const step = 10;
-    setLines(lines.map(line => {
+    const step = 2; // Reduced step for fine control
+    setLines(prevLines => prevLines.map(line => {
       if (line.id !== id) return line;
 
+      let updatedLine = { ...line };
       switch (direction) {
         case 'up':
-          return { ...line, y1: line.y1 - step, y2: line.y2 - step };
+          updatedLine = { ...line, y1: line.y1 - step, y2: line.y2 - step };
+          break;
         case 'down':
-          return { ...line, y1: line.y1 + step, y2: line.y2 + step };
+          updatedLine = { ...line, y1: line.y1 + step, y2: line.y2 + step };
+          break;
         case 'left':
-          return { ...line, x1: line.x1 - step, x2: line.x2 - step };
+          updatedLine = { ...line, x1: line.x1 - step, x2: line.x2 - step };
+          break;
         case 'right':
-          return { ...line, x1: line.x1 + step, x2: line.x2 + step };
-        default:
-          return line;
+          updatedLine = { ...line, x1: line.x1 + step, x2: line.x2 + step };
+          break;
       }
+
+      // 🧠 Recalculate offsetY if this is a section divider
+      if (updatedLine.isSectionDivider) {
+        const sectionPos = sectionPositions[updatedLine.isSectionDivider];
+        if (sectionPos) {
+          updatedLine.offsetY = updatedLine.y1 - sectionPos.y;
+        }
+      }
+      return updatedLine;
     }));
+    setIsDividerSyncEnabled(false); // 🚀 TURN OFF SYNC on manual nudge
     setIsLayoutDirty(true);
   };
 
@@ -1276,18 +1290,43 @@ const UIEditor = () => {
 
   // Handle line drag end
   const handleLineDragEnd = (id, newPos) => {
-    setLines(lines.map(line =>
-      line.id === id ? { ...line, ...newPos } : line
-    ));
+    setLines(lines.map(line => {
+      if (line.id === id) {
+        const updatedLine = { ...line, ...newPos };
+        // 🧠 If this is a section divider, update its relative offset
+        // This ensures that when sync is ON, it maintains the user's custom positioning
+        if (line.isSectionDivider) {
+          const sectionPos = sectionPositions[line.isSectionDivider];
+          if (sectionPos) {
+            updatedLine.offsetY = updatedLine.y1 - sectionPos.y;
+          }
+        }
+        return updatedLine;
+      }
+      return line;
+    }));
+    setIsDividerSyncEnabled(false); // 🚀 Turning sync OFF if user manually adjusts a line
     setIsLayoutDirty(true); // 🆕 Layout change
     // 🛡️ Selection persists (User Request)
   };
 
   // Handle line update
   const handleLineUpdate = (id, updates) => {
-    setLines(lines.map(line =>
-      line.id === id ? { ...line, ...updates } : line
-    ));
+    setLines(prevLines => prevLines.map(line => {
+      if (line.id === id) {
+        const updatedLine = { ...line, ...updates };
+        // 🧠 Recalculate offsetY if this is a section divider and Y changed
+        if (updatedLine.isSectionDivider && (updates.y1 !== undefined || updates.y2 !== undefined)) {
+          const sectionPos = sectionPositions[updatedLine.isSectionDivider];
+          if (sectionPos) {
+            updatedLine.offsetY = updatedLine.y1 - sectionPos.y;
+          }
+        }
+        return updatedLine;
+      }
+      return line;
+    }));
+    setIsDividerSyncEnabled(false); // 🚀 TURN OFF SYNC on manual edit
     setIsLayoutDirty(true); // 🆕 Layout change
   };
 
@@ -1422,16 +1461,23 @@ const UIEditor = () => {
   };
 
   const updateLinkedLines = (sectionName, newPos, newWidth) => {
+    // 🚀 We always update linked lines to follow sections, but the 'Sync' toggle 
+    // now specifically controls whether we force the default 22px position.
     setLines(prevLines => prevLines.map(line => {
       if (line.isSectionDivider === sectionName) {
         const width = newWidth ? Math.min(parseInt(newWidth) || 575, 575) : Math.abs(line.x2 - line.x1);
-        const offsetY = line.offsetY || 22;
+
+        // 🧠 If Sync is ON, we force the default 22px offset.
+        // 🧠 If Sync is OFF, we use the custom offsetY (falls back to 22 if none set).
+        const offsetY = isDividerSyncEnabled ? 22 : (line.offsetY !== undefined ? line.offsetY : 22);
+
         return {
           ...line,
           x1: newPos.x,
           y1: newPos.y + offsetY,
           x2: newPos.x + width,
-          y2: newPos.y + offsetY
+          y2: newPos.y + offsetY,
+          offsetY: offsetY
         };
       }
       return line;
@@ -1467,15 +1513,18 @@ const UIEditor = () => {
             if (pos) {
               if (existingLineIndex > -1) {
                 // Update existing
+                const existingLine = newLines[existingLineIndex];
+                // 🧠 Respect the sync toggle even when global styles are applied
+                const offsetY = isDividerSyncEnabled ? 22 : (existingLine.offsetY !== undefined ? existingLine.offsetY : 22);
                 newLines[existingLineIndex] = {
-                  ...newLines[existingLineIndex],
+                  ...existingLine,
                   thickness: globalConfig.thickness,
                   color: globalConfig.color,
                   x1: pos.x,
-                  y1: pos.y + 22,
+                  y1: pos.y + offsetY,
                   x2: pos.x + width,
-                  y2: pos.y + 22,
-                  offsetY: 22
+                  y2: pos.y + offsetY,
+                  offsetY: offsetY
                 };
               } else {
                 // Add new
@@ -2102,6 +2151,28 @@ const UIEditor = () => {
             </div>
           </div>
 
+          {/* BULLET STYLE SELECTOR */}
+          <div style={{ marginTop: '10px' }}>
+            <label className="control-label" style={{ fontSize: '10px' }}>Bullet Shape</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '4px' }}>
+              {['•', '◦', '▪', '▫', '★', '➜', '–', '✓'].map(char => (
+                <button
+                  key={char}
+                  onClick={() => handleGlobalStyleChange('globalBulletChar', char)}
+                  className={`btn-secondary ${styleConfig.globalBulletChar === char ? 'active' : ''}`}
+                  style={{
+                    padding: '4px',
+                    fontSize: '14px',
+                    border: styleConfig.globalBulletChar === char ? '2px solid #3b82f6' : '1px solid #e5e7eb',
+                    background: styleConfig.globalBulletChar === char ? '#eff6ff' : 'white'
+                  }}
+                >
+                  {char}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div style={{ marginTop: '10px' }}>
             <label className="control-label" style={{ fontSize: '11px', display: 'flex', justifyContent: 'space-between' }}>
               Bullet Vertical Offset <span>{styleConfig.globalBulletTop || 0}px</span>
@@ -2152,6 +2223,20 @@ const UIEditor = () => {
             }}
           >
             {isMagneticEnabled ? '🧲 Magnetic Flow: ON' : '🧲 Magnetic Flow: OFF'}
+          </button>
+
+          <button
+            onClick={() => setIsDividerSyncEnabled(!isDividerSyncEnabled)}
+            className={`btn-primary full-width btn-auto-flow-action ${isDividerSyncEnabled ? 'active' : ''}`}
+            style={{
+              marginTop: '10px',
+              backgroundColor: isDividerSyncEnabled ? '#ecfdf5' : 'white',
+              color: isDividerSyncEnabled ? '#047857' : '#1f2937',
+              borderColor: isDividerSyncEnabled ? '#a7f3d0' : '#e5e7eb',
+              fontWeight: '700'
+            }}
+          >
+            {isDividerSyncEnabled ? '📏 Divider Auto-Sync: ON' : '📏 Divider Auto-Sync: OFF'}
           </button>
         </div>
 
@@ -2789,10 +2874,13 @@ const UIEditor = () => {
                     type="number"
                     value={Math.round(sectionPositions[selectedSection]?.x || 0)}
                     onChange={(e) => {
+                      const newVal = parseInt(e.target.value) || 0;
+                      const newPos = { ...sectionPositions[selectedSection], x: newVal };
                       setSectionPositions(p => ({
                         ...p,
-                        [selectedSection]: { ...p[selectedSection], x: parseInt(e.target.value) || 0 }
+                        [selectedSection]: newPos
                       }));
+                      updateLinkedLines(selectedSection, newPos);
                     }}
                     className={`control-input ${isAnimationsEnabled ? 'animate-input-spring' : ''}`}
                     style={{ width: '100%', padding: '8px', border: '1px solid #e5e7eb', borderRadius: '4px' }}
@@ -2804,10 +2892,13 @@ const UIEditor = () => {
                     type="number"
                     value={Math.round(sectionPositions[selectedSection]?.y || 0)}
                     onChange={(e) => {
+                      const newVal = parseInt(e.target.value) || 0;
+                      const newPos = { ...sectionPositions[selectedSection], y: newVal };
                       setSectionPositions(p => ({
                         ...p,
-                        [selectedSection]: { ...p[selectedSection], y: parseInt(e.target.value) || 0 }
+                        [selectedSection]: newPos
                       }));
+                      updateLinkedLines(selectedSection, newPos);
                     }}
                     className="control-input"
                     style={{ width: '100%', padding: '8px', border: '1px solid #e5e7eb', borderRadius: '4px' }}
@@ -2858,6 +2949,102 @@ const UIEditor = () => {
                   <div></div>
                   <button onClick={() => moveSection(selectedSection, 'down')} className="btn-arrow">↓</button>
                   <div></div>
+                </div>
+              </div>
+
+              {/* 🚀 NEW: Layout & Spacing Controls */}
+              <div style={{ marginBottom: '16px' }}>
+                <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#374151', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Layout & Spacing
+                </h4>
+
+                {/* Padding Control */}
+                <div className="property-control">
+                  <label className="control-label">Padding (px)</label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="40"
+                    step="2"
+                    value={parseInt(styleConfig[selectedSection]?.container?.padding) || 0}
+                    onChange={(e) => handleStyleChange(selectedSection, 'container', `${e.target.value}px`, 'padding')}
+                    className="control-input"
+                    style={{ padding: 0 }}
+                  />
+                </div>
+
+                {/* Content Indent Control */}
+                <div className="property-control" style={{ marginTop: '8px' }}>
+                  <label className="control-label">Content Indent (px)</label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="40"
+                    step="2"
+                    value={parseInt(styleConfig[selectedSection]?.bodyStyle?.marginLeft || styleConfig[selectedSection]?.contentLayout?.marginLeft || 0)}
+                    onChange={(e) => {
+                      // Try applying to bodyStyle (Summary) and contentLayout (Skills) and itemStyle (Experience/Projects)
+                      handleStyleChange(selectedSection, 'bodyStyle', `${e.target.value}px`, 'marginLeft');
+                      handleStyleChange(selectedSection, 'contentLayout', `${e.target.value}px`, 'marginLeft');
+                      // For lists (Experience/Projects), we might want itemStyle margin-left or padding-left
+                      handleStyleChange(selectedSection, 'itemStyle', `${e.target.value}px`, 'marginLeft');
+                    }}
+                    className="control-input"
+                    style={{ padding: 0 }}
+                  />
+                </div>
+
+                {/* Alignment Controls */}
+                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                  {/* Content Align */}
+                  <div style={{ flex: 1 }}>
+                    <label className="control-label-small">Content Align</label>
+                    <div className="button-group-row">
+                      <button
+                        onClick={() => {
+                          handleStyleChange(selectedSection, 'container', 'left', 'textAlign');
+                          // Also try to help specific layouts like flex columns
+                          handleStyleChange(selectedSection, 'layout', 'flex-start', 'alignItems');
+                        }}
+                        className="btn-secondary small"
+                        title="Align Left"
+                      >
+                        Left
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleStyleChange(selectedSection, 'container', 'center', 'textAlign');
+                          // Also try to help specific layouts like flex columns
+                          handleStyleChange(selectedSection, 'layout', 'center', 'alignItems');
+                        }}
+                        className="btn-secondary small"
+                        title="Align Center"
+                      >
+                        Center
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Title Align (Separate) */}
+                  <div style={{ flex: 1 }}>
+                    <label className="control-label-small">Title Align</label>
+                    <div className="button-group-row">
+                      <button
+                        onClick={() => handleStyleChange(selectedSection, 'titleStyle', 'left', 'textAlign')}
+                        className="btn-secondary small"
+                        title="Align Left"
+                      >
+                        Left
+                      </button>
+                      <button
+                        onClick={() => handleStyleChange(selectedSection, 'titleStyle', 'center', 'textAlign')}
+                        className="btn-secondary small"
+                        title="Align Center"
+                      >
+                        Center
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -3235,6 +3422,26 @@ const UIEditor = () => {
                     </div>
                   </div>
 
+                  {/* Link Spacing (Margin Bottom) */}
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                      Link Spacing (Bottom)
+                    </label>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <input
+                        type="range"
+                        min="0"
+                        max="30"
+                        value={parseInt(styleConfig.projects?.linkStyle?.marginBottom) || 0}
+                        onChange={(e) => handleStyleChange('projects', 'linkStyle', `${e.target.value}px`, 'marginBottom')}
+                        style={{ flex: 1 }}
+                      />
+                      <span style={{ fontSize: '12px', fontWeight: '600', minWidth: '30px' }}>
+                        {parseInt(styleConfig.projects?.linkStyle?.marginBottom) || 0}px
+                      </span>
+                    </div>
+                  </div>
+
                   {/* Underline Toggle */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <label style={{ fontSize: '11px', fontWeight: '600', color: '#374151' }}>Show Underline</label>
@@ -3340,7 +3547,7 @@ const UIEditor = () => {
               )}
 
               {/* Entry Spacing Control */}
-              {styleConfig[selectedSection]?.itemMarginBottom && (
+              {(styleConfig[selectedSection]?.itemMarginBottom || ['education', 'experience', 'projects'].includes(selectedSection)) && (
                 <div style={{ marginBottom: '16px' }}>
                   <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
                     Entry Spacing (Between Items)

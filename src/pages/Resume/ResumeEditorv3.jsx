@@ -411,7 +411,7 @@ export default function ResumeEditor({ resume: propsResume }) {
     const [isAIAnalysis, setIsAIAnalysis] = useState(false);
     const id = useSelector((s) => s.auth.userId);
     const userId = id;
-    const currentResumeId = useSelector((state) => state.resume.resumeId);
+    const currentResumeId = useSelector((state) => state.auth.currentResumeId);
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const resumePdf = useSelector(state => state.resume.globalCurrentPdf);
@@ -436,6 +436,13 @@ export default function ResumeEditor({ resume: propsResume }) {
     const [showProjects, setShowProjects] = useState(true);
     const [showEducation, setShowEducation] = useState(true);
     const [showCertifications, setShowCertifications] = useState(true);
+    // Sync currentResumeId from URL param on mount
+    useEffect(() => {
+        if (resumeId) {
+            dispatch(setCurrentResumeId(resumeId));
+            console.log(`[Sync] Updated currentResumeId from URL: ${resumeId}`);
+        }
+    }, [resumeId, dispatch]);
 
     // ==================== RESPONSIVE CANVAS STATE ====================
     const [viewportWidth, setViewportWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
@@ -496,7 +503,7 @@ export default function ResumeEditor({ resume: propsResume }) {
     const enhancedResume = useSelector((state) => state.resume.enhancedResume);
     const importedResume = useSelector(state => state.resume.importedResume);
     const currentResume = useSelector(state => state.resume.currentResume);
-    const [localResumeId, setLocalResuneId] = useState(null);
+    const [localResumeId, setLocalResumeId] = useState(resumeId || null);
     const [isTitleEditable, setIsTitleEditable] = useState(false); // Default: Titles are locked
 
 
@@ -1758,9 +1765,9 @@ export default function ResumeEditor({ resume: propsResume }) {
                 console.log("Response data:", data);
 
                 // If this is the first save, store the resumeId in Redux or state
-                if (!currentResumeId && data.resumeId) {
+                if (data.resumeId) {
                     dispatch(setCurrentResumeId(data.resumeId));
-                    setLocalResuneId(data.resumeId);
+                    setLocalResumeId(data.resumeId);
                 }
 
                 if (window.showMessage) window.showMessage('Success', message, 'success', 1500);

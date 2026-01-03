@@ -256,17 +256,17 @@ const FlexibleBulletList = ({ items = [], styleConfig = {}, globalStyleConfig = 
                     {/* Bullet */}
                     <div
                         style={applyStyles({
-                            marginTop: `${(parseFloat(globalStyleConfig.globalBulletTop) || 0) + (parseFloat(config.bulletStyle?.marginTop) || 2)}px`,
-                            width: "10px",
-                            minWidth: "10px",
+                            marginTop: `${(parseFloat(globalStyleConfig.globalBulletTop) || 0) + (parseFloat(typeof config.bulletStyle === 'object' ? config.bulletStyle?.marginTop : 0) || 2)}px`,
+                            width: config.bulletWidth || "10px",
+                            minWidth: config.bulletWidth || "10px",
                             fontSize: config.bulletSize || "12px",
                             color: globalStyleConfig.globalBulletColor || globalStyleConfig.globalPrimaryColor || config.bulletColor || config.textColor || "#000000",
                             lineHeight: config.lineHeight || "1.4",
                             userSelect: "none",
                             fontFamily: globalStyleConfig.globalFontFamily || "inherit"
-                        }, config.bulletStyle)}
+                        }, typeof config.bulletStyle === 'object' ? config.bulletStyle : {})}
                     >
-                        {config.bulletChar || config.bulletStyle?.bulletChar || "•"}
+                        {config.bulletChar || globalStyleConfig.globalBulletChar || (typeof config.bulletStyle === 'string' ? config.bulletStyle : "•")}
                     </div>
 
                     {/* Text */}
@@ -824,11 +824,14 @@ export const FlexibleProjectsSection = ({ projects, styleConfig = {} }) => {
             {projects.map((proj, idx) => (
                 <FlexibleContainer
                     key={idx}
-                    config={{ marginBottom: sectionConfig.itemMarginBottom || "12px", ...sectionConfig.itemStyle }}
+                    config={{
+                        ...sectionConfig.itemStyle,
+                        marginBottom: sectionConfig.itemMarginBottom || sectionConfig.itemStyle?.marginBottom || "12px"
+                    }}
                     styleConfig={styleConfig}
                 >
                     {/* Project Header */}
-                    <FlexibleLayout config={sectionConfig.headerLayout}>
+                    <FlexibleLayout config={{ justifyContent: "space-between", alignItems: "center", ...sectionConfig.headerLayout }}>
                         <FlexibleText config={{ ...sectionConfig.nameStyle, variant: "subtitle" }} styleConfig={styleConfig}>
                             {proj.name}
                         </FlexibleText>
@@ -850,7 +853,14 @@ export const FlexibleProjectsSection = ({ projects, styleConfig = {} }) => {
                     {proj.link && sectionConfig.showLink && (
                         <FlexibleText
                             as="a"
-                            config={{ ...sectionConfig.linkStyle, href: proj.link, target: "_blank" }}
+                            config={{
+                                display: "block",
+                                marginTop: "2px",
+                                marginBottom: "4px",
+                                ...sectionConfig.linkStyle,
+                                href: proj.link,
+                                target: "_blank"
+                            }}
                             styleConfig={styleConfig}
                         >
                             {proj.link}
@@ -889,65 +899,88 @@ export const FlexibleEducationSection = ({ educationList, styleConfig = {} }) =>
                 />
             )}
 
-            {educationList && Array.isArray(educationList) && educationList.map((edu, idx) => (
-                <FlexibleContainer
-                    key={idx}
-                    config={{ marginBottom: sectionConfig.itemMarginBottom || "10px", ...sectionConfig.itemStyle }}
-                    styleConfig={styleConfig}
-                >
-                    {/* Custom Field Order (NEW FEATURE) */}
-                    {sectionConfig.fieldOrder ? (
-                        sectionConfig.fieldOrder.map((field, fieldIdx) => {
-                            const value = edu[field];
-                            if (!value && !sectionConfig.showEmptyFields) return null;
+            {educationList && Array.isArray(educationList) && educationList.map((edu, idx) => {
+                // Prepare details array for cleaner rendering with separators
+                const details = [
+                    {
+                        text: edu.year,
+                        shouldShow: !!edu.year
+                    },
+                    {
+                        text: (() => {
+                            if (!edu.gpa) return null;
+                            const isPercentage = edu.gpa.includes('%') || edu.gpa.toUpperCase().includes('CGPA') || edu.gpa.toUpperCase().includes('GPA');
+                            const prefix = isPercentage ? "" : (sectionConfig.gpaPrefix || "GPA: ");
+                            return `${prefix}${edu.gpa}`;
+                        })(),
+                        shouldShow: !!edu.gpa && sectionConfig.showGpa
+                    },
+                    {
+                        text: edu.location,
+                        shouldShow: !!edu.location && sectionConfig.showLocation
+                    }
+                ].filter(item => item.shouldShow);
 
-                            const fieldConfig = { ...sectionConfig.fieldStyles?.[field], variant: field === 'degree' ? 'subtitle' : undefined };
-                            const prefix = sectionConfig.fieldPrefixes?.[field] || "";
+                return (
+                    <FlexibleContainer
+                        key={idx}
+                        config={{ marginBottom: sectionConfig.itemMarginBottom || "10px", ...sectionConfig.itemStyle }}
+                        styleConfig={styleConfig}
+                    >
+                        {/* Custom Field Order (NEW FEATURE) */}
+                        {sectionConfig.fieldOrder ? (
+                            sectionConfig.fieldOrder.map((field, fieldIdx) => {
+                                const value = edu[field];
+                                if (!value && !sectionConfig.showEmptyFields) return null;
 
-                            return (
-                                <FlexibleText key={fieldIdx} config={fieldConfig} styleConfig={styleConfig}>
-                                    {prefix}{value}
+                                const fieldConfig = { ...sectionConfig.fieldStyles?.[field], variant: field === 'degree' ? 'subtitle' : undefined };
+                                const prefix = sectionConfig.fieldPrefixes?.[field] || "";
+
+                                return (
+                                    <FlexibleText key={fieldIdx} config={fieldConfig} styleConfig={styleConfig}>
+                                        {prefix}{value}
+                                    </FlexibleText>
+                                );
+                            })
+                        ) : (
+                            // Fallback to original layout (BACKWARD COMPATIBLE)
+                            <>
+                                <FlexibleText config={{ ...sectionConfig.degreeStyle, variant: "subtitle" }} styleConfig={styleConfig}>
+                                    {edu.degree}
                                 </FlexibleText>
-                            );
-                        })
-                    ) : (
-                        // Fallback to original layout (BACKWARD COMPATIBLE)
-                        <>
-                            <FlexibleText config={{ ...sectionConfig.degreeStyle, variant: "subtitle" }} styleConfig={styleConfig}>
-                                {edu.degree}
-                            </FlexibleText>
 
-                            {edu.institution && sectionConfig.showInstitution && (
-                                <FlexibleText config={sectionConfig.institutionStyle} styleConfig={styleConfig}>
-                                    {edu.institution}
-                                </FlexibleText>
-                            )}
+                                {edu.institution && sectionConfig.showInstitution && (
+                                    <FlexibleText config={sectionConfig.institutionStyle} styleConfig={styleConfig}>
+                                        {edu.institution}
+                                    </FlexibleText>
+                                )}
 
-                            <FlexibleLayout config={sectionConfig.detailsLayout}>
-                                {edu.year && (
-                                    <FlexibleText config={sectionConfig.detailsStyle} styleConfig={styleConfig}>
-                                        {edu.year}
-                                    </FlexibleText>
-                                )}
-                                {edu.gpa && sectionConfig.showGpa && (
-                                    <FlexibleText config={sectionConfig.detailsStyle} styleConfig={styleConfig}>
-                                        {/* Smart prefix: Don't show "GPA: " if value is a percentage or already has a label */}
-                                        {(edu.gpa.includes('%') || edu.gpa.toUpperCase().includes('CGPA') || edu.gpa.toUpperCase().includes('GPA'))
-                                            ? ""
-                                            : (sectionConfig.gpaPrefix || "GPA: ")
-                                        }{edu.gpa}
-                                    </FlexibleText>
-                                )}
-                                {edu.location && sectionConfig.showLocation && (
-                                    <FlexibleText config={sectionConfig.detailsStyle} styleConfig={styleConfig}>
-                                        {edu.location}
-                                    </FlexibleText>
-                                )}
-                            </FlexibleLayout>
-                        </>
-                    )}
-                </FlexibleContainer>
-            ))}
+                                <FlexibleLayout config={sectionConfig.detailsLayout}>
+                                    {details.map((item, i) => (
+                                        <React.Fragment key={i}>
+                                            <FlexibleText config={sectionConfig.detailsStyle} styleConfig={styleConfig}>
+                                                {item.text}
+                                            </FlexibleText>
+                                            {i < details.length - 1 && (
+                                                <span style={{
+                                                    margin: "0 5px",
+                                                    color: styleConfig.globalTextColor || "#000",
+                                                    opacity: 0.7,
+                                                    fontFamily: styleConfig.globalFontFamily || "inherit",
+                                                    fontSize: sectionConfig.detailsStyle?.fontSize || "10px",
+                                                    ...sectionConfig.separatorStyle
+                                                }}>
+                                                    {sectionConfig.separator || "|"}
+                                                </span>
+                                            )}
+                                        </React.Fragment>
+                                    ))}
+                                </FlexibleLayout>
+                            </>
+                        )}
+                    </FlexibleContainer>
+                );
+            })}
         </FlexibleContainer>
     );
 };

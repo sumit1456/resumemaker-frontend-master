@@ -148,7 +148,7 @@ export const BALANCED_HYBRID_CONFIG = {
     durationStyle: { fontSize: "9px", fontStyle: "normal", color: "#444444", whiteSpace: "nowrap" },
     bulletConfig: {
       bulletStyle: "•",
-      bulletWidth: "0px",
+      bulletWidth: "12px",
       bulletColor: "#000000",
       textSize: "10px",
       textColor: "#000000",
@@ -177,7 +177,7 @@ export const BALANCED_HYBRID_CONFIG = {
     techStyle: { fontSize: "9px", fontStyle: "italic", color: "#666666", marginBottom: "0px" },
     bulletConfig: {
       bulletStyle: "•",
-      bulletWidth: "0px",
+      bulletWidth: "12px",
       bulletColor: "#000000",
       textSize: "10px",
       textColor: "#000000",
@@ -218,7 +218,7 @@ export const BALANCED_HYBRID_CONFIG = {
     displayType: "list",
     bulletConfig: {
       bulletStyle: "•",
-      bulletWidth: "0px",
+      bulletWidth: "12px",
       bulletColor: "#000000",
       textSize: "9px",
       textColor: "#000000",
