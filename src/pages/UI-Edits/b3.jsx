@@ -6,6 +6,7 @@ import { setCurrentResume, setCurrentResumeId, setSavedStyleConfig, setCurrentTe
 import { mergeResumeData } from "./Utils";
 import {
   ATS_TEMPLATE_CONFIG,
+  BALANCED_HYBRID_CONFIG,
   MODERN_TEMPLATE_CONFIG,
   TWO_COLUMN_TEMPLATE_CONFIG,
   TEMPLATE5_CONFIG,
@@ -34,6 +35,7 @@ import api from "../../api/axios";
 // ==================== TEMPLATE MAPPINGS ====================
 const TEMPLATES = {
   custom: { name: 'Custom (Saved)', ...ATS_TEMPLATE_CONFIG }, // 🆕 Custom Option
+  balancedHybrid: BALANCED_HYBRID_CONFIG,
   modern: MODERN_TEMPLATE_CONFIG,
   twoColumn: TWO_COLUMN_TEMPLATE_CONFIG,
   template5: TEMPLATE5_CONFIG,
@@ -66,6 +68,7 @@ const normalizeTemplateKey = (templateIdentifier) => {
   // 🆕 Extended ID Mapping (from ResumeEditorv3 friendly names)
   const EXTENDED_MAP = {
     "ats-optimized": "ats",
+    "balanced-hybrid": "balancedHybrid",
     "modern-ats-two-column": "modern",
     "two-column-professional": "twoColumn",
     "ats-edgy": "newAts",
@@ -761,29 +764,6 @@ const UIEditor = () => {
   };
 
   // Add these helper methods to your component
-
-  const handleHeaderLayoutChange = (key, value) => {
-    setStyleConfig(prev => ({
-      ...prev,
-      header: {
-        ...prev.header,
-        [key]: value
-      }
-    }));
-  };
-
-  const handleHeaderStyleChange = (styleKey, property, value) => {
-    setStyleConfig(prev => ({
-      ...prev,
-      header: {
-        ...prev.header,
-        [styleKey]: {
-          ...prev.header?.[styleKey],
-          [property]: value
-        }
-      }
-    }));
-  };
 
   const handleSectionOrderChange = (currentIndex, direction) => {
     const currentOrder = styleConfig.header?.sectionOrder || ['name', 'title', 'contact'];
@@ -1686,10 +1666,10 @@ const UIEditor = () => {
         return;
       }
 
+      const captureStart = performance.now();
       try {
         // 🚀 DELAY CAPTURE: Wait for font rendering & DOM layout to settle
-        // This ensures the capture doesn't happen before the browser finishes the font switch
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 50));
         await document.fonts.ready;
 
         // Force layout recalculation
@@ -1700,6 +1680,9 @@ const UIEditor = () => {
         const scanner = new GeometrySnapshot();
         const snapshot = await scanner.capture(element);
 
+        const duration = performance.now() - captureStart;
+        console.log(`⏱️ [SMART-CAPTURE] ${sectionName} captured in ${duration.toFixed(2)}ms`);
+
         setSectionSnapshots(prev => ({ ...prev, [sectionName]: snapshot }));
       } catch (error) {
         console.error(`Error rendering ${sectionName}:`, error);
@@ -1708,12 +1691,16 @@ const UIEditor = () => {
 
     // Render all sections in parallel
     const renderAllSections = async () => {
-      // console.log('--- START RENDER CHECK ---');
+      const startTime = performance.now();
+      console.log('🏁 [RENDER-CYCLE] Starting Full DOM Capture...');
+
       const sections = Object.keys(sectionRefs.current);
       await Promise.all(sections.map(sectionName => renderSectionData(sectionName)));
 
+      const totalTime = performance.now() - startTime;
+      console.log(`🏆 [RENDER-CYCLE] Full DOM Capture Complete. Total Time: ${totalTime.toFixed(2)}ms`);
+
       // Update the partial ref for next comparison
-      // We do a deep clone to ensure we have a stable specific snapshot of config
       prevStyleConfigRef.current = JSON.parse(JSON.stringify(styleConfig));
     };
 
@@ -2287,6 +2274,33 @@ const UIEditor = () => {
                                 fontSize: '10px',
                                 padding: '6px',
                                 border: styleConfig.header?.nameAlign === layout.config.nameAlign ? '2px solid #3b82f6' : '1px solid #ddd'
+                              }}
+                            >
+                              {layout.label}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* CONTACT LAYOUTS (Restored) */}
+                        <label className="control-label-small" style={{ marginBottom: '8px', display: 'block', marginTop: '12px' }}>Contact Style</label>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+                          {CONTACT_LAYOUTS && Object.entries(CONTACT_LAYOUTS).map(([key, layout]) => (
+                            <button
+                              key={key}
+                              onClick={() => setStyleConfig(prev => ({
+                                ...prev,
+                                header: {
+                                  ...prev.header,
+                                  ...layout.config
+                                }
+                              }))}
+                              className={`btn-secondary ${isAnimationsEnabled ? 'animate-btn-spring' : ''}`}
+                              style={{
+                                fontSize: '10px',
+                                padding: '6px',
+                                border: (styleConfig.header?.contactLayout?.display === layout.config.contactLayout?.display &&
+                                  styleConfig.header?.contactLayout?.flexDirection === layout.config.contactLayout?.flexDirection)
+                                  ? '2px solid #3b82f6' : '1px solid #ddd'
                               }}
                             >
                               {layout.label}
@@ -3018,6 +3032,28 @@ const UIEditor = () => {
                     >
                       +
                     </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Bullet Point Spacing (Gap) */}
+              {styleConfig[selectedSection]?.bulletConfig && (
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                    Content Spacing (Points)
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      type="range"
+                      min={0}
+                      max={20}
+                      value={parseInt(styleConfig[selectedSection]?.bulletConfig?.gap) || 0}
+                      onChange={(e) => handleStyleChange(selectedSection, 'bulletConfig', `${e.target.value}px`, 'gap')}
+                      style={{ width: '100%' }}
+                    />
+                    <div style={{ minWidth: '40px', textAlign: 'right', fontSize: '13px', color: '#374151' }}>
+                      {(parseInt(styleConfig[selectedSection]?.bulletConfig?.gap) || 0) + 'px'}
+                    </div>
                   </div>
                 </div>
               )}

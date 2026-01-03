@@ -30,14 +30,7 @@ export const defaultResumeData = {
 
   experiences: [
     {
-      position: "Full Stack Developer (Intern/Project Lead)",
-      company: "Technical Projects",
-      location: "Pune, India",
-      duration: "2023 - Present",
-      achievements: [
-        "Led the development of a high-performance resume builder platform",
-        "Implemented real-time editing features and AI-driven content suggestions"
-      ],
+
     },
   ],
 
@@ -45,63 +38,67 @@ export const defaultResumeData = {
     {
       name: "Resume Maker",
       duration: "September 2025 - December 2025",
-      technologies: "React, Java Spring Boot, PostgreSQL, Pixi.js , WebGl, Matter.js, Canvas 2D API",
+      technologies: "React, Spring Boot, PostgreSQL, PixiJS, WebGL, Matter.js, Canvas 2D API",
       description: [
-        "Developed a real-time resume builder allowing for instant UI customization and live previews.",
-        "Integrated Google Gemini AI to provide automated content optimization and formatting suggestions.",
-        "Implemented a PDF data extraction feature to import information from existing resumes seamlessly.",
-        "Built a synchronized state management system using React to handle complex layout updates.",
-        "Optimized backend API performance using Java Spring Boot and MySQL for efficient data handling."
+        "Built ResumeMaker, a WebGL + DOM–based resume editor powered by a custom DOM-to-WebGL rendering engine for high-performance live previews",
+        "Achieved ultra-fast resume load times of 20–30 ms on desktop and 50–60 ms on mobile with instant text and UI updates",
+        "Architected separate Text Editor and UI Layout Editor to preserve ATS-friendly resume structure while enabling flexible visual customization",
+        "Designed a config-driven (non-hardcoded) template system, allowing highly scalable and reusable resume layouts",
+        "Delivered high-quality PDF and PNG exports with sharp text rendering and minimal blur even at higher zoom levels using GPU-based rendering"
       ],
       link: "https://resume-maker-pro.netlify.app",
     },
+
     {
-      name: "Find Issue Web Application",
-      duration: "June 2023 - August 2023",
-      technologies: "Java, Spring Boot, MySQL",
+      name: "GitHub Issue Finder",
+      duration: "July 2025 - August 2025",
+      technologies: "Java 17, Spring Boot, PostgreSQL, Spring Data JPA, Thymeleaf, Bootstrap 5",
       description: [
-        "Created an issue tracking platform to streamline bug reporting and management workflows.",
-        "Developed robust RESTful APIs using Spring Boot to handle CRUD operations on software issues.",
-        "Designed an intuitive dashboard for monitoring project status and issue life cycles.",
-        "Implemented secure database schemas in MySQL for persistent and reliable data storage."
+        "Developed a Spring Boot web application to search and view open issues across public GitHub repositories using the GitHub REST API",
+        "Implemented backend logic with Spring Data JPA for efficient querying, filtering, and persistence",
+        "Built a responsive server-rendered UI using Thymeleaf and Bootstrap 5",
+        "Integrated PostgreSQL for secure storage of user preferences and search history",
+        "Documented REST APIs using OpenAPI and Swagger for testing and maintainability"
       ],
-      link: "https://github.com/sumithatekar/find-issue-app",
+      link: "https://github.com/sumit1456/findissue-SpringBoot-Application",
     },
+
     {
-      name: "Dom-Webgl Rederer",
-      duration: "March 2024 - Present",
-      technologies: "PixiJS, WebGL, Matter.js",
+      name: "DOM–WebGL Renderer",
+      duration: "November 2025 - Present",
+      technologies: "PixiJS, WebGL, Web Workers, Matter.js, Canvas 2D API",
       description: [
-        "Project lead in building a custom rendering engine using PixiJS and WebGL for high-performance graphics.",
-        "Integrated Matter.js to add interactive physics animations, making UI components feel more dynamic.",
-        "Developed a bridge between standard HTML elements and GPU-accelerated graphics for smoother visuals.",
-        "Created smart snapping and layout guide algorithms to improve precision in UI design tools.",
-        "Investigated rendering optimizations to ensure high-frame-rate performance during complex animations."
+        "Built a DOM-to-WebGL rendering engine that captures DOM geometry and style snapshots and renders document-style UIs on the GPU",
+        "Improved rendering performance by 30–40% by offloading heavy geometry and style computations to Web Workers",
+        "Implemented change-based rendering to recalculate only modified elements, reducing unnecessary layout and GPU workload",
+        "Enabled smooth live previews reaching 50–60 FPS for document-style layouts, outperforming Canvas 2D and HTML-to-canvas approaches",
+        "Delivered high-fidelity rendering and export quality with crisp text output and reduced blur compared to raster-based rendering pipelines"
       ],
-      link: "https://github.com/sumithatekar/ui-engine",
+      link: "https://github.com/sumit1456/webgl",
     }
-  ],
+  ]
+  ,
 
   educationList: [
     {
       degree: "Master of Science in Computer Applications (MSc CA)",
       institution: "Savitribai Phule University",
       location: "Pune, India",
-      year: "2025 (Expected)",
+      year: "2027 (Expected)",
       gpa: "89.63% (First Sem)",
     },
     {
       degree: "BSc Chemistry",
       institution: "Shivaji University",
       location: "Koregaon Satara, India",
-      year: "2021",
+      year: "2024",
       gpa: "7.52 CGPA",
     },
     {
       degree: "HSC (Science)",
       institution: "Yashwantrao Chavan Institute of Science",
       location: "Satara, India",
-      year: "2018",
+      year: "2021",
       gpa: "84%",
     },
   ],

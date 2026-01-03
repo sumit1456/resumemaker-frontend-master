@@ -13,6 +13,7 @@
 
 import React, { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
 import * as PIXI from 'pixi.js';
+import { getGradientWorker, getStyleWorker } from "../../workers/workerManager";
 
 // ==================== UTILITY FUNCTIONS ====================
 
@@ -52,18 +53,18 @@ function parseMargin(margin) {
 
 class GeometrySnapshot {
     constructor(options = {}) {
+        // Workers for offloading heavy processing
+        this.styleWorker = options.styleWorker || getStyleWorker();
+        this.gradientWorker = options.gradientWorker || getGradientWorker();
+
         this.options = {
             mode: 'performance', // 'performance' (fast) or 'deep' (high fidelity)
-            useWorkers: !!options.styleWorker, // Auto-enable if workers provided
+            useWorkers: (options.useWorkers !== undefined) ? options.useWorkers : !!this.styleWorker,
             ...options
         };
         this.nodes = [];
         this.rootWidth = 0;
         this.rootHeight = 0;
-
-        // Workers for offloading heavy processing
-        this.styleWorker = options.styleWorker;
-        this.gradientWorker = options.gradientWorker;
 
         // Promise queues for async worker resolution
         this.stylePromises = [];
@@ -2834,7 +2835,7 @@ const WebGLStage = forwardRef(({
             isMounted = false;
             setInitialized(false);
             if (pixiApp.current) {
-                console.log('🧹 [WebGLStage] Cleanup');
+                console.log('🧹 [WebGLStage] Cleanup: Destroying App');
                 const app = pixiApp.current;
                 try {
                     // Defend against Pixi v8 _cancelResize issue
@@ -2852,6 +2853,13 @@ const WebGLStage = forwardRef(({
                     console.warn('[WebGLStage] App destroy warning:', e);
                 }
                 pixiApp.current = null;
+            }
+
+            // --- SHARED RENDERER CLEANUP ---
+            if (sharedRenderer.current) {
+                console.log('🧹 [WebGLStage] Cleanup: Destroying Shared Renderer');
+                sharedRenderer.current.destroy();
+                sharedRenderer.current = null;
             }
         };
     }, [width, height]); // Re-init on size change
@@ -2871,6 +2879,8 @@ const WebGLStage = forwardRef(({
 
         const render = async () => {
             if (isCancelled) return;
+            const pixiRenderStart = performance.now();
+            console.log('🖼️ [PIXI-RENDER] Starting WebGL Render Cycle...');
 
             // Surgical Cleanup
             const engine = sharedRenderer.current;
@@ -3014,10 +3024,14 @@ const WebGLStage = forwardRef(({
                 layers.current.lines.addChild(g);
             });
 
-            const renderDuration = performance.now() - renderStartTime;
+            const pixiDuration = performance.now() - pixiRenderStart;
+            const totalLoadDuration = performance.now() - renderStartTime;
             const nodeCount = snapshot?.nodes?.length || Object.values(snapshot || {}).reduce((acc, s) => acc + (s?.nodes?.length || 0), 0);
+
             if (!isCancelled) {
-                console.log(`[WebGLStage] Render cycle: ${renderDuration.toFixed(2)}ms (Nodes: ${nodeCount}, Sections: ${sections?.length || 0})`);
+                console.log(`🖼️ [PIXI-RENDER] WebGL Render Cycle Complete: ${pixiDuration.toFixed(2)}ms`);
+                console.log(`💎 [TOTAL-LOAD] Preview Ready! (Nodes: ${nodeCount}, Sections: ${sections?.length || 0})`);
+                console.log(`   └─ Load Time: ${totalLoadDuration.toFixed(2)}ms`);
             }
         };
 

@@ -239,7 +239,7 @@ const FlexibleBulletList = ({ items = [], styleConfig = {}, globalStyleConfig = 
             style={applyStyles({
                 display: "flex",
                 flexDirection: "column",
-                gap: "4px",
+                gap: config.gap || "4px",
                 width: "100%",
             }, config.containerStyle)}
         >

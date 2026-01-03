@@ -35,12 +35,14 @@ import {
     ATS_TEMPLATE_CONFIG, MODERN_TEMPLATE_CONFIG, TWO_COLUMN_TEMPLATE_CONFIG,
     TEMPLATE5_CONFIG,
     NEW_ATS_CONFIG,
+    BALANCED_HYBRID_CONFIG
 } from "../UI-Edits/TemplateConfigs.js";
 import { defaultResumeData } from "../UI-Edits/Utils.js";
 
 // ==================== TEMPLATE MAPPINGS ====================
 const TEMPLATES = {
     ats: ATS_TEMPLATE_CONFIG,
+    balancedHybrid: BALANCED_HYBRID_CONFIG,
     modern: MODERN_TEMPLATE_CONFIG,
     twoColumn: TWO_COLUMN_TEMPLATE_CONFIG,
     template5: TEMPLATE5_CONFIG,
@@ -426,6 +428,7 @@ export default function ResumeEditor({ resume: propsResume }) {
     const [isLoadingResume, setIsLoadingResume] = useState(false);
     const [resumeTitle, setResumeTitle] = useState("");
     const [fetchError, setFetchError] = useState("");
+    const [activeSection, setActiveSection] = useState("summary");
 
     const [showSummary, setShowSummary] = useState(true);
     const [showSkills, setShowSkills] = useState(true);
@@ -738,7 +741,7 @@ export default function ResumeEditor({ resume: propsResume }) {
     useEffect(() => {
         const sections = [
             'header', 'summary', 'skills', 'experience', 'projects', 'education', 'certifications',
-            ...customSections.map(s => `custom-${s.id}`)
+            ...(customSections || []).map(s => `custom-${s.id}`)
         ];
 
         // Ensure refs exist
@@ -1260,13 +1263,6 @@ export default function ResumeEditor({ resume: propsResume }) {
 
     const debouncedData = useDebounce(combinedData, 1500);
 
-    // 🔄 SYNC TO GLOBAL REDUX: Keep currentResume updated for other components (like b3.jsx)
-    useEffect(() => {
-        if (debouncedData) {
-            dispatch(setCurrentResume(debouncedData));
-            console.log("🔄 Global currentResume synced from Editorv3");
-        }
-    }, [debouncedData, dispatch]);
 
 
 
@@ -1396,17 +1392,21 @@ export default function ResumeEditor({ resume: propsResume }) {
         });
     }, []);
 
-    const addSkill = useCallback(() => setSkills(prev => [...prev, ""]), []);
-    const removeSkill = useCallback((i) => setSkills(prev => prev.filter((_, idx) => idx !== i)), []);
+    const addSkill = useCallback(() => setSkills(prev => [...(prev || []), ""]), []);
+    const removeSkill = useCallback((i) => setSkills(prev => (prev || []).filter((_, idx) => idx !== i)), []);
 
     const handleExperienceChange = useCallback((i, field, value, sub) => {
         setExperiences(prev => {
             const updated = [...prev];
+            const exp = { ...updated[i] };
             if (field === "achievements") {
-                updated[i].achievements[sub] = value;
+                const newAchievements = [...(exp.achievements || [])];
+                newAchievements[sub] = value;
+                exp.achievements = newAchievements;
             } else {
-                updated[i][field] = value;
+                exp[field] = value;
             }
+            updated[i] = exp;
             return updated;
         });
     }, []);
@@ -1425,7 +1425,9 @@ export default function ResumeEditor({ resume: propsResume }) {
     const addAchievement = useCallback((i) => {
         setExperiences(prev => {
             const updated = [...prev];
-            updated[i].achievements.push("");
+            const exp = { ...updated[i] };
+            exp.achievements = [...(exp.achievements || []), ""];
+            updated[i] = exp;
             return updated;
         });
     }, []);
@@ -1433,7 +1435,9 @@ export default function ResumeEditor({ resume: propsResume }) {
     const removeAchievement = useCallback((i, j) => {
         setExperiences(prev => {
             const updated = [...prev];
-            updated[i].achievements.splice(j, 1);
+            const exp = { ...updated[i] };
+            exp.achievements = (exp.achievements || []).filter((_, idx) => idx !== j);
+            updated[i] = exp;
             return updated;
         });
     }, []);
@@ -1441,11 +1445,15 @@ export default function ResumeEditor({ resume: propsResume }) {
     const handleProjectChange = useCallback((i, field, value, sub) => {
         setProjects(prev => {
             const updated = [...prev];
+            const proj = { ...updated[i] };
             if (field === "description") {
-                updated[i].description[sub] = value;
+                const newDescription = [...(proj.description || [])];
+                newDescription[sub] = value;
+                proj.description = newDescription;
             } else {
-                updated[i][field] = value;
+                proj[field] = value;
             }
+            updated[i] = proj;
             return updated;
         });
     }, []);
@@ -1464,7 +1472,9 @@ export default function ResumeEditor({ resume: propsResume }) {
     const addProjectPoint = useCallback((i) => {
         setProjects(prev => {
             const updated = [...prev];
-            updated[i].description.push("");
+            const proj = { ...updated[i] };
+            proj.description = [...(proj.description || []), ""];
+            updated[i] = proj;
             return updated;
         });
     }, []);
@@ -1472,7 +1482,9 @@ export default function ResumeEditor({ resume: propsResume }) {
     const removeProjectPoint = useCallback((i, j) => {
         setProjects(prev => {
             const updated = [...prev];
-            updated[i].description.splice(j, 1);
+            const proj = { ...updated[i] };
+            proj.description = (proj.description || []).filter((_, idx) => idx !== j);
+            updated[i] = proj;
             return updated;
         });
     }, []);
@@ -1480,7 +1492,7 @@ export default function ResumeEditor({ resume: propsResume }) {
     const handleEducationChange = useCallback((i, field, value) => {
         setEducationList(prev => {
             const updated = [...prev];
-            updated[i][field] = value;
+            updated[i] = { ...updated[i], [field]: value };
             return updated;
         });
     }, []);
@@ -1505,8 +1517,8 @@ export default function ResumeEditor({ resume: propsResume }) {
         });
     }, []);
 
-    const addCertification = useCallback(() => setCertifications(prev => [...prev, ""]), []);
-    const removeCertification = useCallback((i) => setCertifications(prev => prev.filter((_, idx) => idx !== i)), []);
+    const addCertification = useCallback(() => setCertifications(prev => [...(prev || []), ""]), []);
+    const removeCertification = useCallback((i) => setCertifications(prev => (prev || []).filter((_, idx) => idx !== i)), []);
 
     const downloadPDF = async () => {
         setDownloading(true);
@@ -1917,7 +1929,7 @@ export default function ResumeEditor({ resume: propsResume }) {
     };
 
     // Handle selection from WebGL canvas
-    const handleWebGLSelect = (type, id) => {
+    const handleWebGLSelect = useCallback((type, id) => {
         if (type !== 'section') return;
 
         // If syncing is disabled, do not react to WebGL clicks
@@ -1936,24 +1948,22 @@ export default function ResumeEditor({ resume: propsResume }) {
             // header is always visible
         }
 
-        // 2. Scroll to the section (with slight delay to allow React render)
-        setTimeout(() => {
-            // For standard sections
-            let sectionId = `editor-section-${id}`;
+        // 2. Set active section for expansion
+        setActiveSection(id);
 
-            // For custom sections, the ID handling is a bit different 
-            // The WebGL layer passes the raw ID (e.g., 'custom-1735...')
-            // Our DOM elements have IDs like `editor-section-custom-1735...`
+        // 3. Scroll to the section (with slight delay to allow React render)
+        setTimeout(() => {
+            // ... (rest of the logic)
+            let sectionId = `editor-section-${id}`;
             if (id.startsWith('custom-')) {
                 sectionId = `editor-section-${id}`;
             }
 
             const element = document.getElementById(sectionId);
-            // The scrollable container
-            const container = resumeRef.current; // Use the existing ref for .ats-resume
+            const container = resumeRef.current; // The scrollable .ats-resume
 
             if (element && container) {
-                // Use custom smooth scroll on the container
+                // Restore smooth scroll to the section
                 smoothScrollTo(container, element, 800);
 
                 // Focus the first input or textarea
@@ -1977,7 +1987,7 @@ export default function ResumeEditor({ resume: propsResume }) {
                 console.warn(`[WebGL] DOM element not found: ${sectionId} or container missing`);
             }
         }, 100);
-    };
+    }, [autoScrollEnabled, setShowSummary, setShowSkills, setShowExperience, setShowProjects, setShowEducation, setShowCertifications]);
 
 
 
@@ -2154,7 +2164,11 @@ export default function ResumeEditor({ resume: propsResume }) {
 
 
                                 {showSummary && (
-                                    <section className="section" id="editor-section-summary">
+                                    <section
+                                        className={`section ${activeSection === 'summary' ? 'active' : ''}`}
+                                        id="editor-section-summary"
+                                        onClick={() => setActiveSection('summary')}
+                                    >
                                         <div className="section-title">
                                             <input className={`sec-inputs ${!isTitleEditable ? 'readonly-input' : ''}`} type="text" readOnly={!isTitleEditable} value={sectionTitles.summary} onChange={(e) => {
                                                 setSectionTitles({ ...sectionTitles, summary: e.target.value })
@@ -2165,7 +2179,11 @@ export default function ResumeEditor({ resume: propsResume }) {
                                 )}
 
                                 {showSkills && (
-                                    <section className="section" id="editor-section-skills">
+                                    <section
+                                        className={`section ${activeSection === 'skills' ? 'active' : ''}`}
+                                        id="editor-section-skills"
+                                        onClick={() => setActiveSection('skills')}
+                                    >
                                         <div className="section-title">
                                             <input type="text" className={`sec-inputs ${!isTitleEditable ? 'readonly-input' : ''}`} readOnly={!isTitleEditable} value={sectionTitles.skills} onChange={(e) => {
                                                 setSectionTitles({ ...sectionTitles, skills: e.target.value })
@@ -2183,7 +2201,11 @@ export default function ResumeEditor({ resume: propsResume }) {
                                 )}
 
                                 {showExperience && (
-                                    <section className="section" id="editor-section-experience">
+                                    <section
+                                        className={`section ${activeSection === 'experience' ? 'active' : ''}`}
+                                        id="editor-section-experience"
+                                        onClick={() => setActiveSection('experience')}
+                                    >
                                         <div className="section-title">
                                             <input type="text" value={sectionTitles.experience} className={`sec-inputs ${!isTitleEditable ? 'readonly-input' : ''} `} readOnly={!isTitleEditable}
                                                 onChange={(e) => {
@@ -2214,7 +2236,11 @@ export default function ResumeEditor({ resume: propsResume }) {
                                 )}
 
                                 {showProjects && (
-                                    <section className="section" id="editor-section-projects">
+                                    <section
+                                        className={`section ${activeSection === 'projects' ? 'active' : ''}`}
+                                        id="editor-section-projects"
+                                        onClick={() => setActiveSection('projects')}
+                                    >
                                         <div className="section-title">
                                             <input className={`sec-inputs ${!isTitleEditable ? 'readonly-input' : ''} `} type="text" readOnly={!isTitleEditable} value={sectionTitles.projects} onChange={(e) => {
                                                 setSectionTitles({ ...sectionTitles, projects: e.target.value })
@@ -2245,7 +2271,11 @@ export default function ResumeEditor({ resume: propsResume }) {
                                 )}
 
                                 {showEducation && (
-                                    <section className="section" id="editor-section-education">
+                                    <section
+                                        className={`section ${activeSection === 'education' ? 'active' : ''}`}
+                                        id="editor-section-education"
+                                        onClick={() => setActiveSection('education')}
+                                    >
                                         <div className="section-title">
                                             <input type="text" className={`sec-inputs ${!isTitleEditable ? 'readonly-input' : ''} `} readOnly={!isTitleEditable} value={sectionTitles.education} onChange={(e) => {
                                                 setSectionTitles({ ...sectionTitles, education: e.target.value })
@@ -2272,7 +2302,11 @@ export default function ResumeEditor({ resume: propsResume }) {
                                 )}
 
                                 {showCertifications && (
-                                    <section className="section" id="editor-section-certifications">
+                                    <section
+                                        className={`section ${activeSection === 'certifications' ? 'active' : ''}`}
+                                        id="editor-section-certifications"
+                                        onClick={() => setActiveSection('certifications')}
+                                    >
                                         <div className="section-title">
                                             <input type="text" className={`sec-inputs ${!isTitleEditable ? 'readonly-input' : ''} `} readOnly={!isTitleEditable} value={sectionTitles.certifications} onChange={(e) => {
                                                 setSectionTitles({ ...sectionTitles, certifications: e.target.value })
@@ -2291,9 +2325,10 @@ export default function ResumeEditor({ resume: propsResume }) {
                                 {customSections.map((section) => (
                                     <div
                                         key={section.id}
-                                        className="custom-section-container"
+                                        className={`custom-section-container section ${activeSection === `custom-${section.id}` ? 'active' : ''}`}
                                         id={`editor-section-custom-${section.id}`}
                                         ref={el => sectionRefs.current[`custom-${section.id}`] = el}
+                                        onClick={() => setActiveSection(`custom-${section.id}`)}
                                     >
                                         <div className="custom-section-header">
                                             <input type="text" className={`custom-section-title-input `} value={section.title} onChange={(e) => updateCustomSectionTitle(section.id, e.target.value)} placeholder="Section Title" />

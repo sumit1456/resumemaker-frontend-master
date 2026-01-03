@@ -1,5 +1,234 @@
 // ==================== TWO COLUMN TEMPLATE ====================
 
+export const BALANCED_HYBRID_CONFIG = {
+  id: "balanced-hybrid",
+  type: "multi-column",
+  name: "Balanced Hybrid",
+
+  positions: {
+    header: { x: 24, y: 30, scaleX: 1, scaleY: 1 },
+    summary: { x: 24, y: 130, scaleX: 1, scaleY: 1 },
+    skills: { x: 24, y: 240, scaleX: 1, scaleY: 1 },
+    experience: { x: 280, y: 240, scaleX: 1, scaleY: 1 },
+    projects: { x: 280, y: 380, scaleX: 1, scaleY: 1 },
+    education: { x: 24, y: 550, scaleX: 1, scaleY: 1 },
+    certifications: { x: 24, y: 720, scaleX: 1, scaleY: 1 }
+  },
+
+  lines: [
+    {
+      id: 1,
+      x1: 265,
+      y1: 230,
+      x2: 265,
+      y2: 842,
+      color: '#000000',
+      thickness: 1,
+      orientation: 'vertical',
+      label: 'Column Divider'
+    }
+  ],
+
+  shapes: [],
+
+  page: {
+    width: "210mm",
+    height: "297mm",
+    backgroundColor: "#FFFFFF",
+    fontFamily: "Helvetica",
+  },
+
+  header: {
+    container: {
+      width: "550px",
+      backgroundColor: "transparent",
+      padding: "0",
+      borderBottom: "1px solid #000000",
+      textAlign: "center"
+    },
+    mainLayout: { display: "flex", flexDirection: "column", gap: "0px" },
+    nameSection: { display: "flex", flexDirection: "column", alignItems: "center" },
+    nameStyle: {
+      fontSize: "24px",
+      fontWeight: "900",
+      color: "#000000",
+      letterSpacing: "1px",
+      lineHeight: "1.1",
+      textAlign: "center",
+      textTransform: "uppercase"
+    },
+    titleStyle: {
+      fontSize: "12px",
+      fontWeight: "normal",
+      color: "#333",
+      marginTop: "0px",
+      textAlign: "center",
+      textTransform: "uppercase",
+      letterSpacing: "1px"
+    },
+    showTitle: true,
+    showContact: true,
+    contactLayout: {
+      display: "flex",
+      flexDirection: "row",
+      justifyContent: "center",
+      alignItems: "center",
+      gap: "0px",
+      flexWrap: "wrap",
+      marginTop: "0px"
+    },
+    contactOrder: ["email", "phone", "linkedin", "location"],
+    contactItemStyle: { fontSize: "8.5px", color: "#000000" },
+    showContactIcons: false,
+    showDivider: true,
+    dividerStyle: "none",
+    dividerChar: " | "
+  },
+
+  summary: {
+    container: {
+      width: "550px",
+      backgroundColor: "transparent",
+      padding: "0",
+      marginTop: "0px"
+    },
+    showTitle: true,
+    titleStyle: {
+      fontSize: "14px",
+      fontWeight: "bold",
+      borderBottom: "1px solid #000",
+      marginBottom: "0px",
+      textTransform: "uppercase",
+      letterSpacing: "1px"
+    },
+    bodyStyle: {
+      fontSize: "10px",
+      lineHeight: "1.5",
+      textAlign: "justify",
+      color: "#000000"
+    }
+  },
+
+  skills: {
+    container: { width: "220px" },
+    showTitle: true,
+    titleStyle: {
+      fontSize: "14px",
+      fontWeight: "bold",
+      color: "#000000",
+      marginBottom: "0px",
+      textTransform: "uppercase"
+    },
+    contentLayout: { display: "flex", flexDirection: "column", gap: "0px" },
+    displayType: "inline",
+    separator: ", ",
+    showCategories: true,
+    categoryStyle: { fontSize: "10px", fontWeight: "bold", color: "#000000" },
+    valueStyle: { fontSize: "9px", color: "#000000", lineHeight: "1.4" },
+    itemMarginBottom: "0px"
+  },
+
+  experience: {
+    container: { width: "310px" },
+    showTitle: true,
+    titleStyle: {
+      fontSize: "14px",
+      fontWeight: "bold",
+      borderBottom: "1px solid #000",
+      marginBottom: "0px",
+      textTransform: "uppercase",
+      letterSpacing: "1px"
+    },
+    showAchievements: true,
+    showLocation: true,
+    itemStyle: { marginBottom: "0px" },
+    headerLayout: { display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "0px", marginBottom: "0px" },
+    positionStyle: { fontSize: "11px", fontWeight: "bold", color: "#000000" },
+    companyStyle: { fontSize: "10px", color: "#444444" },
+    durationStyle: { fontSize: "9px", fontStyle: "normal", color: "#444444", whiteSpace: "nowrap" },
+    bulletConfig: {
+      bulletStyle: "•",
+      bulletWidth: "0px",
+      bulletColor: "#000000",
+      textSize: "10px",
+      textColor: "#000000",
+      lineHeight: "1.5",
+      itemMarginBottom: "0px"
+    }
+  },
+
+  projects: {
+    container: { width: "310px" },
+    showTitle: true,
+    titleStyle: {
+      fontSize: "14px",
+      fontWeight: "bold",
+      borderBottom: "1px solid #000",
+      marginBottom: "0px",
+      textTransform: "uppercase",
+      letterSpacing: "1px"
+    },
+    showDescription: true,
+    showTechnologies: true,
+    showDuration: true,
+    showLink: true,
+    itemStyle: { marginBottom: "0px" },
+    nameStyle: { fontSize: "11px", fontWeight: "bold", color: "#000000" },
+    techStyle: { fontSize: "9px", fontStyle: "italic", color: "#666666", marginBottom: "0px" },
+    bulletConfig: {
+      bulletStyle: "•",
+      bulletWidth: "0px",
+      bulletColor: "#000000",
+      textSize: "10px",
+      textColor: "#000000",
+      lineHeight: "1.5",
+      itemMarginBottom: "0px"
+    }
+  },
+
+  education: {
+    container: { width: "220px" },
+    showTitle: true,
+    titleStyle: {
+      fontSize: "14px",
+      fontWeight: "bold",
+      color: "#000000",
+      marginBottom: "0px",
+      textTransform: "uppercase"
+    },
+    degreeStyle: { fontSize: "11px", fontWeight: "bold", color: "#000000", lineHeight: "1.4" },
+    institutionStyle: { fontSize: "10px", color: "#333333", lineHeight: "1.4", fontStyle: "italic" },
+    detailsStyle: { fontSize: "9px", color: "#444444", lineHeight: "1.4" },
+    itemMarginBottom: "0px",
+    showInstitution: true,
+    showGpa: true,
+    showLocation: true
+  },
+
+  certifications: {
+    container: { width: "220px" },
+    showTitle: true,
+    titleStyle: {
+      fontSize: "14px",
+      fontWeight: "bold",
+      color: "#000000",
+      marginBottom: "0px",
+      textTransform: "uppercase"
+    },
+    displayType: "list",
+    bulletConfig: {
+      bulletStyle: "•",
+      bulletWidth: "0px",
+      bulletColor: "#000000",
+      textSize: "9px",
+      textColor: "#000000",
+      lineHeight: "1.5",
+      itemMarginBottom: "0px"
+    },
+    itemStyle: { fontSize: "9px", marginBottom: "0px" }
+  }
+};
+
 export const TWO_COLUMN_TEMPLATE_CONFIG = {
   id: "two-column-professional",
   type: "multi-column", // 🛡️ Explicit ID for Auto-Flow Logic
@@ -585,218 +814,6 @@ export const ATS_TEMPLATE_CONFIG = {
 };
 
 
-// export const ATS_TEMPLATE_CONFIG = {
-//   id: "ats-optimized",
-//   name: "ATS Optimized",
-
-//   /* ================= PAGE ================= */
-//   page: {
-//     width: 595,   // A4 @ 72dpi
-//     height: 842,
-//     backgroundColor: "#FFFFFF",
-//     fontFamily: "Arial"
-//   },
-
-//   /* ================= POSITIONS ================= */
-//   positions: {
-//     header:        { x: 7, y: 19,  height: 64,  scaleX: 1, scaleY: 1 },
-//     summary:       { x: 7, y: 107, height: 117, scaleX: 1, scaleY: 1 },
-//     skills:        { x: 7, y: 200, height: 132, scaleX: 1, scaleY: 1 },
-//     projects:      { x: 7, y: 355, height: 290, scaleX: 1, scaleY: 1 },
-//     experience:    { x: 7, y: 668, height: 120, scaleX: 1, scaleY: 1 },
-//     education:     { x: 7, y: 758, height: 80,  scaleX: 1, scaleY: 1 },
-//     certifications:{ x: 7, y: 838, height: 80,  scaleX: 1, scaleY: 1 }
-//   },
-
-//   /* ================= LINES ================= */
-//   lines: [
-//     { id: 2, y: 99,  label: "Summary Divider" },
-//     { id: 3, y: 200, label: "Skills Divider" },
-//     { id: 4, y: 350, label: "Projects Divider" },
-//     { id: 5, y: 648, label: "Experience Divider" },
-//     { id: 6, y: 758, label: "Education Divider" },
-//     { id: 7, y: 838, label: "Certifications Divider" }
-//   ].map(l => ({
-//     ...l,
-//     x1: 18,
-//     x2: 555,
-//     thickness: 1.5,
-//     color: "#000000",
-//     orientation: "horizontal"
-//   })),
-
-//   shapes: [],
-
-//   /* ================= HEADER ================= */
-//   header: {
-//     container: {
-//       width: 545,
-//       padding: 0
-//     },
-
-//     layout: {
-//       type: "stack",
-//       align: "center",
-//       gap: 8
-//     },
-
-//     nameBlock: {
-//       layout: {
-//         type: "stack",
-//         align: "center",
-//         gap: 4
-//       }
-//     },
-
-//     contactBlock: {
-//       layout: {
-//         type: "row",
-//         align: "center",
-//         justify: "center",
-//         gap: 12,
-//         wrap: false
-//       }
-//     },
-
-//     nameStyle: {
-//       fontSize: 24,
-//       fontWeight: 700,
-//       color: "#000000",
-//       align: "center"
-//     },
-
-//     titleStyle: {
-//       fontSize: 14,
-//       fontWeight: 400,
-//       color: "#c53a3a",
-//       align: "center"
-//     },
-
-//     contactItemStyle: {
-//       fontSize: 9,
-//       color: "#000000"
-//     },
-
-//     contactOrder: ["email", "phone", "linkedin", "location"],
-
-//     showTitle: true,
-//     showContact: true,
-
-//     divider: {
-//       show: true,
-//       thickness: 2,
-//       color: "#000000",
-//       marginTop: 8,
-//       marginBottom: 0
-//     }
-//   },
-
-//   /* ================= SUMMARY ================= */
-//   summary: {
-//     container: { width: 545 },
-
-//     showTitle: true,
-
-//     titleStyle: {
-//       fontSize: 12,
-//       fontWeight: 700
-//     },
-
-//     bodyStyle: {
-//       fontSize: 10,
-//       lineHeight: 1.5,
-//       align: "justify"
-//     }
-//   },
-
-//   /* ================= SKILLS ================= */
-//   skills: {
-//     container: { width: 545 },
-
-//     showTitle: true,
-
-//     titleStyle: {
-//       fontSize: 12,
-//       fontWeight: 700
-//     },
-
-//     contentLayout: {
-//       type: "stack",
-//       gap: 6
-//     },
-
-//     showCategories: true,
-
-//     categoryStyle: {
-//       fontSize: 10,
-//       fontWeight: 700
-//     },
-
-//     valueStyle: {
-//       fontSize: 9,
-//       lineHeight: 1.4
-//     },
-
-//     displayType: "inline",
-//     separator: ", ",
-//     itemMarginBottom: 8
-//   },
-
-//   /* ================= EXPERIENCE ================= */
-//   experience: {
-//     container: { width: 545 },
-
-//     showTitle: true,
-
-//     titleStyle: {
-//       fontSize: 12,
-//       fontWeight: 700
-//     },
-
-//     headerLayout: {
-//       type: "row",
-//       justify: "space-between",
-//       wrap: true,
-//       gap: 4
-//     },
-
-//     subHeaderLayout: {
-//       type: "row",
-//       gap: 4
-//     },
-
-//     positionStyle: {
-//       fontSize: 11,
-//       fontWeight: 700
-//     },
-
-//     companyStyle: {
-//       fontSize: 10
-//     },
-
-//     durationStyle: {
-//       fontSize: 9,
-//       italic: true,
-//       noWrap: true
-//     },
-
-//     showLocation: true,
-
-//     bullet: {
-//       symbol: "•",
-//       width: 10,
-//       fontSize: 9,
-//       lineHeight: 1.4,
-//       color: "#000000",
-//       marginBottom: 3
-//     },
-
-//     itemMarginBottom: 12
-//   },
-
-//   /* ================= PROJECTS ================= */
-//   projects: {
-//     container: { width: 545 },
 
 //     showTitle: true,
 
@@ -1926,17 +1943,6 @@ export const HEADER_LAYOUTS = {
         justifyContent: "center",
         alignItems: "center"
       },
-      contactLayout: {
-        display: "flex",
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "flex-start",
-        gap: "20px",
-        flexWrap: "nowrap",
-        marginTop: "8px"
-      },
-      contactLeftGroup: ["phone", "email"],
-      contactRightGroup: ["linkedin", "github", "location"],
       nameStyle: {
         textAlign: "center",
         alignSelf: "center",
@@ -1965,17 +1971,6 @@ export const HEADER_LAYOUTS = {
         justifyContent: "flex-start",
         alignItems: "flex-start"
       },
-      contactLayout: {
-        display: "flex",
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "flex-start",
-        gap: "20px",
-        flexWrap: "nowrap",
-        marginTop: "8px"
-      },
-      contactLeftGroup: ["phone", "email"],
-      contactRightGroup: ["linkedin", "github", "location"],
       nameStyle: {
         textAlign: "left",
         alignSelf: "flex-start",
@@ -2004,17 +1999,6 @@ export const HEADER_LAYOUTS = {
         justifyContent: "center",
         alignItems: "flex-start"
       },
-      contactLayout: {
-        display: "flex",
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "flex-start",
-        gap: "20px",
-        flexWrap: "nowrap",
-        marginTop: "8px"
-      },
-      contactLeftGroup: ["phone", "email"],
-      contactRightGroup: ["linkedin", "github", "location"],
       nameStyle: {
         textAlign: "left",
         alignSelf: "flex-start",
@@ -2043,17 +2027,6 @@ export const HEADER_LAYOUTS = {
         alignItems: "flex-start",
         flex: 1
       },
-      contactLayout: {
-        display: "flex",
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "flex-start",
-        gap: "20px",
-        flexWrap: "nowrap",
-        marginTop: "8px"
-      },
-      contactLeftGroup: ["phone", "email"],
-      contactRightGroup: ["linkedin", "github", "location"],
       nameStyle: {
         textAlign: "left",
         fontSize: "26px"
@@ -2082,17 +2055,6 @@ export const HEADER_LAYOUTS = {
         textAlign: "right",
         textTransform: "capitalize"
       },
-      contactLayout: {
-        display: "flex",
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "flex-start",
-        gap: "20px",
-        flexWrap: "nowrap",
-        marginTop: "8px"
-      },
-      contactLeftGroup: ["phone", "email"],
-      contactRightGroup: ["linkedin", "github", "location"],
       showContactIcons: false,
       showDivider: true,
       dividerStyle: "2px solid #000000",
