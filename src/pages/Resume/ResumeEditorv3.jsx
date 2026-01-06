@@ -32,16 +32,20 @@ import {
 import * as PIXI from 'pixi.js';
 import { jsPDF } from "jspdf";
 import {
-    ATS_TEMPLATE_CONFIG, MODERN_TEMPLATE_CONFIG, TWO_COLUMN_TEMPLATE_CONFIG,
+    ATS_TEMPLATE_CONFIG,
+    ATS_COMPACT_CONFIG,
+    MODERN_TEMPLATE_CONFIG,
+    TWO_COLUMN_TEMPLATE_CONFIG,
     TEMPLATE5_CONFIG,
     NEW_ATS_CONFIG,
     BALANCED_HYBRID_CONFIG
 } from "../UI-Edits/TemplateConfigs.js";
-import { defaultResumeData } from "../UI-Edits/Utils.js";
+import { defaultResumeData, defaultDatasets } from "../UI-Edits/Utils.js";
 
 // ==================== TEMPLATE MAPPINGS ====================
 const TEMPLATES = {
     ats: ATS_TEMPLATE_CONFIG,
+    atsCompact: ATS_COMPACT_CONFIG,
     balancedHybrid: BALANCED_HYBRID_CONFIG,
     modern: MODERN_TEMPLATE_CONFIG,
     twoColumn: TWO_COLUMN_TEMPLATE_CONFIG,
@@ -585,7 +589,38 @@ export default function ResumeEditor({ resume: propsResume }) {
             }
         });
 
+        // CUSTOM SECTIONS
+        const newCustomSections = Array.isArray(importedResume?.customSections)
+            ? [...importedResume.customSections]
+            : (Array.isArray(importedResume?.custom) ? [...importedResume.custom] : []);
+
+        setCustomSections(newCustomSections);
     }, [importedResume]);
+
+    // 🛡️ SYNC CUSTOM SECTIONS TO WEBGL (Auto-Initialize Positions)
+    useEffect(() => {
+        if (customSections.length === 0) return;
+
+        setSectionPositions(prev => {
+            const updated = { ...prev };
+            let hasChanges = false;
+
+            // Calculate starting Y for new sections
+            const maxY = Object.values(updated).reduce((max, pos) => Math.max(max, pos.y), 0);
+            let nextY = maxY + 100;
+
+            customSections.forEach(section => {
+                const sectionId = `custom-${section.id}`;
+                if (!updated[sectionId]) {
+                    updated[sectionId] = { x: 40, y: nextY };
+                    nextY += 150; // Buffer for stacking
+                    hasChanges = true;
+                }
+            });
+
+            return hasChanges ? updated : prev;
+        });
+    }, [customSections]);
 
     useEffect(() => {
 
@@ -829,8 +864,28 @@ export default function ResumeEditor({ resume: propsResume }) {
             setShowProjects(currentResume.showProjects !== undefined ? currentResume.showProjects : true);
             setShowEducation(currentResume.showEducation !== undefined ? currentResume.showEducation : true);
             setShowCertifications(currentResume.showCertifications !== undefined ? currentResume.showCertifications : true);
+        } else if (!resumeId && !localResume && !isLoadingResume) {
+            // 🏠 Check for Custom Default in LocalStorage
+            const customDefault = localStorage.getItem('user_custom_default_resume');
+            if (customDefault) {
+                try {
+                    console.log("🏠 Loading custom default from localStorage");
+                    const data = JSON.parse(customDefault);
+                    setLocalResume(data); // Mark initialized
+                    if (data.resumeDetails) setResumeDetails(data.resumeDetails);
+                    if (data.skills) setSkills(data.skills);
+                    if (data.experiences) setExperiences(data.experiences);
+                    if (data.projects) setProjects(data.projects);
+                    if (data.educationList) setEducationList(data.educationList);
+                    if (data.certifications) setCertifications(data.certifications);
+                    if (data.customSections) setCustomSections(data.customSections);
+                    if (data.sectionTitles) setSectionTitles(data.sectionTitles);
+                } catch (e) {
+                    console.error("Error loading custom default", e);
+                }
+            }
         }
-    }, [currentResume, localResume, isLoadingResume]);
+    }, [currentResume, localResume, isLoadingResume, resumeId]);
 
     // 🎯 REACTIVE AUTO-FLOW: Trigger on content change (from b3.jsx line 1272)
     useEffect(() => {
@@ -1186,23 +1241,12 @@ export default function ResumeEditor({ resume: propsResume }) {
 
     const addCustomSection = useCallback(() => {
         const newId = Date.now();
-        const sectionId = `custom-${newId}`;
-
-        // Calculate next Y position
-        const maxY = Object.values(sectionPositions).reduce((max, pos) => Math.max(max, pos.y), 0);
-        const newY = maxY + 100; // buffer
-
-        setSectionPositions(prev => ({
-            ...prev,
-            [sectionId]: { x: 40, y: newY }
-        }));
-
         setCustomSections(prev => [...prev, {
             id: newId,
             title: "New Section",
             items: [""]
         }]);
-    }, [sectionPositions]);
+    }, []);
 
     const removeCustomSection = useCallback((id) => {
         const sectionId = `custom-${id}`;
@@ -1379,6 +1423,46 @@ export default function ResumeEditor({ resume: propsResume }) {
 
         setTimeout(() => setIsTemplateLoading(false), 100);
     }, []);
+
+    const handleDatasetChange = useCallback((datasetKey) => {
+        const data = defaultDatasets[datasetKey].data;
+        if (!data) return;
+
+        setResumeDetails(data.resumeDetails);
+        setSkills(data.skills || []);
+        setExperiences(data.experiences || []);
+        setProjects(data.projects || []);
+        setEducationList(data.educationList || []);
+        setCertifications(data.certifications || []);
+        setCustomSections(data.customSections || []);
+        setSectionTitles(data.sectionTitles || defaultResumeData.sectionTitles);
+
+        // Success feedback
+        setSuccessMessage(`Loaded ${defaultDatasets[datasetKey].name} data successfully!`);
+    }, [setResumeDetails, setSkills, setExperiences, setProjects, setEducationList, setCertifications, setCustomSections, setSectionTitles]);
+
+    const handleSaveCurrentAsDefault = () => {
+        const data = buildResumePayload();
+        localStorage.setItem('user_custom_default_resume', JSON.stringify(data));
+        setSuccessMessage("Current resume saved as your personal default!");
+    };
+
+    const handleResetToFactoryDefault = () => {
+        localStorage.removeItem('user_custom_default_resume');
+
+        // Load Sumit's data as factory default
+        const data = defaultResumeData;
+        setResumeDetails(data.resumeDetails);
+        setSkills(data.skills);
+        setExperiences(data.experiences);
+        setProjects(data.projects);
+        setEducationList(data.educationList);
+        setCertifications(data.certifications);
+        setCustomSections([]);
+        setSectionTitles(data.sectionTitles);
+
+        setSuccessMessage("Reset to factory default resume.");
+    };
 
     const handleResumeDetailChange = useCallback((field, value) => {
         if (field in resumeDetails.contact) {
@@ -2379,6 +2463,23 @@ export default function ResumeEditor({ resume: propsResume }) {
                                 </div>
 
                                 <div className="template-selector-controls">
+                                    <div className="dataset-selector" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.05)', padding: '4px 10px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', marginRight: '10px' }}>
+                                        <select
+                                            onChange={(e) => handleDatasetChange(e.target.value)}
+                                            className="template-select"
+                                            style={{ padding: '2px 6px', borderRadius: '4px', background: '#222', color: '#fff', border: '1px solid #444', fontSize: '11px' }}
+                                        >
+                                            <option value="" disabled selected>Data Samples</option>
+                                            {Object.keys(defaultDatasets).map(key => (
+                                                <option key={key} value={key}>{defaultDatasets[key].name}</option>
+                                            ))}
+                                        </select>
+                                        <button onClick={handleSaveCurrentAsDefault} style={{ background: 'transparent', border: 'none', color: '#34d399', fontSize: '11px', cursor: 'pointer' }} title="Set as Default">📌</button>
+                                        {localStorage.getItem('user_custom_default_resume') && (
+                                            <button onClick={handleResetToFactoryDefault} style={{ background: 'transparent', border: 'none', color: '#ef4444', fontSize: '11px', cursor: 'pointer' }} title="Reset">↺</button>
+                                        )}
+                                    </div>
+
                                     <label className="template-label">Choose Template:</label>
                                     <select value={selectedTemplate} onChange={(e) => handleTemplateChange(e.target.value)} className="template-select">
                                         {Object.keys(TEMPLATES).map(key => (
@@ -2601,12 +2702,12 @@ export default function ResumeEditor({ resume: propsResume }) {
 
                         const propsMap = {
                             header: { resumeDetails, styleConfig },
-                            summary: { summary: resumeDetails.summary, styleConfig },
-                            skills: { skills, styleConfig },
-                            experience: { experiences, styleConfig },
-                            projects: { projects, styleConfig },
-                            education: { educationList, styleConfig },
-                            certifications: { certifications, styleConfig },
+                            summary: { summary: resumeDetails.summary, styleConfig, sectionTitle: sectionTitles.summary },
+                            skills: { skills, styleConfig, sectionTitle: sectionTitles.skills },
+                            experience: { experiences, styleConfig, sectionTitle: sectionTitles.experience },
+                            projects: { projects, styleConfig, sectionTitle: sectionTitles.projects },
+                            education: { educationList, styleConfig, sectionTitle: sectionTitles.education },
+                            certifications: { certifications, styleConfig, sectionTitle: sectionTitles.certifications },
                             contact: { resumeDetails, styleConfig },
                             custom: { customSections, styleConfig }
                         };

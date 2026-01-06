@@ -64,6 +64,14 @@ const TemplatesShowcase = () => {
       features: ["Publication focus", "Research highlights", "Academic formatting", "Clean structure"],
       image: acad,
       category: "Academic"
+    },
+    {
+      id: 7,
+      name: "ATS Compact",
+      description: "Efficiency-first single column design optimized for maximum content density and ATS readability.",
+      features: ["Compact single-column", "Optimized whitespace", "High character density", "Ultra-efficient layout"],
+      image: atsOptimized, // Using same ATS image for now as placeholder
+      category: "Executive"
     }
   ];
 

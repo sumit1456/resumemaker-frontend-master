@@ -6,6 +6,7 @@ import { setCurrentResume, setCurrentResumeId, setSavedStyleConfig, setCurrentTe
 import { mergeResumeData } from "./Utils";
 import {
   ATS_TEMPLATE_CONFIG,
+  ATS_COMPACT_CONFIG,
   BALANCED_HYBRID_CONFIG,
   MODERN_TEMPLATE_CONFIG,
   TWO_COLUMN_TEMPLATE_CONFIG,
@@ -21,7 +22,8 @@ import {
   FlexibleCertificationsSection, FlexibleContactSection,
   FlexibleEducationSection, FlexibleExperienceSection,
   FlexibleHeaderSection, FlexibleProjectsSection,
-  FlexibleSkillsSection, FlexibleSummarySection
+  FlexibleSkillsSection, FlexibleSummarySection,
+  FlexibleCustomSection
 } from "./BaseTemplates.jsx";
 import { GeometrySnapshot, WebGLStage } from "../../components/engine/WebEngine.jsx";
 import { PhysicsPushingManager } from "./physicsPushing.js"; // 🚀 Added
@@ -39,7 +41,8 @@ const TEMPLATES = {
   modern: MODERN_TEMPLATE_CONFIG,
   twoColumn: TWO_COLUMN_TEMPLATE_CONFIG,
   template5: TEMPLATE5_CONFIG,
-  newAts: NEW_ATS_CONFIG
+  newAts: NEW_ATS_CONFIG,
+  atsCompact: ATS_COMPACT_CONFIG
 };
 
 // 🔄 Map numeric templateIds from backend to template config keys
@@ -68,6 +71,7 @@ const normalizeTemplateKey = (templateIdentifier) => {
   // 🆕 Extended ID Mapping (from ResumeEditorv3 friendly names)
   const EXTENDED_MAP = {
     "ats-optimized": "ats",
+    "ats-compact": "atsCompact",
     "balanced-hybrid": "balancedHybrid",
     "modern-ats-two-column": "modern",
     "two-column-professional": "twoColumn",
@@ -214,6 +218,7 @@ const UIEditor = () => {
 
   const [resumeData, setResumeData] = useState(defaultResumeData);
   const [resumeDetails, setResumeDetails] = useState(defaultResumeData);
+  const [customSections, setCustomSections] = useState([]);
 
   // 🛡️ Section Visibility State (New Feature)
   const [sectionVisibility, setSectionVisibility] = useState({
@@ -230,18 +235,76 @@ const UIEditor = () => {
   // 🔄 Sync visibility from prop/redux on mount
   useEffect(() => {
     if (resumeData) {
-      setSectionVisibility({
-        summary: resumeData.showSummary ?? true,
-        skills: resumeData.showSkills ?? true,
-        experience: resumeData.showExperience ?? true,
-        projects: resumeData.showProjects ?? true,
-        education: resumeData.showEducation ?? true,
-        certifications: resumeData.showCertifications ?? true,
-        contact: true, // Always true unless specifically hidden
-        header: true
+      setSectionVisibility(prev => {
+        const newVis = {
+          ...prev, // Keep existing custom ones
+          summary: resumeData.showSummary ?? true,
+          skills: resumeData.showSkills ?? true,
+          experience: resumeData.showExperience ?? true,
+          projects: resumeData.showProjects ?? true,
+          education: resumeData.showEducation ?? true,
+          certifications: resumeData.showCertifications ?? true,
+          contact: true,
+          header: true
+        };
+
+        // Add custom sections if not present
+        if (customSections) {
+          customSections.forEach(section => {
+            const id = `custom-${section.id}`;
+            if (newVis[id] === undefined) newVis[id] = true;
+          });
+        }
+        return newVis;
       });
     }
-  }, [resumeData]);
+  }, [resumeData, customSections]);
+
+  // 🛡️ SYNC CUSTOM SECTIONS FROM RESUME DETAILS
+  useEffect(() => {
+    if (resumeDetails?.customSections) {
+      setCustomSections(resumeDetails.customSections);
+    }
+  }, [resumeDetails]);
+
+  // 🛡️ SYNC CUSTOM SECTIONS TO WEBGL (Auto-Initialize Positions) - Same as ResumeEditorv3
+  useEffect(() => {
+    if (customSections.length === 0) return;
+
+    setSectionPositions(prev => {
+      const updated = { ...prev };
+      let hasChanges = false;
+
+      // Calculate starting Y for new sections
+      const maxY = Object.values(updated).reduce((max, pos) => Math.max(max, pos.y), 0);
+      let nextY = maxY + 100;
+
+      customSections.forEach(section => {
+        const sectionId = `custom-${section.id}`;
+        if (!updated[sectionId]) {
+          updated[sectionId] = { x: 40, y: nextY };
+          nextY += 150; // Buffer for stacking
+          hasChanges = true;
+        }
+      });
+
+      return hasChanges ? updated : prev;
+    });
+
+    // 🛡️ Initialize widths for custom sections to show in left panel
+    setSectionWidths(prev => {
+      const updated = { ...prev };
+      let hasChanges = false;
+      customSections.forEach(section => {
+        const id = `custom-${section.id}`;
+        if (!updated[id]) {
+          updated[id] = '515px'; // default width
+          hasChanges = true;
+        }
+      });
+      return hasChanges ? updated : prev;
+    });
+  }, [customSections]);
 
 
 
@@ -316,7 +379,18 @@ const UIEditor = () => {
     }
 
     setStyleConfig(template);
-    setSectionPositions(template.positions || {});
+
+    // 🛡️ PRESERVE CUSTOM SECTION POSITIONS DURING TEMPLATE SWITCH
+    setSectionPositions(prev => {
+      const newPos = { ...(template.positions || {}) };
+      // Keep existing custom sections
+      Object.keys(prev).forEach(key => {
+        if (key.startsWith('custom-')) {
+          newPos[key] = prev[key];
+        }
+      });
+      return newPos;
+    });
 
     const { widths, heights } = extractWidthsAndHeightsFromConfig(template);
     setSectionWidths(widths);
@@ -652,9 +726,25 @@ const UIEditor = () => {
 
   // ==================== USE EFFECTS ====================
 
+  // Sync regular and custom sections to refs
+  useEffect(() => {
+    const regularSections = ['header', 'contact', 'summary', 'skills', 'experience', 'education', 'projects', 'certifications'];
+    regularSections.forEach(section => {
+      if (!sectionRefs.current[section]) {
+        sectionRefs.current[section] = React.createRef();
+      }
+    });
+
+    customSections.forEach(section => {
+      const id = `custom-${section.id}`;
+      if (!sectionRefs.current[id]) {
+        sectionRefs.current[id] = React.createRef();
+      }
+    });
+  }, [customSections]);
+
   // Initialize template components
   useEffect(() => {
-
     setTemplateComponents({
       header: FlexibleHeaderSection,
       contact: FlexibleContactSection,
@@ -664,14 +754,6 @@ const UIEditor = () => {
       projects: FlexibleProjectsSection,
       education: FlexibleEducationSection,
       certifications: FlexibleCertificationsSection
-    });
-
-    // Initialize section refs
-    const sections = ['header', 'contact', 'summary', 'skills', 'experience', 'education', 'projects', 'certifications'];
-    sections.forEach(section => {
-      if (!sectionRefs.current[section]) {
-        sectionRefs.current[section] = React.createRef();
-      }
     });
   }, []);
 
@@ -736,6 +818,16 @@ const UIEditor = () => {
 
   // Helper to map generic 'bodyStyle' to section-specific style names
   const getStyleType = (sectionName, genericType) => {
+    if (genericType === 'subtitleStyle') {
+      const subtitleMappings = {
+        skills: 'categoryStyle',
+        experience: 'companyStyle',
+        education: 'institutionStyle',
+        projects: 'durationStyle'
+      };
+      return subtitleMappings[sectionName] || 'subtitleStyle';
+    }
+
     if (genericType !== 'bodyStyle') return genericType;
     const mappings = {
       header: 'nameStyle',
@@ -910,7 +1002,7 @@ const UIEditor = () => {
         // 3. Extract with resolution = 1 on mobile to avoid artifacts
         console.log("📸 [getPageCanvas] Triggering PIXI extract...");
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        const exportResolution = isMobile ? 1 : (app.renderer.resolution || 1);
+        const exportResolution = isMobile ? 1 : Math.min(app.renderer.resolution || 1, 2.0);
 
         const canvas = await app.renderer.extract.canvas({
           target: app.stage,
@@ -944,9 +1036,9 @@ const UIEditor = () => {
 
     try {
       const downloadCanvas = (canvas, filename) => {
-        const uri = canvas.toDataURL('image/png', 1.0);
+        const uri = canvas.toDataURL('image/jpeg', 0.9);
         const link = document.createElement('a');
-        link.download = filename;
+        link.download = filename.replace('.png', '.jpg');
         link.href = uri;
         link.click();
       };
@@ -1018,9 +1110,9 @@ const UIEditor = () => {
           firstChildAlpha: app.stage.children[0]?.alpha
         });
 
-        // 🔧 Use renderer resolution for export
+        // 🔧 Use renderer resolution for export (capped at 2.0)
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        const exportResolution = app.renderer.resolution || 1;
+        const exportResolution = Math.min(app.renderer.resolution || 1, 2.0);
 
         console.log("📐 [PDF Export] Resolution:", { isMobile, exportResolution });
 
@@ -1065,9 +1157,9 @@ const UIEditor = () => {
       // 2. Extract Page 1
       const canvas1 = await getPageCanvas(app1);
       if (!canvas1) throw new Error("Failed to capture Page 1");
-      const imgData1 = canvas1.toDataURL('image/png', 1.0);
+      const imgData1 = canvas1.toDataURL('image/jpeg', 0.9);
 
-      pdf.addImage(imgData1, 'PNG', 0, 0, width, height);
+      pdf.addImage(imgData1, 'JPEG', 0, 0, width, height, undefined, 'FAST');
 
       // 3. Extract Page 2 (if active)
       if (showPage2) {
@@ -1076,9 +1168,9 @@ const UIEditor = () => {
           console.log('📄 Adding Page 2...');
           const canvas2 = await getPageCanvas(app2);
           if (canvas2) {
-            const imgData2 = canvas2.toDataURL('image/png', 1.0);
+            const imgData2 = canvas2.toDataURL('image/jpeg', 0.9);
             pdf.addPage();
-            pdf.addImage(imgData2, 'PNG', 0, 0, width, height);
+            pdf.addImage(imgData2, 'JPEG', 0, 0, width, height, undefined, 'FAST');
           }
         }
       }
@@ -1116,6 +1208,62 @@ const UIEditor = () => {
 
       addLinksToPage(1);
       if (showPage2) addLinksToPage(2);
+
+      // 5. ADD INVISIBLE TEXT LAYER (Crucial for ATS)
+      console.log('📄 Injecting Invisible Text Layer for ATS...');
+
+      const addTextLayerToPage = (targetPageNum) => {
+        pdf.setPage(targetPageNum);
+        const yOffset = (targetPageNum - 1) * 842;
+
+        Object.entries(sectionPositions).forEach(([sectionId, pos]) => {
+          const sectionY = pos.y;
+          const sectionPage = sectionY >= 842 ? 2 : 1;
+
+          if (sectionPage !== targetPageNum) return;
+
+          const snapshot = sectionSnapshots[sectionId];
+          if (!snapshot || !snapshot.nodes) return;
+
+          snapshot.nodes.forEach(node => {
+            if (node.type === 'text' && node.text) {
+              const relativeY = sectionY - yOffset;
+              const textX = pos.x + node.x;
+              const textY = relativeY + node.y;
+
+              // Use styles for font size and color (though we make it transparent)
+              const fontSize = node.styles?.fontSize || 10;
+
+              // Map standard fonts to PDF fonts
+              const fontMap = {
+                'Helvetica': 'helvetica',
+                'Arial': 'helvetica',
+                'Times New Roman': 'times',
+                'Courier New': 'courier'
+              };
+              const fontFamily = fontMap[node.styles?.fontFamily] || 'helvetica';
+              const fontWeight = (node.styles?.fontWeight === 'bold' || node.styles?.fontWeight >= 700) ? 'bold' : 'normal';
+
+              pdf.setFontSize(fontSize);
+              pdf.setFont(fontFamily, fontWeight);
+
+              // 🧠 Baseline Fix: jsPDF 'text' Y is the baseline, while node.y is the top.
+              // We add ~80% of fontSize to align the baseline correctly.
+              const baselineY = textY + (fontSize * 0.8);
+
+              // Make text invisible but extractable
+              // Mode 3 is "Invisible"
+              pdf.text(node.text, textX, baselineY, {
+                renderingMode: 'invisible',
+                maxWidth: node.width
+              });
+            }
+          });
+        });
+      };
+
+      addTextLayerToPage(1);
+      if (showPage2) addTextLayerToPage(2);
 
       pdf.save('resume.pdf');
       console.log('✅ PDF Generation Complete');
@@ -1764,6 +1912,7 @@ const UIEditor = () => {
     resumeData,
     sectionWidths,
     sectionHeights,
+    customSections,
   ]);
 
 
@@ -1958,13 +2107,17 @@ const UIEditor = () => {
         <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', background: '#3b82f6', color: 'white', padding: '4px 8px', fontSize: '10px', fontWeight: 'bold' }}>
           🛠️ LIVE DOM RENDER (Snapshot Source)
         </div>
-        {TemplateComponents && Object.entries(sectionRefs.current).map(([key, ref]) => {
-          const Component = TemplateComponents[key];
+        {Object.entries(sectionRefs.current).map(([key, ref]) => {
+          let Component = TemplateComponents ? TemplateComponents[key] : null;
+          let isCustom = key.startsWith('custom-');
+
+          if (isCustom) {
+            Component = FlexibleCustomSection;
+          }
+
           if (!Component) return null;
 
           // 🚀 DIRECT PASS: Always use the local styleConfig for the hidden render
-          // This ensures that live edits (colors, fonts, bullet offsets) are reflected immediately in the DOM renderer.
-          // Note: currentResume?.styleConfig is stale relative to local state during active editing.
           const renderConfig = styleConfig;
 
           // Map data according to your FlexibleSection component props
@@ -1979,16 +2132,31 @@ const UIEditor = () => {
             certifications: { certifications: resumeData?.certifications, styleConfig: renderConfig }
           };
 
+          if (isCustom) {
+            const actualId = key.replace('custom-', '');
+            // Support both string and number comparison just in case
+            const sectionData = customSections.find(s => String(s.id) === String(actualId));
+            if (!sectionData) return null;
+            propsMap[key] = {
+              customSections: [sectionData],
+              styleConfig: renderConfig
+            };
+          }
+
           // 🛡️ Hide empty sections to prevent title rendering
-          if (!sectionVisibility[key]) return null; // 🆕 Check manual visibility toggle
+          if (!sectionVisibility[key]) return null;
 
           let isEmpty = false;
-          if (key === 'summary') isEmpty = !resumeData?.resumeDetails?.summary || resumeData.resumeDetails.summary.trim() === '';
-          else if (key === 'skills') isEmpty = !resumeData?.skills || resumeData.skills.length === 0;
-          else if (key === 'experience') isEmpty = !resumeData?.experiences || resumeData.experiences.length === 0;
-          else if (key === 'projects') isEmpty = !resumeData?.projects || resumeData.projects.length === 0;
-          else if (key === 'education') isEmpty = !resumeData?.educationList || resumeData.educationList.length === 0;
-          else if (key === 'certifications') isEmpty = !resumeData?.certifications || resumeData.certifications.length === 0;
+          if (isCustom) {
+            isEmpty = false; // We already checked for sectionData above
+          } else {
+            if (key === 'summary') isEmpty = !resumeData?.resumeDetails?.summary || resumeData.resumeDetails.summary.trim() === '';
+            else if (key === 'skills') isEmpty = !resumeData?.skills || resumeData.skills.length === 0;
+            else if (key === 'experience') isEmpty = !resumeData?.experiences || resumeData.experiences.length === 0;
+            else if (key === 'projects') isEmpty = !resumeData?.projects || resumeData.projects.length === 0;
+            else if (key === 'education') isEmpty = !resumeData?.educationList || resumeData.educationList.length === 0;
+            else if (key === 'certifications') isEmpty = !resumeData?.certifications || resumeData.certifications.length === 0;
+          }
 
           if (isEmpty) return null;
 
@@ -1998,7 +2166,7 @@ const UIEditor = () => {
               ref={ref}
               data-section={key}
               style={{
-                width: renderConfig[key]?.container?.width || 'auto',
+                width: renderConfig[key]?.container?.width || (isCustom ? (renderConfig.custom?.container?.width || '515px') : 'auto'),
                 height: renderConfig[key]?.container?.height || 'auto',
                 minHeight: renderConfig[key]?.container?.height || 'auto',
                 maxHeight: renderConfig[key]?.container?.height || 'none',
@@ -2303,7 +2471,14 @@ const UIEditor = () => {
                   className="sub-accordion-trigger"
                   onClick={() => setActiveSectionAccordion(isOpen ? null : sectionName)}
                 >
-                  <span className="section-name">{sectionName}</span>
+                  <span className="section-name" style={{
+                    color: sectionName.startsWith('custom-') ? '#9333ea' : 'inherit',
+                    fontWeight: sectionName.startsWith('custom-') ? 'bold' : 'normal'
+                  }}>
+                    {sectionName.startsWith('custom-')
+                      ? (customSections.find(s => `custom-${s.id}` === sectionName)?.title || sectionName)
+                      : sectionName}
+                  </span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
 
                     {/* 👁️ VISIBILITY TOGGLE */}
@@ -3051,7 +3226,7 @@ const UIEditor = () => {
               {/* Font Size Quick Controls */}
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
-                  Font Size
+                  {selectedSection === 'header' ? 'Name Font Size' : 'Font Size'}
                 </label>
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                   <button
@@ -3093,6 +3268,49 @@ const UIEditor = () => {
                   </button>
                 </div>
               </div>
+
+              {/* 🚀 Dedicated Contact Font Size Control */}
+              {(selectedSection === 'header' || selectedSection === 'contact') && (
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                    Contact Info Size (Email, Phone, etc.)
+                  </label>
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                    <button
+                      onClick={() => {
+                        const current = parseInt(styleConfig[selectedSection]?.contactItemStyle?.fontSize) || 8;
+                        handleStyleChange(selectedSection, 'contactItemStyle', `${Math.max(4, current - 1)}px`, 'fontSize');
+                      }}
+                      className="btn-secondary"
+                      style={{ padding: '8px 14px', fontSize: '16px', flex: 1 }}
+                    >
+                      −
+                    </button>
+                    <span style={{
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      minWidth: '40px',
+                      textAlign: 'center',
+                      background: 'white',
+                      padding: '8px',
+                      borderRadius: '4px',
+                      border: '1px solid #e5e7eb'
+                    }}>
+                      {parseInt(styleConfig[selectedSection]?.contactItemStyle?.fontSize) || (selectedSection === 'header' ? 8 : 10)}
+                    </span>
+                    <button
+                      onClick={() => {
+                        const current = parseInt(styleConfig[selectedSection]?.contactItemStyle?.fontSize) || 8;
+                        handleStyleChange(selectedSection, 'contactItemStyle', `${Math.min(24, current + 1)}px`, 'fontSize');
+                      }}
+                      className="btn-secondary"
+                      style={{ padding: '8px 14px', fontSize: '16px', flex: 1 }}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Title Font Size (if applicable) */}
               {styleConfig[selectedSection]?.titleStyle && (
@@ -3180,7 +3398,84 @@ const UIEditor = () => {
                 </div>
               )}
 
-              {/* Content Font Size (Bullet Points) - Specifically for Experience, Projects, etc. */}
+              {/* Subtitle Style (Skill Categories, Company Names, etc.) */}
+              {(() => {
+                const sType = getStyleType(selectedSection, 'subtitleStyle');
+                const sStyle = styleConfig[selectedSection]?.[sType];
+                if (!sStyle) return null;
+
+                const label = selectedSection === 'skills' ? 'Skill Category' :
+                  selectedSection === 'experience' ? 'Company Name' :
+                    selectedSection === 'education' ? 'Institution' : 'Subtitle';
+
+                return (
+                  <div style={{ marginTop: '24px', borderTop: '1px solid #e5e7eb', paddingTop: '16px' }}>
+                    <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#111827', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      🏷️ {label} Style
+                    </h4>
+
+                    {/* Subtitle Font Size */}
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                        Font Size
+                      </label>
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        <button
+                          onClick={() => {
+                            const current = parseInt(sStyle.fontSize) || 10;
+                            handleStyleChange(selectedSection, 'subtitleStyle', `${Math.max(6, current - 1)}px`, 'fontSize');
+                          }}
+                          className="btn-secondary"
+                          style={{ padding: '8px 14px', fontSize: '16px', flex: 1 }}
+                        >
+                          −
+                        </button>
+                        <span style={{
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          minWidth: '40px',
+                          textAlign: 'center',
+                          background: 'white',
+                          padding: '8px',
+                          borderRadius: '4px',
+                          border: '1px solid #e5e7eb'
+                        }}>
+                          {parseInt(sStyle.fontSize) || 10}
+                        </span>
+                        <button
+                          onClick={() => {
+                            const current = parseInt(sStyle.fontSize) || 10;
+                            handleStyleChange(selectedSection, 'subtitleStyle', `${Math.min(32, current + 1)}px`, 'fontSize');
+                          }}
+                          className="btn-secondary"
+                          style={{ padding: '8px 14px', fontSize: '16px', flex: 1 }}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Subtitle Color */}
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                        Color
+                      </label>
+                      <input
+                        type="color"
+                        value={normalizeColorForInput(sStyle.color)}
+                        onChange={(e) => handleStyleChange(selectedSection, 'subtitleStyle', e.target.value, 'color')}
+                        style={{
+                          width: '100%',
+                          height: '40px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          cursor: 'pointer'
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
               {styleConfig[selectedSection]?.bulletConfig && (
                 <div style={{ marginBottom: '16px' }}>
                   <label style={{ fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151' }}>

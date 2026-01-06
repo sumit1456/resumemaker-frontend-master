@@ -813,6 +813,175 @@ export const ATS_TEMPLATE_CONFIG = {
   }
 };
 
+export const ATS_COMPACT_CONFIG = {
+  id: "ats-compact",
+  type: "single-column",
+  name: "ATS Compact",
+
+  positions: {
+    header: { x: 7, y: 15, height: 50, scaleX: 1, scaleY: 1 },
+    summary: { x: 7, y: 80, height: 90, scaleX: 1, scaleY: 1 },
+    skills: { x: 7, y: 175, height: 100, scaleX: 1, scaleY: 1 },
+    experience: { x: 7, y: 280, height: 200, scaleX: 1, scaleY: 1 },
+    projects: { x: 7, y: 485, height: 180, scaleX: 1, scaleY: 1 },
+    education: { x: 7, y: 670, height: 70, scaleX: 1, scaleY: 1 },
+    certifications: { x: 7, y: 745, height: 70, scaleX: 1, scaleY: 1 }
+  },
+
+  lines: [],
+  shapes: [],
+
+  page: {
+    width: "210mm",
+    height: "297mm",
+    backgroundColor: "#FFFFFF",
+    fontFamily: "Helvetica",
+  },
+
+  header: {
+    container: {
+      width: "545px",
+      backgroundColor: "transparent",
+      padding: "0"
+    },
+    mainLayout: { display: "flex", flexDirection: "column", gap: "4px" },
+    nameSection: { display: "flex", flexDirection: "column", alignItems: "center" },
+    contactLayout: {
+      display: "flex",
+      flexDirection: "row",
+      justifyContent: "center",
+      alignItems: "center",
+      gap: "12px",
+      flexWrap: "wrap",
+      marginTop: "4px"
+    },
+    nameStyle: {
+      fontSize: "20px",
+      fontWeight: "bold",
+      color: "#000000",
+      textAlign: "center"
+    },
+    titleStyle: {
+      fontSize: "12px",
+      fontWeight: "normal",
+      color: "#4025efff",
+      textAlign: "center"
+    },
+    showTitle: true,
+    showContact: true,
+    contactOrder: ["phone", "email", "linkedin", "location"],
+    contactItemStyle: { fontSize: "8.5px", color: "#000000" },
+    showContactIcons: false,
+    showDivider: true,
+    dividerStyle: "1px solid #000000",
+    dividerMarginTop: "4px",
+    dividerMarginBottom: "0"
+  },
+
+  summary: {
+    container: { width: "545px", backgroundColor: "transparent", padding: "0" },
+    showTitle: true,
+    titleStyle: { fontSize: "11px", fontWeight: "bold", color: "#000000", borderBottom: "1px solid #000", marginBottom: "3px", paddingBottom: "0px" },
+    bodyStyle: { fontSize: "9px", color: "#000000", lineHeight: "1.4", textAlign: "justify" }
+  },
+
+  skills: {
+    container: { width: "545px", backgroundColor: "transparent", padding: "0" },
+    showTitle: true,
+    titleStyle: { fontSize: "11px", fontWeight: "bold", color: "#000000", borderBottom: "1px solid #000", marginBottom: "3px", paddingBottom: "0px" },
+    contentLayout: { display: "flex", flexDirection: "column", gap: "1px" },
+    showCategories: true,
+    categoryStyle: { fontSize: "9px", fontWeight: "bold", color: "#000000" },
+    valueStyle: { fontSize: "8.5px", color: "#000000", lineHeight: "1.3" },
+    displayType: "inline",
+    separator: ", ",
+    itemMarginBottom: "1px"
+  },
+
+  experience: {
+    container: { width: "545px", backgroundColor: "transparent", padding: "0" },
+    showTitle: true,
+    titleStyle: { fontSize: "11px", fontWeight: "bold", color: "#000000", borderBottom: "1px solid #000", marginBottom: "3px", paddingBottom: "0px" },
+    headerLayout: { display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "2px", marginBottom: "1px" },
+    subHeaderLayout: { display: "flex", marginBottom: "2px" },
+    positionFirst: true,
+    positionStyle: { fontSize: "10px", fontWeight: "bold", color: "#000000" },
+    companyStyle: { fontSize: "9px", color: "#000000" },
+    durationStyle: { fontSize: "8.5px", fontStyle: "italic", color: "#666666", whiteSpace: "nowrap" },
+    showLocation: true,
+    showAchievements: true,
+    bulletConfig: {
+      bulletStyle: "•",
+      bulletWidth: "8px",
+      bulletColor: "#000000",
+      textSize: "8.5px",
+      textColor: "#000000",
+      lineHeight: "1.3",
+      itemMarginBottom: "1px"
+    },
+    itemMarginBottom: "5px"
+  },
+
+  projects: {
+    container: { width: "545px", backgroundColor: "transparent", padding: "0" },
+    showTitle: true,
+    titleStyle: { fontSize: "11px", fontWeight: "bold", color: "#000000", borderBottom: "1px solid #000", marginBottom: "3px", paddingBottom: "0px" },
+    headerLayout: { display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "2px", marginBottom: "1px" },
+    nameStyle: { fontSize: "10px", fontWeight: "bold", color: "#000000" },
+    durationStyle: { fontSize: "8.5px", fontStyle: "italic", color: "#666666", whiteSpace: "nowrap" },
+    techStyle: { fontSize: "8.5px", fontStyle: "italic", color: "#000000", marginBottom: "2px" },
+    showDuration: true,
+    showTechnologies: true,
+    showDescription: true,
+    showLink: true,
+    linkStyle: { fontSize: "8.5px", color: "#3b82f6", textDecoration: "none", marginTop: "1px", display: "block" },
+    bulletConfig: {
+      bulletStyle: "•",
+      bulletWidth: "8px",
+      bulletColor: "#000000",
+      textSize: "8.5px",
+      textColor: "#000000",
+      lineHeight: "1.3",
+      itemMarginBottom: "1px"
+    },
+    itemMarginBottom: "5px",
+    itemStyle: { padding: "0" }
+  },
+
+  education: {
+    container: { width: "545px", backgroundColor: "transparent", padding: "0" },
+    showTitle: true,
+    titleStyle: { fontSize: "11px", fontWeight: "bold", color: "#000000", borderBottom: "1px solid #000", marginBottom: "3px", paddingBottom: "0px" },
+    degreeStyle: { fontSize: "9.5px", fontWeight: "bold", color: "#000000", lineHeight: "1.3" },
+    institutionStyle: { fontSize: "8.5px", color: "#000000", lineHeight: "1.3" },
+    detailsLayout: { display: "flex", gap: "6px", flexWrap: "wrap" },
+    detailsStyle: { fontSize: "8.5px", fontStyle: "italic", color: "#666666", lineHeight: "1.3" },
+    showInstitution: true,
+    showGpa: true,
+    showLocation: false,
+    gpaPrefix: "GPA: ",
+    itemMarginBottom: "4px",
+    itemStyle: { padding: "0" }
+  },
+
+  certifications: {
+    container: { width: "545px", backgroundColor: "transparent", padding: "0" },
+    showTitle: true,
+    titleStyle: { fontSize: "11px", fontWeight: "bold", color: "#000000", borderBottom: "1px solid #000", marginBottom: "3px", paddingBottom: "0px" },
+    displayType: "list",
+    bulletConfig: {
+      bulletStyle: "•",
+      bulletWidth: "8px",
+      bulletColor: "#000000",
+      textSize: "8.5px",
+      textColor: "#000000",
+      lineHeight: "1.3",
+      itemMarginBottom: "1px"
+    },
+    itemStyle: { fontSize: "8.5px", color: "#000000", marginBottom: "1px" }
+  }
+};
+
 
 
 //     showTitle: true,
@@ -929,26 +1098,22 @@ export const MODERN_TEMPLATE_CONFIG = {
   type: "multi-column",
 
   // --- 1. Global Positions ---
-  // Note: These positions are relative to the main resume container, 
-  // not the canvas. They MUST be updated in the UIEditor to be relative 
-  // to the respective column (or updated in the UIEditor logic to handle
-  // two-column flow). For now, we'll place them logically.
   positions: {
-    // Left Column Positions (on black background)
+    // Left Column Positions (on light gray background)
     header: { x: 46, y: 23, scaleX: 1, scaleY: 1 },
     contact: { x: 46, y: 180, scaleX: 1, scaleY: 1 },
-    skills: { x: 46, y: 231, scaleX: 1, scaleY: 1 },
-    education: { x: 46, y: 560, scaleX: 1, scaleY: 1 },
+    skills: { x: 46, y: 350, scaleX: 1, scaleY: 1 },
 
     // Right Column Positions (on white background)
     summary: { x: 305, y: 15, scaleX: 1, scaleY: 1 },
-    experience: { x: 305, y: 194, scaleX: 1, scaleY: 1 },
-    projects: { x: 305, y: 348, scaleX: 1, scaleY: 1 },
-    certifications: { x: 46, y: 900, scaleX: 1, scaleY: 1 }
+    education: { x: 305, y: 200, scaleX: 1, scaleY: 1 },
+    experience: { x: 305, y: 550, scaleX: 1, scaleY: 1 },
+    projects: { x: 305, y: 750, scaleX: 1, scaleY: 1 },
+    certifications: { x: 305, y: 850, scaleX: 1, scaleY: 1 }
   },
 
   lines: [
-    { id: 1, x1: 240, y1: 0, x2: 240, y2: 842, color: '#CCCCCC', thickness: 1, orientation: 'vertical', label: 'Divider' }
+    { id: 1, x1: 280, y1: 0, x2: 280, y2: 842, color: '#EEEEEE', thickness: 1, orientation: 'vertical', label: 'Divider' }
   ],
 
   page: {
@@ -958,16 +1123,15 @@ export const MODERN_TEMPLATE_CONFIG = {
     fontFamily: "Helvetica",
   },
 
-
   shapes: [
     {
       id: 99,
       type: "rect",
       x: 0,
       y: 0,
-      width: 260,      // Cover left column (approx)
+      width: 280,      // Cover left column
       height: 842,     // Full page height
-      color: "#1A1A1A", // Dark background color
+      color: "#f3f4f6", // Light background color (Gray-100)
       draggable: false,
       selectable: false
     }
@@ -978,17 +1142,15 @@ export const MODERN_TEMPLATE_CONFIG = {
 
   header: {
     container: {
-      // This section must span the entire top width or be split manually in the UI code
       width: "220px",
       backgroundColor: "transparent",
       padding: "0",
-      color: "#FFFFFF",
+      color: "#2C3E50",
     },
     mainLayout: { display: "flex", flexDirection: "column", gap: "2px" },
     nameSection: { display: "flex", flexDirection: "column", alignItems: "flex-start" },
-    nameStyle: { fontSize: "20px", fontWeight: "900", color: "#FFFFFF", textTransform: "uppercase" },
-    titleStyle: { fontSize: "12px", fontWeight: "normal", color: "#F0F0F0", marginTop: "4px" },
-    showTitle: true,
+    nameStyle: { fontSize: "20px", fontWeight: "900", color: "#2C3E50", textTransform: "uppercase" },
+    titleStyle: { fontSize: "12px", fontWeight: "normal", color: "#34495E", marginTop: "4px" },
     showTitle: true,
     showContact: true,
 
@@ -1002,9 +1164,9 @@ export const MODERN_TEMPLATE_CONFIG = {
       flexWrap: "wrap"
     },
     contactOrder: ["phone", "email", "linkedin", "location"],
-    contactItemStyle: { fontSize: "8px", color: "#FFFFFF" },
+    contactItemStyle: { fontSize: "8px", color: "#2C3E50" },
     showContactIcons: true,
-    contactIconColor: "#FFFFFF",
+    contactIconColor: "#2C3E50",
 
     // Split layout support (optional defaults)
     contactLeftGroup: ["phone", "email"],
@@ -1018,14 +1180,21 @@ export const MODERN_TEMPLATE_CONFIG = {
       width: "250px",
       backgroundColor: "transparent",
       padding: "5px",
-      color: "#FFFFFF",
+      color: "#2C3E50",
     },
     showTitle: true,
-    titleStyle: { fontSize: "14px", fontWeight: "bold", color: "#FFFFFF", marginBottom: "8px", textTransform: "uppercase" },
+    titleStyle: {
+      fontSize: "14px",
+      fontWeight: "bold",
+      color: "#2C3E50",
+      marginBottom: "8px",
+      textTransform: "uppercase",
+      borderBottom: "1px solid #2C3E50"
+    },
     contentLayout: { display: "flex", flexDirection: "column", gap: "6px" },
     showCategories: true,
-    categoryStyle: { fontSize: "10px", fontWeight: "bold", color: "#FFFFFF" },
-    valueStyle: { fontSize: "9px", color: "#F0F0F0", lineHeight: "1.4" },
+    categoryStyle: { fontSize: "10px", fontWeight: "bold", color: "#2C3E50" },
+    valueStyle: { fontSize: "9px", color: "#34495E", lineHeight: "1.4" },
     displayType: "inline", // Inline text within valueStyle
     separator: ", ",
     itemMarginBottom: "8px"
@@ -1036,14 +1205,21 @@ export const MODERN_TEMPLATE_CONFIG = {
       width: "300px",
       backgroundColor: "transparent",
       padding: "0",
-      color: "#FFFFFF",
+      color: "#2C3E50",
     },
     showTitle: true,
-    titleStyle: { fontSize: "14px", fontWeight: "bold", color: "#FFFFFF", marginBottom: "8px", textTransform: "uppercase" },
-    degreeStyle: { fontSize: "11px", fontWeight: "bold", color: "#FFFFFF", lineHeight: "1.4" },
-    institutionStyle: { fontSize: "10px", color: "#F0F0F0", lineHeight: "1.4" },
+    titleStyle: {
+      fontSize: "14px",
+      fontWeight: "bold",
+      color: "#2C3E50",
+      marginBottom: "8px",
+      textTransform: "uppercase",
+      borderBottom: "1px solid #2C3E50"
+    },
+    degreeStyle: { fontSize: "11px", fontWeight: "bold", color: "#2C3E50", lineHeight: "1.4" },
+    institutionStyle: { fontSize: "10px", color: "#34495E", lineHeight: "1.4" },
     detailsLayout: { display: "flex", flexDirection: "column", gap: "2px" },
-    detailsStyle: { fontSize: "9px", fontStyle: "normal", color: "#CCCCCC", lineHeight: "1.4" },
+    detailsStyle: { fontSize: "9px", fontStyle: "normal", color: "#7F8C8D", lineHeight: "1.4" },
     showInstitution: true,
     showGpa: true,
     showLocation: true,
@@ -1056,9 +1232,10 @@ export const MODERN_TEMPLATE_CONFIG = {
       width: "400px", // Right column width
       backgroundColor: "transparent",
       padding: "0",
+      color: "#2C3E50"
     },
     showTitle: true,
-    titleStyle: { fontSize: "14px", fontWeight: "bold", color: "#000000", borderBottom: "1px solid #000", marginBottom: "8px", paddingBottom: "3px" },
+    titleStyle: { fontSize: "14px", fontWeight: "bold", color: "#2C3E50", borderBottom: "1px solid #2C3E50", marginBottom: "8px", paddingBottom: "3px" },
     displayType: "list",
     bulletConfig: {
       bulletStyle: "•",
@@ -1079,16 +1256,18 @@ export const MODERN_TEMPLATE_CONFIG = {
       width: "350px", // Main content width
       backgroundColor: "transparent",
       padding: "0",
+      color: "#2C3E50"
     },
     showTitle: true,
     titleStyle: {
       fontSize: "14px",
       fontWeight: "bold",
-      color: "#000000",
+      color: "#2C3E50",
       marginBottom: "8px",
       paddingBottom: "3px",
       letterSpacing: "1px",
-      textTransform: "uppercase"
+      textTransform: "uppercase",
+      borderBottom: "1px solid #2C3E50"
     },
     bodyStyle: { fontSize: "10px", color: "#000000", lineHeight: "1.5", textAlign: "left" }
   },
@@ -1098,16 +1277,18 @@ export const MODERN_TEMPLATE_CONFIG = {
       width: "400px",
       backgroundColor: "transparent",
       padding: "0",
+      color: "#2C3E50"
     },
     showTitle: true,
     titleStyle: {
       fontSize: "14px",
       fontWeight: "bold",
-      color: "#000000",
+      color: "#2C3E50",
       marginBottom: "8px",
       paddingBottom: "3px",
       letterSpacing: "1px",
-      textTransform: "uppercase"
+      textTransform: "uppercase",
+      borderBottom: "1px solid #2C3E50"
     },
     headerLayout: { display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "4px", marginBottom: "2px" },
     subHeaderLayout: { display: "flex", marginBottom: "4px", fontStyle: "italic" },
@@ -1134,16 +1315,18 @@ export const MODERN_TEMPLATE_CONFIG = {
       width: "400px",
       backgroundColor: "transparent",
       padding: "0",
+      color: "#2C3E50"
     },
     showTitle: true,
     titleStyle: {
       fontSize: "14px",
       fontWeight: "bold",
-      color: "#000000",
+      color: "#2C3E50",
       marginBottom: "8px",
       paddingBottom: "3px",
       letterSpacing: "1px",
-      textTransform: "uppercase"
+      textTransform: "uppercase",
+      borderBottom: "1px solid #2C3E50"
     },
     headerLayout: { display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "4px", marginBottom: "2px" },
     nameStyle: { fontSize: "11px", fontWeight: "bold", color: "#000000" },

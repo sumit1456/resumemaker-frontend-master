@@ -853,44 +853,86 @@ class GeometrySnapshot {
             ctx.setLineDash([]); // Reset
         }
 
-        // 6. TEXT (Works for both 'text' type and 'box' type with direct text)
+        // 6. TEXT (Upgraded with alignment & wrapping)
         if (text) {
+            const fontSize = styles.fontSize || 12;
+            const fontFamily = styles.fontFamily || 'Helvetica';
+            const fontWeight = styles.fontWeight || 'normal';
+            const fontStyle = styles.fontStyle || 'normal';
+
+            ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`;
             ctx.fillStyle = styles.color || '#000';
-            ctx.font = `${styles.fontStyle || ''} ${styles.fontWeight || ''} ${styles.fontSize}px ${styles.fontFamily || 'Helvetica'}`;
             ctx.textBaseline = 'top';
 
-            const pLeft = (styles.padding?.left || 0);
-            const pTop = (styles.padding?.top || 0);
-            const pRight = (styles.padding?.right || 0);
-            const mWidth = Math.max(10, width - pLeft - pRight);
+            const align = styles.textAlign || 'left';
+            const lineHeight = styles.lineHeight || fontSize * 1.2;
+            const padding = styles.padding || { left: 0, top: 0, right: 0 };
 
-            const lines = this.wrapText(ctx, text, mWidth);
-            let cY = y + pTop;
+            const words = text.split(' ');
+            let line = '';
 
-            // Adjust vertical centering if it's a box with single line text
-            if (type === 'box' && lines.length === 1 && !styles.padding?.top) {
-                const tHeight = styles.lineHeight || styles.fontSize * 1.2;
-                cY = y + (height - tHeight) / 2;
+            const pLeft = padding.left || 0;
+            const pTop = padding.top || 0;
+            const pRight = padding.right || 0;
+
+            const maxWidth = width - (pLeft + pRight);
+            const startX = x + pLeft;
+            let lineY = y + pTop;
+
+            if (type === 'box' && !styles.padding?.top) {
+                // Approximate vertical centering for boxes
+                const textHeight = this.calculateTextHeight(ctx, text, maxWidth, lineHeight);
+                lineY = y + (height - textHeight) / 2;
             }
 
-            lines.forEach(line => {
-                let aX = x + pLeft;
-                if (styles.textAlign === 'center') {
-                    const m = ctx.measureText(line);
-                    aX = x + width / 2 - m.width / 2;
-                } else if (styles.textAlign === 'right') {
-                    const m = ctx.measureText(line);
-                    aX = x + width - pRight - m.width;
+            for (let n = 0; n < words.length; n++) {
+                const testLine = line + words[n] + ' ';
+                const metrics = ctx.measureText(testLine);
+
+                if (metrics.width > maxWidth && n > 0) {
+                    this.fillTextLine(ctx, line, startX, lineY, maxWidth, align);
+                    line = words[n] + ' ';
+                    lineY += lineHeight;
+                } else {
+                    line = testLine;
                 }
-                ctx.fillText(line, aX, cY);
-                cY += (styles.lineHeight || styles.fontSize * 1.2);
-            });
+            }
+            this.fillTextLine(ctx, line, startX, lineY, maxWidth, align);
         }
 
 
         ctx.restore();
     }
 
+
+    calculateTextHeight(ctx, text, maxWidth, lineHeight) {
+        const words = text.split(' ');
+        let lines = 0;
+        let line = '';
+        for (let n = 0; n < words.length; n++) {
+            const testLine = line + words[n] + ' ';
+            const metrics = ctx.measureText(testLine);
+            if (metrics.width > maxWidth && n > 0) {
+                lines++;
+                line = words[n] + ' ';
+            } else {
+                line = testLine;
+            }
+        }
+        return (lines + 1) * lineHeight;
+    }
+
+    fillTextLine(ctx, text, x, y, maxWidth, align) {
+        let drawX = x;
+        if (align === 'center') {
+            const metrics = ctx.measureText(text);
+            drawX = x + (maxWidth - metrics.width) / 2;
+        } else if (align === 'right') {
+            const metrics = ctx.measureText(text);
+            drawX = x + maxWidth - metrics.width;
+        }
+        ctx.fillText(text, drawX, y);
+    }
 
     wrapText(ctx, text, maxWidth) {
         const words = text.split(' ');
@@ -2634,7 +2676,7 @@ const WebGLStage = forwardRef(({
             try {
                 // Calculate optimal resolution for mobile
                 const pixelRatio = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
-                const mobileResolution = Math.max(pixelRatio, 2); // Ensure at least 2x on mobile for sharpness
+                const mobileResolution = Math.max(pixelRatio, 2);
 
                 const initOptions = {
                     width: Math.max(1, width),
@@ -2642,7 +2684,7 @@ const WebGLStage = forwardRef(({
                     background,
                     resolution: isMobile ? Math.min(mobileResolution, 2) : resolution,
                     antialias: true,
-                    roundPixels: true, // 🔧 Fix mobile export artifacts
+                    roundPixels: true,
                     preference: 'webgl',
                     autoDensity: true
                 };
@@ -2650,20 +2692,12 @@ const WebGLStage = forwardRef(({
                 try {
                     await app.init(initOptions);
                 } catch (firstTryErr) {
-                    console.warn("[WebGLStage] Primary init failed, retrying with safe settings...", firstTryErr);
-                    // Fallback to minimal settings for old/low-power mobile devices
-                    try {
-                        await app.init({
-                            ...initOptions,
-                            resolution: 1,
-                            antialias: false,
-                            preference: 'canvas' // Try canvas preference in pixi if webgl fails
-                        });
-                    } catch (secondTryErr) {
-                        console.error("[WebGLStage] PixiJS init completely failed:", secondTryErr);
-                        setUseFallback(true); // 🚨 COMPLETE FAIL -> TRIGGER FALLBACK
-                        return;
-                    }
+                    console.warn("[WebGLStage] Primary WebGL init failed, attempting safe init...", firstTryErr);
+                    await app.init({
+                        ...initOptions,
+                        resolution: 1,
+                        antialias: false
+                    });
                 }
 
                 if (!isMounted) {
@@ -2692,32 +2726,26 @@ const WebGLStage = forwardRef(({
                     app.stage.scale.set(stageScale);
                 }
 
-                // ✂️ CLIPPING: Strictly mask the stage to page dimensions
-                // Mask needs to be in logical coordinates if it's a child of stage? 
-                // No, mask is usually applied in global space or local space of the object.
-                // Here we want to mask the VIEWPORT size.
                 const mask = new PIXI_LIB.Graphics();
                 mask.rect(0, 0, width / stageScale, height / stageScale).fill(0xffffff);
                 app.stage.mask = mask;
                 app.stage.addChild(mask);
 
-                // Setup Interaction
-                app.stage.interactive = true;
-                // Hit area should be the unscaled logical size to cover the whole content
-                app.stage.hitArea = new PIXI_LIB.Rectangle(0, 0, width / stageScale, height / stageScale);
-
-                bindEvents(app);
-
-                // FIX: Ensure stage event mode is set for v7/v8 compatibility
                 app.stage.eventMode = 'static';
                 app.stage.hitArea = app.screen;
+
+                bindEvents(app);
 
                 const duration = performance.now() - startTime;
                 console.log(`[WebGLStage] Init complete in ${duration.toFixed(2)}ms`);
                 setInitialized(true);
 
             } catch (err) {
-                console.error("[WebGLStage] Init failed:", err);
+                console.error("[WebGLStage] PixiJS init failed completely:", err);
+                if (err.message?.includes('CanvasRenderer')) {
+                    console.warn("[WebGLStage] PixiJS CanvasRenderer missing. Using custom engine fallback.");
+                }
+                if (isMounted) setUseFallback(true);
             }
         };
 
@@ -2726,17 +2754,19 @@ const WebGLStage = forwardRef(({
                 const session = dragSession.current;
                 if (!session.active || !session.target || session.target.destroyed) return;
 
-                const newPos = e.data.global;
-                const deltaX = newPos.x - session.dragStartX;
-                const deltaY = newPos.y - session.dragStartY;
+                // 🚀 FIX: Use local position to automatically account for stageScale
+                const localPos = e.data.getLocalPosition(app.stage);
+
+                // We captured dragStartX/Y in LOCAL coordinates in pointerdown for sections
+                const deltaX = localPos.x - session.dragStartX;
+                const deltaY = localPos.y - session.dragStartY;
 
                 const targetX = session.startX + deltaX;
                 const targetY = session.startY + deltaY;
+
                 if (physicsEnabledRef.current && session.type === 'section' && physicsManagerRef?.current) {
-                    // 🚀 Real-time Physics Pushing (Matter.js)
                     const manager = physicsManagerRef.current;
                     manager.updateDragging(session.id, targetX, targetY + yOffsetRef.current);
-
                     const positions = manager.getPositions();
 
                     layers.current.sections.children.forEach(c => {
@@ -2746,38 +2776,28 @@ const WebGLStage = forwardRef(({
                         }
                     });
                 } else if (isMagneticEnabledRef.current && session.type === 'section') {
-                    // 🚀 NEW: Magnetic Flow (Cascaded Vertical Shift)
-                    // 1. Update the dragged element
                     session.target.x = targetX;
                     session.target.y = targetY;
 
-                    // 2. Shift all sections below it that are in the same column
-                    const deltaY = targetY - session.startY;
+                    const deltaShiftY = targetY - session.startY;
                     const draggedInitialY = session.startY;
                     const draggedInitialX = session.startX;
-                    // We need a width for the dragged section to check overlap
-                    const draggedWidth = session.width || session.target.getBounds?.().width || 575;
+                    const draggedWidth = session.width || 575;
 
                     layers.current.sections.children.forEach(c => {
                         if (c._id && c._id !== session.id) {
                             const initialPos = session.initialPositions[c._id];
                             if (!initialPos) return;
 
-                            // Condition 1: Section started BELOW the dragged one
-                            // Condition 2: Section is in the SAME column (X overlap)
                             const isBelow = initialPos.y > draggedInitialY;
-
-                            // Simple X overlap check
-                            const sectionWidth = initialPos.width || c.getBounds?.().width || 575;
+                            const sectionWidth = initialPos.width || 575;
                             const hasXOverlap = (initialPos.x < draggedInitialX + draggedWidth) &&
                                 (initialPos.x + sectionWidth > draggedInitialX);
 
                             if (isBelow && hasXOverlap) {
-                                // 🎯 Refined: Snap to Column + Cascaded Shift
-                                c.x = targetX; // Matches X alignment
-                                c.y = initialPos.y + deltaY;
+                                c.x = targetX;
+                                c.y = initialPos.y + deltaShiftY;
                             } else {
-                                // 🎯 Restore initial relative positions if not in the flow
                                 c.x = initialPos.x;
                                 c.y = initialPos.y;
                             }
@@ -2797,7 +2817,6 @@ const WebGLStage = forwardRef(({
                     const finalX = Math.round(session.target.x);
                     const finalY = Math.round(session.target.y);
 
-                    // Batch positions for all sections if physics was moving them
                     const allPositions = {};
                     if (session.type === 'section' && layers.current.sections) {
                         layers.current.sections.children.forEach(c => {
@@ -2809,12 +2828,8 @@ const WebGLStage = forwardRef(({
                 }
                 session.active = false;
                 session.target = null;
-
-                // 🛡️ Prevent immediate de-selection on touch release
                 session.wasDragging = true;
-                setTimeout(() => {
-                    if (dragSession.current) dragSession.current.wasDragging = false;
-                }, 150);
+                setTimeout(() => { if (dragSession.current) dragSession.current.wasDragging = false; }, 150);
             };
 
             app.stage.on('pointerup', endDrag);
@@ -2838,19 +2853,26 @@ const WebGLStage = forwardRef(({
                 console.log('🧹 [WebGLStage] Cleanup: Destroying App');
                 const app = pixiApp.current;
                 try {
-                    // Defend against Pixi v8 _cancelResize issue
-                    if (app.renderer && !app.renderer._cancelResize) {
-                        app.renderer._cancelResize = () => { };
+                    // 🛡️ CRITICAL DEFENSE for Pixi v8
+                    // Prevent GraphicPipe.contextChange errors during destruction
+                    if (app.renderer) {
+                        // Some v8 environments crash on _cancelResize if accessed post-destroy
+                        if (!app.renderer._cancelResize) app.renderer._cancelResize = () => { };
+
+                        // Stop systems explicitly before full destroy to prevent context restored events
+                        if (app.renderer.systems?.context) {
+                            // Removing event listeners from systems that might emit contextChange
+                            app.renderer.systems.context.handleContextRestored = () => { };
+                            app.renderer.systems.context.handleContextLost = () => { };
+                        }
                     }
 
                     app.ticker.stop();
-                    // Explicitly destroy stages/layers first to avoid pool issues
-                    if (app.stage) {
-                        app.stage.removeChildren();
-                    }
-                    app.destroy(true, { children: true, texture: true });
+                    if (app.stage) app.stage.removeChildren();
+
+                    app.destroy(true, { children: true, texture: true, baseTexture: true });
                 } catch (e) {
-                    console.warn('[WebGLStage] App destroy warning:', e);
+                    console.warn('[WebGLStage] App destroy warning (usually safe):', e);
                 }
                 pixiApp.current = null;
             }
@@ -2913,8 +2935,17 @@ const WebGLStage = forwardRef(({
 
                 g.on('pointerdown', (e) => {
                     onSelect('shape', shape.id);
-                    const pos = e.data.global;
-                    dragSession.current = { active: true, type: 'shape', id: shape.id, target: g, startX: g.x, startY: g.y, dragStartX: pos.x, dragStartY: pos.y };
+                    const localPos = e.data.getLocalPosition(app.stage);
+                    dragSession.current = {
+                        active: true,
+                        type: 'shape',
+                        id: shape.id,
+                        target: g,
+                        startX: g.x,
+                        startY: g.y,
+                        dragStartX: localPos.x,
+                        dragStartY: localPos.y
+                    };
                 });
 
                 layers.current.shapes.addChild(g);
@@ -2954,8 +2985,8 @@ const WebGLStage = forwardRef(({
 
                 sectionContainer.on('pointerdown', (e) => {
                     e.stopPropagation();
-                    // Track position immediately for drag
-                    const globalPos = e.data.global;
+                    // 🚀 FIX: Capture local position for dragging (matches bindEvents upgrade)
+                    const localPos = e.data.getLocalPosition(app.stage);
                     onSelect('section', id);
 
                     dragSession.current = {
@@ -2965,9 +2996,9 @@ const WebGLStage = forwardRef(({
                         target: sectionContainer,
                         startX: sectionContainer.x,
                         startY: sectionContainer.y,
-                        dragStartX: globalPos.x,
-                        dragStartY: globalPos.y,
-                        width: snapshotData.width, // 🚀 Capture explicit width
+                        dragStartX: localPos.x,
+                        dragStartY: localPos.y,
+                        width: snapshotData.width,
                         initialPositions: {}
                     };
 

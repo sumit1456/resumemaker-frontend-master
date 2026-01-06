@@ -11,40 +11,45 @@ export const defaultResumeData = {
     name: "SUMIT HATEKAR",
     title: "Full Stack Developer",
     contact: {
-      phone: "+91 9876543210",
-      email: "sumithatekar@gmail.com",
-      linkedin: "linkedin.com/in/sumithatekar",
-      github: "github.com/sumithatekar",
+      phone: "+91 7387155502",
+      email: "sumithatekar067@gmail.com",
+      linkedin: "linkedin.com/in/sumit-hatekar123/",
+      github: "github.com/sumit1456",
       location: "Pune, India",
     },
-    summary: "Passionate Computer Applications student with a strong foundation in Java and Web technologies. I love building things for the web, from backend APIs with Spring Boot to interactive frontend experiences using React and PixiJS. Always curious to learn new technologies and apply them to solve real-world problems.",
+    summary: "Detail-oriented Full Stack Developer and Computer Applications student with expertise in Java, JavaScript, and modern web frameworks. Proven track record in building high-performance, scalable web applications and custom rendering engines. Proficient in architecting backend RESTful APIs with Spring Boot and creating immersive frontend experiences with React and WebGL/PixiJS. Strong focus on performance optimization, system design, and solving complex technical challenges.",
   },
 
   skills: [
-    "Programming Languages - Java, JavaScript (ES6+), SQL, HTML/CSS",
-    "Databases - PostgreSQL, Oracle SQL, MongoDB, MySQL",
-    "Frameworks & Libraries - React.js, Spring Boot, Hibernate",
-    "Tools & Platforms - Git, GitHub, Postman, Docker, Maven, VS Code",
-    "Soft Skills - Communication, Teamwork, Problem Solving, Agile"
+    "Programming Languages - Java (Core & Advanced), JavaScript (ES6+), TypeScript, SQL, HTML5/CSS3",
+    "Databases & ORM - PostgreSQL, MySQL, Oracle SQL, Hibernate, Spring Data JPA",
+    "Frameworks & Libraries - React.js, Redux, Spring Boot, PixiJS, WebGL",
+    "Tools & Platforms - Git/GitHub, Docker, Maven, Postman, AWS, Netlify, Vercel, Render",
+    "Soft Skills - System Design, Problem Solving, Agile Methodology, Team Leadership"
   ],
 
   experiences: [
     {
-
+      company: "Self-Employed / Personal Projects",
+      position: "Full Stack Developer",
+      duration: "2024 - Present",
+      description: [
+        "Developing high-performance web tools and rendering engines using modern tech stacks.",
+        "Focusing on UI/UX excellence and backend scalability for complex web applications."
+      ]
     },
   ],
 
   projects: [
     {
-      name: "Resume Maker",
+      name: "Resume Maker Pro",
       duration: "September 2025 - December 2025",
-      technologies: "React, Spring Boot, PostgreSQL, PixiJS, WebGL, Matter.js, Canvas 2D API",
+      technologies: "React, Spring Boot, PostgreSQL, PixiJS, WebGL, Matter.js, jsPDF",
       description: [
-        "Built ResumeMaker, a WebGL + DOM–based resume editor powered by a custom DOM-to-WebGL rendering engine for high-performance live previews",
-        "Achieved ultra-fast resume load times of 20–30 ms on desktop and 50–60 ms on mobile with instant text and UI updates",
-        "Architected separate Text Editor and UI Layout Editor to preserve ATS-friendly resume structure while enabling flexible visual customization",
-        "Designed a config-driven (non-hardcoded) template system, allowing highly scalable and reusable resume layouts",
-        "Delivered high-quality PDF and PNG exports with sharp text rendering and minimal blur even at higher zoom levels using GPU-based rendering"
+        "Engineered a high-performance WebGL + DOM-based resume editor featuring a custom rendering engine for instant live previews.",
+        "Architected a sophisticated PDF export strategy using jsPDF with an invisible, searchable text layer for 100% ATS compatibility.",
+        "Integrated Matter.js for real-time physics-based section pushing and magnetic flow layouts, creating a unique responsive UI.",
+        "Optimized client-side performance to sub-30ms frame times by leveraging GPU acceleration and off-thread processing."
       ],
       link: "https://resume-maker-pro.netlify.app",
     },
@@ -54,30 +59,26 @@ export const defaultResumeData = {
       duration: "July 2025 - August 2025",
       technologies: "Java 17, Spring Boot, PostgreSQL, Spring Data JPA, Thymeleaf, Bootstrap 5",
       description: [
-        "Developed a Spring Boot web application to search and view open issues across public GitHub repositories using the GitHub REST API",
-        "Implemented backend logic with Spring Data JPA for efficient querying, filtering, and persistence",
-        "Built a responsive server-rendered UI using Thymeleaf and Bootstrap 5",
-        "Integrated PostgreSQL for secure storage of user preferences and search history",
-        "Documented REST APIs using OpenAPI and Swagger for testing and maintainability"
+        "Developed a robust Spring Boot application to query and manage open issues across public GitHub repositories via REST API integration.",
+        "Optimized data persistence layer using Spring Data JPA and PostgreSQL, improving query response times for large metadata sets.",
+        "Designed and implemented a responsive, accessible UI using Thymeleaf and Bootstrap 5, documented with OpenAPI/Swagger."
       ],
       link: "https://github.com/sumit1456/findissue-SpringBoot-Application",
     },
 
     {
-      name: "DOM–WebGL Renderer",
+      name: "DOM-WebGL Rendering Engine",
       duration: "November 2025 - Present",
-      technologies: "PixiJS, WebGL, Web Workers, Matter.js, Canvas 2D API",
+      technologies: "PixiJS, WebGL, Web Workers, Matter.js, Multi-threading",
       description: [
-        "Built a DOM-to-WebGL rendering engine that captures DOM geometry and style snapshots and renders document-style UIs on the GPU",
-        "Improved rendering performance by 30–40% by offloading heavy geometry and style computations to Web Workers",
-        "Implemented change-based rendering to recalculate only modified elements, reducing unnecessary layout and GPU workload",
-        "Enabled smooth live previews reaching 50–60 FPS for document-style layouts, outperforming Canvas 2D and HTML-to-canvas approaches",
-        "Delivered high-fidelity rendering and export quality with crisp text output and reduced blur compared to raster-based rendering pipelines"
+        "Developed a proprietary rendering engine that reconstructs CSS layout trees as GPU-accelerated WebGL geometry using PixiJS.",
+        "Architected a parallel processing pipeline using Web Workers for asynchronous geometry triangulation, maintaining a steady 60 FPS.",
+        "Implemented intelligent 'Surgical' re-rendering logic to minimize GPU workload by updating only modified layout nodes.",
+        "Engineered custom z-index and overflow clipping systems that mirror standard CSS behavior within a high-performance graphics context."
       ],
       link: "https://github.com/sumit1456/webgl",
     }
-  ]
-  ,
+  ],
 
   educationList: [
     {
@@ -86,13 +87,6 @@ export const defaultResumeData = {
       location: "Pune, India",
       year: "2027 (Expected)",
       gpa: "89.63% (First Sem)",
-    },
-    {
-      degree: "BSc Chemistry",
-      institution: "Shivaji University",
-      location: "Koregaon Satara, India",
-      year: "2024",
-      gpa: "7.52 CGPA",
     },
     {
       degree: "HSC (Science)",
@@ -105,7 +99,6 @@ export const defaultResumeData = {
 
   certifications: [
     "Java Full Stack Development - QSpiders Wakad 2024",
-    "Scrum Master Certified",
   ],
 
   sectionTitles: {
@@ -116,6 +109,107 @@ export const defaultResumeData = {
     education: "Education",
     certifications: "Certifications"
   }
+};
+
+export const abhishekResumeData = {
+  resumeDetails: {
+    name: "Abhishek Vitthal Gaikwad",
+    title: "Chemistry Graduate / Aspiring Business Professional",
+    contact: {
+      phone: "8767454938",
+      email: "abhishekgaikwad197@gmail.com",
+      linkedin: "",
+      github: "",
+      location: "Satara, Maharashtra"
+    },
+    summary: "Seeking an opportunity where I can leverage my strong foundation in Chemistry while gaining valuable insights into business operations, strategy development, and the practical applications of scientific knowledge in an industry setting."
+  },
+
+  skills: [
+    "Communication - Clear and concise communicator, adept at presenting findings and reports.",
+    "Computer Skills - Familiar with MS Office and scientific software.",
+    "MS-CIT - Certified in Information Technology.",
+    "Laboratory Techniques - Proficient in conducting experiments, handling chemicals safely, and analyzing results."
+  ],
+
+  experiences: [],
+
+  projects: [
+    {
+      name: "Comparative Chemical Analysis of Tea and Coffee Varieties",
+      duration: "Academic Project",
+      technologies: "Chemical Titration, pH Analysis, Quantitative Measurement",
+      description: [
+        "Conducted a comprehensive study on the acidic and caffeine content of 15+ commercial tea and coffee varieties.",
+        "Performed precise quantitative measurements of caffeine concentrations and pH levels using standardized laboratory techniques.",
+        "Analyzed the correlation between chemical composition and flavor profiles, documenting data for comparative health insights.",
+        "Maintained rigorous accuracy in measurements and safety protocols while handling chemical reagents for data collection."
+      ],
+      link: ""
+    }
+  ],
+
+  educationList: [
+    {
+      degree: "Bachelor of Science in Chemistry",
+      institution: "Shivaji University",
+      location: "Satara, Maharashtra",
+      year: "2024",
+      gpa: "70%"
+    },
+    {
+      degree: "Higher Secondary Certificate (HSC)",
+      institution: "Junior College of Arts, Commerce and Science",
+      location: "Rahimatpur",
+      year: "2021",
+      gpa: "78.67% (First Class)"
+    },
+    {
+      degree: "Secondary School Certificate (SSC)",
+      institution: "Vitthalrao Govindrao Nikam Madhyamik Vidyalaya",
+      location: "Ambheri",
+      year: "2019",
+      gpa: "76.60% (First Class)"
+    }
+  ],
+
+  certifications: [
+    "MS-CIT (Maharashtra State Certificate in Information Technology)"
+  ],
+
+  customSections: [
+    {
+      id: "interests",
+      title: "Interests",
+      items: [
+        "Curious about business models and their real-time working",
+        "Coding and developing",
+        "Travel and exploration",
+        "Language learning"
+      ]
+    },
+    {
+      id: "declaration",
+      title: "Declaration",
+      items: [
+        "I hereby declare that all above information provided is true and accurate to the best of my knowledge."
+      ]
+    }
+  ],
+
+  sectionTitles: {
+    summary: "Career Objective",
+    skills: "Personal Skills",
+    experience: "Experience",
+    projects: "Academic Projects",
+    education: "Academic Credentials",
+    certifications: "Certifications"
+  }
+};
+
+export const defaultDatasets = {
+  sumit: { name: "Sumit Hatekar (Default)", data: defaultResumeData },
+  abhishek: { name: "Abhishek Gaikwad", data: abhishekResumeData }
 };
 
 /**
@@ -600,7 +694,8 @@ export const applyResumeData = (setters, data = defaultResumeData) => {
     setProjects,
     setEducationList,
     setCertifications,
-    setSectionTitles
+    setSectionTitles,
+    setCustomSections
   } = setters;
 
   if (setResumeDetails && data.resumeDetails) {
@@ -629,6 +724,10 @@ export const applyResumeData = (setters, data = defaultResumeData) => {
 
   if (setSectionTitles && data.sectionTitles) {
     setSectionTitles(data.sectionTitles);
+  }
+
+  if (setCustomSections && (data.customSections || data.custom)) {
+    setCustomSections(data.customSections || data.custom || []);
   }
 };
 

@@ -423,25 +423,30 @@ export const FlexibleHeaderSection = ({ resumeDetails, styleConfig = {} }) => {
                                                             alignItems: "center"
                                                         }}
                                                     >
-                                                        {(() => {
-                                                            const IconComponent = contactIconMap[type] || Globe;
-                                                            const rawSize = sectionConfig.contactIconSize;
-                                                            const sizeNum = parseInt(rawSize) || 0;
-                                                            const iconSize = (sizeNum > 6) ? rawSize : 14;
-
-                                                            return (
-                                                                <IconComponent
-                                                                    size={iconSize}
-                                                                    color={sectionConfig.contactIconColor || "#000000"}
-                                                                />
-                                                            );
-                                                        })()}
+                                                        {/* Icon removed */}
                                                     </div>
                                                 )}
 
-                                                <FlexibleText config={sectionConfig.contactItemStyle} styleConfig={styleConfig}>
-                                                    {value}
-                                                </FlexibleText>
+                                                {(() => {
+                                                    const isLink = ['email', 'linkedin', 'github', 'website', 'link'].includes(type);
+                                                    const href = type === 'email' ? `mailto:${value}` : (value.startsWith('http') ? value : `https://${value}`);
+                                                    return (
+                                                        <FlexibleText
+                                                            as={isLink ? "a" : "div"}
+                                                            config={{
+                                                                ...sectionConfig.contactItemStyle,
+                                                                href: isLink ? href : undefined,
+                                                                target: isLink ? "_blank" : undefined,
+                                                                rel: isLink ? "noopener noreferrer" : undefined,
+                                                                cursor: isLink ? "pointer" : undefined,
+                                                                textDecoration: 'none'
+                                                            }}
+                                                            styleConfig={styleConfig}
+                                                        >
+                                                            {value}
+                                                        </FlexibleText>
+                                                    );
+                                                })()}
                                             </FlexibleLayout>
                                         );
                                     })}
@@ -474,25 +479,30 @@ export const FlexibleHeaderSection = ({ resumeDetails, styleConfig = {} }) => {
                                                             alignItems: "center"
                                                         }}
                                                     >
-                                                        {(() => {
-                                                            const IconComponent = contactIconMap[type] || Globe;
-                                                            const rawSize = sectionConfig.contactIconSize;
-                                                            const sizeNum = parseInt(rawSize) || 0;
-                                                            const iconSize = (sizeNum > 6) ? rawSize : 14;
-
-                                                            return (
-                                                                <IconComponent
-                                                                    size={iconSize}
-                                                                    color={sectionConfig.contactIconColor || "#000000"}
-                                                                />
-                                                            );
-                                                        })()}
+                                                        {/* Icon removed */}
                                                     </div>
                                                 )}
 
-                                                <FlexibleText config={sectionConfig.contactItemStyle} styleConfig={styleConfig}>
-                                                    {value}
-                                                </FlexibleText>
+                                                {(() => {
+                                                    const isLink = ['email', 'linkedin', 'github', 'website', 'link'].includes(type);
+                                                    const href = type === 'email' ? `mailto:${value}` : (value.startsWith('http') ? value : `https://${value}`);
+                                                    return (
+                                                        <FlexibleText
+                                                            as={isLink ? "a" : "div"}
+                                                            config={{
+                                                                ...sectionConfig.contactItemStyle,
+                                                                href: isLink ? href : undefined,
+                                                                target: isLink ? "_blank" : undefined,
+                                                                rel: isLink ? "noopener noreferrer" : undefined,
+                                                                cursor: isLink ? "pointer" : undefined,
+                                                                textDecoration: 'none'
+                                                            }}
+                                                            styleConfig={styleConfig}
+                                                        >
+                                                            {value}
+                                                        </FlexibleText>
+                                                    );
+                                                })()}
                                             </FlexibleLayout>
                                         );
                                     })}
@@ -516,34 +526,28 @@ export const FlexibleHeaderSection = ({ resumeDetails, styleConfig = {} }) => {
                                             ...sectionConfig.contactItemContainer,
                                         }}
                                     >
-                                        {sectionConfig.showContactIcons && (
-                                            <div
-                                                style={{
-                                                    marginRight: sectionConfig.contactIconMarginRight || "8px",
-                                                    marginLeft: sectionConfig.contactIconMarginLeft || "0px",
-                                                    display: "flex",
-                                                    alignItems: "center"
-                                                }}
-                                            >
-                                                {(() => {
-                                                    const IconComponent = contactIconMap[type] || Globe;
-                                                    const rawSize = sectionConfig.contactIconSize;
-                                                    const sizeNum = parseInt(rawSize) || 0;
-                                                    const iconSize = (sizeNum > 6) ? rawSize : 14;
+                                        {/* Icons removed as per user request */}
 
-                                                    return (
-                                                        <IconComponent
-                                                            size={iconSize}
-                                                            color={sectionConfig.contactIconColor || "#000000"}
-                                                        />
-                                                    );
-                                                })()}
-                                            </div>
-                                        )}
-
-                                        <FlexibleText config={sectionConfig.contactItemStyle} styleConfig={styleConfig}>
-                                            {value}
-                                        </FlexibleText>
+                                        {(() => {
+                                            const isLink = ['email', 'linkedin', 'github', 'website', 'link'].includes(type);
+                                            const href = type === 'email' ? `mailto:${value}` : (value.startsWith('http') ? value : `https://${value}`);
+                                            return (
+                                                <FlexibleText
+                                                    as={isLink ? "a" : "div"}
+                                                    config={{
+                                                        ...sectionConfig.contactItemStyle,
+                                                        href: isLink ? href : undefined,
+                                                        target: isLink ? "_blank" : undefined,
+                                                        rel: isLink ? "noopener noreferrer" : undefined,
+                                                        cursor: isLink ? "pointer" : undefined,
+                                                        textDecoration: 'none'
+                                                    }}
+                                                    styleConfig={styleConfig}
+                                                >
+                                                    {value}
+                                                </FlexibleText>
+                                            );
+                                        })()}
                                     </FlexibleLayout>
                                 );
                             })
@@ -580,14 +584,14 @@ export const FlexibleHeaderSection = ({ resumeDetails, styleConfig = {} }) => {
 /**
  * SUMMARY SECTION - Enhanced
  */
-export const FlexibleSummarySection = ({ summary, styleConfig = {} }) => {
+export const FlexibleSummarySection = ({ summary, styleConfig = {}, sectionTitle }) => {
     const sectionConfig = styleConfig.summary || {};
 
     return (
         <FlexibleContainer config={sectionConfig.container} styleConfig={styleConfig}>
             {sectionConfig.showTitle && (
                 <FlexibleSectionHeader
-                    title={sectionConfig.titleText || "SUMMARY"}
+                    title={sectionTitle || sectionConfig.titleText || "SUMMARY"}
                     config={sectionConfig.titleStyle}
                     styleConfig={styleConfig}
                 />
@@ -615,7 +619,7 @@ export const FlexibleSummarySection = ({ summary, styleConfig = {} }) => {
 /**
  * SKILLS SECTION - Enhanced with multiple display modes
  */
-export const FlexibleSkillsSection = ({ skills, styleConfig = {} }) => {
+export const FlexibleSkillsSection = ({ skills, styleConfig = {}, sectionTitle }) => {
     const sectionConfig = styleConfig.skills || {};
 
     // Parse skills based on display mode
@@ -638,7 +642,7 @@ export const FlexibleSkillsSection = ({ skills, styleConfig = {} }) => {
         <FlexibleContainer config={sectionConfig.container} styleConfig={styleConfig}>
             {sectionConfig.showTitle && (
                 <FlexibleSectionHeader
-                    title={sectionConfig.titleText || "SKILLS"}
+                    title={sectionTitle || sectionConfig.titleText || "SKILLS"}
                     config={sectionConfig.titleStyle}
                     styleConfig={styleConfig}
                 />
@@ -722,14 +726,14 @@ export const FlexibleSkillsSection = ({ skills, styleConfig = {} }) => {
 /**
  * EXPERIENCE SECTION - Enhanced with custom structure support
  */
-export const FlexibleExperienceSection = ({ experiences, styleConfig = {} }) => {
+export const FlexibleExperienceSection = ({ experiences, styleConfig = {}, sectionTitle }) => {
     const sectionConfig = styleConfig.experience || {};
 
     return (
         <FlexibleContainer config={sectionConfig.container} styleConfig={styleConfig}>
             {sectionConfig.showTitle && (
                 <FlexibleSectionHeader
-                    title={sectionConfig.titleText || "EXPERIENCE"}
+                    title={sectionTitle || sectionConfig.titleText || "EXPERIENCE"}
                     config={sectionConfig.titleStyle}
                     styleConfig={styleConfig}
                 />
@@ -808,14 +812,14 @@ export const FlexibleExperienceSection = ({ experiences, styleConfig = {} }) => 
 /**
  * PROJECTS SECTION - Enhanced
  */
-export const FlexibleProjectsSection = ({ projects, styleConfig = {} }) => {
+export const FlexibleProjectsSection = ({ projects, styleConfig = {}, sectionTitle }) => {
     const sectionConfig = styleConfig.projects || {};
 
     return (
         <FlexibleContainer config={sectionConfig.container} styleConfig={styleConfig}>
             {sectionConfig.showTitle && (
                 <FlexibleSectionHeader
-                    title={sectionConfig.titleText || "PROJECTS"}
+                    title={sectionTitle || sectionConfig.titleText || "PROJECTS"}
                     config={sectionConfig.titleStyle}
                     styleConfig={styleConfig}
                 />
@@ -886,14 +890,14 @@ export const FlexibleProjectsSection = ({ projects, styleConfig = {} }) => {
 /**
  * EDUCATION SECTION - Enhanced with field order control
  */
-export const FlexibleEducationSection = ({ educationList, styleConfig = {} }) => {
+export const FlexibleEducationSection = ({ educationList, styleConfig = {}, sectionTitle }) => {
     const sectionConfig = styleConfig.education || {};
 
     return (
         <FlexibleContainer config={sectionConfig.container} styleConfig={styleConfig}>
             {sectionConfig.showTitle && (
                 <FlexibleSectionHeader
-                    title={sectionConfig.titleText || "EDUCATION"}
+                    title={sectionTitle || sectionConfig.titleText || "EDUCATION"}
                     config={sectionConfig.titleStyle}
                     styleConfig={styleConfig}
                 />
@@ -964,8 +968,8 @@ export const FlexibleEducationSection = ({ educationList, styleConfig = {} }) =>
                                             {i < details.length - 1 && (
                                                 <span style={{
                                                     margin: "0 5px",
-                                                    color: styleConfig.globalTextColor || "#000",
-                                                    opacity: 0.7,
+                                                    color: sectionConfig.detailsStyle?.color || sectionConfig.degreeStyle?.color || styleConfig.globalTextColor || "#000",
+                                                    opacity: (sectionConfig.detailsStyle?.color || sectionConfig.degreeStyle?.color) ? 1 : 0.7,
                                                     fontFamily: styleConfig.globalFontFamily || "inherit",
                                                     fontSize: sectionConfig.detailsStyle?.fontSize || "10px",
                                                     ...sectionConfig.separatorStyle
@@ -988,14 +992,14 @@ export const FlexibleEducationSection = ({ educationList, styleConfig = {} }) =>
 /**
  * CERTIFICATIONS SECTION - Enhanced with display types
  */
-export const FlexibleCertificationsSection = ({ certifications, styleConfig = {} }) => {
+export const FlexibleCertificationsSection = ({ certifications, styleConfig = {}, sectionTitle }) => {
     const sectionConfig = styleConfig.certifications || {};
 
     return (
         <FlexibleContainer config={sectionConfig.container} styleConfig={styleConfig}>
             {sectionConfig.showTitle && (
                 <FlexibleSectionHeader
-                    title={sectionConfig.titleText || "CERTIFICATIONS"}
+                    title={sectionTitle || sectionConfig.titleText || "CERTIFICATIONS"}
                     config={sectionConfig.titleStyle}
                     styleConfig={styleConfig}
                 />
@@ -1050,19 +1054,27 @@ export const FlexibleContactSection = ({ resumeDetails, styleConfig = {} }) => {
                             alignItems: 'center',
                             marginBottom: sectionConfig.itemMarginBottom || '0'
                         }}>
-                            {sectionConfig.showContactIcons && contactIconMap[contactType] && (
-                                <span style={{
-                                    marginRight: "6px",
-                                    color: sectionConfig.contactItemStyle?.color || "#000",
-                                    display: "flex",
-                                    alignItems: "center"
-                                }}>
-                                    {React.createElement(contactIconMap[contactType], { size: 12 })}
-                                </span>
-                            )}
-                            <FlexibleText config={sectionConfig.contactItemStyle} styleConfig={styleConfig}>
-                                {value}
-                            </FlexibleText>
+                            {/* Icons removed as per user request */}
+                            {(() => {
+                                const isLink = ['email', 'linkedin', 'github', 'website', 'link'].includes(contactType);
+                                const href = contactType === 'email' ? `mailto:${value}` : (value.startsWith('http') ? value : `https://${value}`);
+                                return (
+                                    <FlexibleText
+                                        as={isLink ? "a" : "div"}
+                                        config={{
+                                            ...sectionConfig.contactItemStyle,
+                                            href: isLink ? href : undefined,
+                                            target: isLink ? "_blank" : undefined,
+                                            rel: isLink ? "noopener noreferrer" : undefined,
+                                            cursor: isLink ? "pointer" : undefined,
+                                            textDecoration: 'none'
+                                        }}
+                                        styleConfig={styleConfig}
+                                    >
+                                        {value}
+                                    </FlexibleText>
+                                );
+                            })()}
                         </div>
                     );
                 })}
