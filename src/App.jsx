@@ -10,6 +10,7 @@ import EmailVerification from "./features/auth/Verification.jsx";
 import BackendWakePopup from "./components/PopUp/Backendpopup.jsx";
 import EditorPage from "./pages/UI-Edits/EditorPage.jsx";
 import B3 from "./pages/UI-Edits/b3.jsx";
+import UIEditorV2 from "./pages/UI-Edits/b3version2.jsx";
 import Demo from "./Demo.jsx";
 import { logInUser } from "./redux/store.js";
 
@@ -24,9 +25,9 @@ export default function App() {
   const [userId, setUserId] = useState(null);
 
   useEffect(() => {
-    // Check for token and userId in localStorage on mount
-    const token = localStorage.getItem('token');
-    const storedUserId = localStorage.getItem('userId');
+    // Check for token and userId in sessionStorage on mount
+    const token = sessionStorage.getItem('token');
+    const storedUserId = sessionStorage.getItem('userId');
 
     if (token && storedUserId) {
       // Restore Redux state
@@ -67,6 +68,10 @@ export default function App() {
         <Route path="ui-editor/webgl" element={<B3 />} />
         <Route path="ui-editor/webgl/:resumeId" element={<B3 />} />
         <Route path="ui-editor/webgl/:resumeId/:templateId" element={<B3 />} />
+
+        <Route path="ui-editor/v2" element={<UIEditorV2 />} />
+        <Route path="ui-editor/v2/:resumeId" element={<UIEditorV2 />} />
+        <Route path="ui-editor/v2/:resumeId/:templateId" element={<UIEditorV2 />} />
         <Route
           path="/*"
           element={

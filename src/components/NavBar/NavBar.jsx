@@ -19,10 +19,10 @@ export default function NavBar() {
 
 
   const handleLogout = () => {
+    sessionStorage.clear();
     dispatch(logOutUser());
     dispatch(clearResume());
     naviaate("/");
-
   };
 
   const toggleSidebar = () => {
@@ -48,6 +48,7 @@ export default function NavBar() {
           <p><Link to="/user-templates">User Templates</Link></p>
           <p><Link to="/dashboard/resume-editor">Text Editor</Link></p>
           <p><Link to="/ui-editor/webgl">UI Editor</Link></p>
+          <p><Link to="/ui-editor/v2">UI Editor v2 🚀</Link></p>
         </div>
 
         <div className="box-icons">
@@ -82,6 +83,7 @@ export default function NavBar() {
         <p><Link to="/user-templates" onClick={toggleSidebar}>User Templates</Link></p>
         <p><Link to="/dashboard/resume-editor" onClick={toggleSidebar}>Text Editor</Link></p>
         <p><Link to="/ui-editor/webgl" onClick={toggleSidebar}>WebGL Editor ✨</Link></p>
+        <p><Link to="/ui-editor/v2" onClick={toggleSidebar}>UI Editor v2 🚀</Link></p>
       </div>
 
       {/* Overlay */}

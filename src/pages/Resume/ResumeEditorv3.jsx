@@ -65,8 +65,7 @@ Font.register({
 
 
 
-const API_BASE_URL2 = 'http://localhost:8080';
-const API_BASE_URL = 'https://resumemaker-1.onrender.com';
+import BASE_URL from '../../api/api';
 
 // Map template IDs to their configurations
 

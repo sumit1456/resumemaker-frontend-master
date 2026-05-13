@@ -5,8 +5,7 @@ import "./Test.css";
 
 
 
-const API_BASE_URL2 = 'http://localhost:8080';
-const API_BASE_URL = "https://resumemaker-1.onrender.com";
+import BASE_URL from '../../api/api';
 
 export default function EmailVerification() {
   const [searchParams] = useSearchParams();
@@ -33,7 +32,7 @@ export default function EmailVerification() {
 
       while (attempt < MAX_RETRIES) {
         try {
-          const response = await axios.get(`${API_BASE_URL}/verify`, {
+          const response = await axios.get(`${BASE_URL}/verify`, {
             params: { token },
             timeout: 30000
           });

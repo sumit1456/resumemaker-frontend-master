@@ -44,13 +44,13 @@ export default function Login({ setUserId }) {
         const { userId, jwt, message } = response.data; // Assuming 'jwt' is the field name, verify this!
 
         if (jwt) {
-          localStorage.setItem('token', jwt);
+          sessionStorage.setItem('token', jwt);
         } else if (response.data.token) {
-          localStorage.setItem('token', response.data.token);
+          sessionStorage.setItem('token', response.data.token);
         }
 
         if (userId) {
-          localStorage.setItem('userId', userId);
+          sessionStorage.setItem('userId', userId);
         }
 
         window.showMessage("Success", message, "success", 1500);
@@ -102,13 +102,13 @@ export default function Login({ setUserId }) {
 
         const { userId, jwt, message } = response.data;
         if (jwt) {
-          localStorage.setItem('token', jwt);
+          sessionStorage.setItem('token', jwt);
         } else if (response.data.token) {
-          localStorage.setItem('token', response.data.token);
+          sessionStorage.setItem('token', response.data.token);
         }
 
         if (userId) {
-          localStorage.setItem('userId', userId);
+          sessionStorage.setItem('userId', userId);
         }
 
         dispatch(logInUser(userId));

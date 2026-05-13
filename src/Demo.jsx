@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { WebGLStage, useWebGLSnapshot } from './components/engine/WebEngine';
-import { captureDOMToCanvas } from './components/canvasEngine/CanvasEngineFunctions';
+
 import html2canvas from 'html2canvas'; // Import html2canvas
 import './Demo.css';
 

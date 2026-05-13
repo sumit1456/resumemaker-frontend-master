@@ -1,4 +1,5 @@
 import { configureStore, createSlice } from '@reduxjs/toolkit';
+import BASE_URL from '../api/api';
 
 // ---------------- AUTH SLICE ----------------
 const authSlice = createSlice({
@@ -7,8 +8,7 @@ const authSlice = createSlice({
     isLoggedIn: false,
     userId: null,
     currentResumeId: null,
-    API_BASE_URL: "https://resumemaker-1.onrender.com",
-    API_BASE_URL2: 'http://localhost:8080',
+    API_BASE_URL: BASE_URL,
   },
   reducers: {
     logInUser: (state, action) => {

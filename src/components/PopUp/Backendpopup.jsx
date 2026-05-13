@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { BASE_URL } from "../../api/api";
 
 export default function BackendWakePopup() {
   const [visible, setVisible] = useState(true);
@@ -9,7 +10,7 @@ export default function BackendWakePopup() {
 
     const checkServer = async () => {
       try {
-        const res = await fetch("https://resumemaker-1.onrender.com/ping", {
+        const res = await fetch(`${BASE_URL}/ping`, {
           method: "GET",
           cache: "no-store",
         });

@@ -2085,20 +2085,15 @@ const UIEditor = () => {
       {/* Hidden rendering area */}
       <div className="hidden-render" style={{
         position: 'fixed',
-        right: '20px',
-        bottom: '20px',
-        visibility: 'hidden', // 🛠️ Debug Mode: Make visible as requested
-        width: '400px', // Smaller for debug overlay
+        left: '-10000px', // 🚀 Move off-screen
+        top: '0',
+        visibility: 'hidden',
+        opacity: 0, // 🚀 Addition
+        pointerEvents: 'none', // 🚀 Addition
+        width: '400px',
         height: '560px',
         background: 'white',
-        boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
-        border: '2px solid #3b82f6',
-        borderRadius: '8px',
-        padding: '20px',
-        zIndex: 10000000,
-        pointerEvents: 'none',
-        transform: 'scale(0.8)',
-        transformOrigin: 'bottom right',
+        zIndex: -1, // 🚀 Move behind everything
         overflowY: 'auto',
         maxWidth: 'none',
         fontFamily: styleConfig.globalFontFamily || 'Helvetica',

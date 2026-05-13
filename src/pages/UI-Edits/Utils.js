@@ -12,69 +12,71 @@ export const defaultResumeData = {
     title: "Full Stack Developer",
     contact: {
       phone: "+91 7387155502",
-      email: "sumithatekar067@gmail.com",
-      linkedin: "linkedin.com/in/sumit-hatekar123/",
+      email: "sumithatekar9@gmail.com",
+      linkedin: "linkedin.com/in/sumit-hatekar123",
       github: "github.com/sumit1456",
       location: "Pune, India",
     },
-    summary: "Detail-oriented Full Stack Developer and Computer Applications student with expertise in Java, JavaScript, and modern web frameworks. Proven track record in building high-performance, scalable web applications and custom rendering engines. Proficient in architecting backend RESTful APIs with Spring Boot and creating immersive frontend experiences with React and WebGL/PixiJS. Strong focus on performance optimization, system design, and solving complex technical challenges.",
+    summary: "Full Stack Developer with experience building performance-focused web applications and document editing systems. Strong background in Java, JavaScript, and modern frontend frameworks, with hands-on experience in WebGL rendering and backend-driven PDF processing pipelines. Focused on layout accuracy, data transformation, and maintainable system design.",
   },
 
   skills: [
-    "Programming Languages - Java (Core & Advanced), JavaScript (ES6+), TypeScript, SQL, HTML5/CSS3",
-    "Databases & ORM - PostgreSQL, MySQL, Oracle SQL, Hibernate, Spring Data JPA",
-    "Frameworks & Libraries - React.js, Redux, Spring Boot, PixiJS, WebGL",
-    "Tools & Platforms - Git/GitHub, Docker, Maven, Postman, AWS, Netlify, Vercel, Render",
-    "Soft Skills - System Design, Problem Solving, Agile Methodology, Team Leadership"
+    "Languages - Java, JavaScript, TypeScript, SQL, HTML5, CSS3",
+    "Backend & APIs - RESTful APIs, Authentication & Authorization (RBAC), DTO Mapping, Validation, Error Handling, Pagination, API Security Basics",
+    "Frameworks & Libraries - Spring Boot, Spring Security (JWT basics), React, Redux, PixiJS (WebGL)",
+    "Databases - PostgreSQL, MySQL, Oracle SQL, Hibernate, Spring Data JPA",
+    "PDF & Graphics - Apache PDF, jsPDF, PyMuPDF, Canvas API, Coordinate Systems, Bounding Boxes, Layout Engines",
+    "Tools - Git, GitHub, Docker, Maven, Postman, AWS, Netlify, Render"
   ],
 
   experiences: [
     {
-      company: "Self-Employed / Personal Projects",
+      company: "Freelance / Client Project (Education Domain)",
       position: "Full Stack Developer",
-      duration: "2024 - Present",
+      duration: "2025 - Present",
       description: [
-        "Developing high-performance web tools and rendering engines using modern tech stacks.",
-        "Focusing on UI/UX excellence and backend scalability for complex web applications."
+        "Developed an end-to-end Exam Management System (MRB Exam Management) based on academic requirements.",
+        "Designed modules for exam creation, student management, hall ticket generation, and result processing.",
+        "Built frontend interfaces using React and backend APIs using Spring Boot for secure data handling."
       ]
     },
   ],
 
   projects: [
     {
-      name: "Resume Maker Pro",
-      duration: "September 2025 - December 2025",
-      technologies: "React, Spring Boot, PostgreSQL, PixiJS, WebGL, Matter.js, jsPDF",
+      name: "ResumeMaker Pro — GPU-Accelerated Resume Editor",
+      duration: "Sep 2025 - Dec 2025",
+      technologies: "React, PixiJS (WebGL), Spring Boot, Java (Apache PDF), jsPDF",
       description: [
-        "Engineered a high-performance WebGL + DOM-based resume editor featuring a custom rendering engine for instant live previews.",
-        "Architected a sophisticated PDF export strategy using jsPDF with an invisible, searchable text layer for 100% ATS compatibility.",
-        "Integrated Matter.js for real-time physics-based section pushing and magnetic flow layouts, creating a unique responsive UI.",
-        "Optimized client-side performance to sub-30ms frame times by leveraging GPU acceleration and off-thread processing."
+        "Built a browser-based resume editor using React and PixiJS to render layout guides and graphical elements.",
+        "Used a hybrid rendering approach combining WebGL graphics with DOM-based text to preserve ATS compatibility.",
+        "Implemented a Spring Boot backend for PDF generation using a Java PDF library.",
+        "Ensured exported PDFs remain searchable and visually consistent across different viewers."
       ],
       link: "https://resume-maker-pro.netlify.app",
     },
 
     {
-      name: "GitHub Issue Finder",
-      duration: "July 2025 - August 2025",
-      technologies: "Java 17, Spring Boot, PostgreSQL, Spring Data JPA, Thymeleaf, Bootstrap 5",
+      name: "PDF Editor App — JSON-Based PDF Reconstruction",
+      duration: "Dec 2025 - Present",
+      technologies: "Python, FastAPI, PyMuPDF, React",
       description: [
-        "Developed a robust Spring Boot application to query and manage open issues across public GitHub repositories via REST API integration.",
-        "Optimized data persistence layer using Spring Data JPA and PostgreSQL, improving query response times for large metadata sets.",
-        "Designed and implemented a responsive, accessible UI using Thymeleaf and Bootstrap 5, documented with OpenAPI/Swagger."
+        "Built a PDF processing backend using FastAPI and PyMuPDF to extract structured JSON from documents.",
+        "Regenerated PDFs from extracted JSON while preserving approximately 90–100% visual layout fidelity.",
+        "Replaced system and embedded fonts with Google Fonts during PDF regeneration.",
+        "Maintained consistent coordinate mapping between extracted data and regenerated output."
       ],
-      link: "https://github.com/sumit1456/findissue-SpringBoot-Application",
+      link: "https://pdf-editor-1-ehhh.onrender.com",
     },
 
     {
       name: "DOM-WebGL Rendering Engine",
-      duration: "November 2025 - Present",
-      technologies: "PixiJS, WebGL, Web Workers, Matter.js, Multi-threading",
+      duration: "Nov 2025 - Present",
+      technologies: "PixiJS (WebGL), Web Workers, Canvas API",
       description: [
-        "Developed a proprietary rendering engine that reconstructs CSS layout trees as GPU-accelerated WebGL geometry using PixiJS.",
-        "Architected a parallel processing pipeline using Web Workers for asynchronous geometry triangulation, maintaining a steady 60 FPS.",
-        "Implemented intelligent 'Surgical' re-rendering logic to minimize GPU workload by updating only modified layout nodes.",
-        "Engineered custom z-index and overflow clipping systems that mirror standard CSS behavior within a high-performance graphics context."
+        "Developed a custom WebGL rendering engine for layout primitives, bounding boxes, and vector shapes.",
+        "Rendered complex scenes with 2,600+ scene-graph nodes per page while maintaining smooth interaction.",
+        "Implemented coordinate normalization and scene-graph management for accurate transformations."
       ],
       link: "https://github.com/sumit1456/webgl",
     }
@@ -82,28 +84,35 @@ export const defaultResumeData = {
 
   educationList: [
     {
-      degree: "Master of Science in Computer Applications (MSc CA)",
-      institution: "Savitribai Phule University",
+      degree: "M.Sc. Computer Applications",
+      institution: "Savitribai Phule Pune University",
       location: "Pune, India",
       year: "2027 (Expected)",
-      gpa: "89.63% (First Sem)",
+      gpa: "First Semester: 89.63%",
     },
     {
-      degree: "HSC (Science)",
+      degree: "Higher Secondary Certificate",
       institution: "Yashwantrao Chavan Institute of Science",
-      location: "Satara, India",
+      location: "Satara",
       year: "2021",
       gpa: "84%",
+    },
+    {
+      degree: "Secondary School Certificate",
+      institution: "The Modern English School, Koregaon",
+      location: "Koregaon",
+      year: "2019",
+      gpa: "87%",
     },
   ],
 
   certifications: [
-    "Java Full Stack Development - QSpiders Wakad 2024",
+    "Java Full Stack Development — QSpiders Wakad (2024)",
   ],
 
   sectionTitles: {
-    summary: "Summary",
-    skills: "Skills",
+    summary: "Profile Summary",
+    skills: "Technical Skills",
     experience: "Experience",
     projects: "Projects",
     education: "Education",
