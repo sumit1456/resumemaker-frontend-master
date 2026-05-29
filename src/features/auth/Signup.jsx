@@ -29,7 +29,7 @@ export default function Signup() {
 
     while (attempt < MAX_RETRIES) {
       try {
-        const response = await api.post(`/signup`, {
+        const response = await api.post(`/v2/signup`, {
           username,
           email,
           password
