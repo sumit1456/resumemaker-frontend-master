@@ -610,6 +610,19 @@ export default function ResumeAnalyzer({
       } catch (err) {
         console.error(`AI Analysis attempt ${attempt + 1} failed:`, err);
 
+        if (err.response && err.response.status === 429) {
+          const rateLimitMsg = err.response.data?.error || "Rate limit exceeded. Try again later.";
+          setJobDescriptionInsights(
+            <ErrorState
+              title="Rate Limit Exceeded"
+              message={rateLimitMsg}
+              subtitle="Please wait before trying again"
+            />
+          );
+          window.showMessage("Error", rateLimitMsg, "error", 3000);
+          break;
+        }
+
         let errorMessage = err.message;
         if (err.name === 'AbortError') {
           errorMessage = "Server is not up";
@@ -716,6 +729,12 @@ export default function ResumeAnalyzer({
       } catch (err) {
         console.error(`Enhancement attempt ${attempt + 1} failed:`, err);
 
+        if (err.response && err.response.status === 429) {
+          const rateLimitMsg = err.response.data?.error || "Rate limit exceeded. Try again later.";
+          window.showMessage("Error", rateLimitMsg, "error", 3000);
+          break;
+        }
+
         let errorMessage = err.message;
         if (err.name === 'AbortError') {
           errorMessage = "Server is not up";
@@ -801,6 +820,13 @@ export default function ResumeAnalyzer({
 
       } catch (error) {
         console.error(`Upload attempt ${attempt + 1} failed:`, error);
+
+        if (error.response && error.response.status === 429) {
+          const rateLimitMsg = error.response.data?.error || "Rate limit exceeded. Try again later.";
+          window.showMessage("Error", rateLimitMsg, "error", 3000);
+          break;
+        }
+
         const isRetryable = error.name === 'AbortError' || error.message.includes('Failed to fetch') || error.message.includes("Connection reset") || error.message.includes("recvAddress") || error.name === "TypeError";
 
         if (isRetryable && attempt < MAX_RETRIES) {
