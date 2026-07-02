@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  frontend:
+    image: ${DOCKERHUB_USERNAME:-sumit67hatekar}/resumemaker-frontend:latest
+    container_name: resumemaker-frontend
+    ports:
+      - "80:80"
+    restart: always
+
