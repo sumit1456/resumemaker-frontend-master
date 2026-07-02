@@ -5,6 +5,6 @@ services:
     image: ${DOCKERHUB_USERNAME:-sumit67hatekar}/resumemaker-frontend:latest
     container_name: resumemaker-frontend
     ports:
-      - "80:80"
+      - "4040:80"
     restart: always
 
